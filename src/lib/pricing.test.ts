@@ -40,7 +40,7 @@ describe('addonsTotal / lineTotal', () => {
     expect(lineTotal(item({ boxQty: 3 }))).toBe(150 * 12 * 3)
   })
 
-  it('adds add-on prices once per line (spec §6.1 literal formula)', () => {
+  it('charges add-on prices per box (spec §6.1, box_qty > 1)', () => {
     const withAddons = item({
       boxQty: 2,
       addons: [
@@ -48,9 +48,9 @@ describe('addonsTotal / lineTotal', () => {
         { id: 'gift_message', label: 'Gift Message', price: 100, detail: { message: 'Happy Birthday' } },
       ],
     })
-    expect(addonsTotal(withAddons)).toBe(250)
-    // base 150*12*2 = 3600, + 250 addons once = 3850
-    expect(lineTotal(withAddons)).toBe(3850)
+    expect(addonsTotal(withAddons)).toBe(250) // per-box add-on cost
+    // (150*12 + 250) × 2 boxes = (1800 + 250) × 2 = 4100
+    expect(lineTotal(withAddons)).toBe(4100)
   })
 })
 

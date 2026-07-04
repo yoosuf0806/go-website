@@ -56,14 +56,13 @@ export function addonsTotal(item: CartItem): number {
 /**
  * Line total for one cart line.
  *
- * Per spec §6.1: `price_per_piece × piece_count × box_qty + add-on prices`.
- * Add-on prices are added ONCE per line (as written), NOT multiplied by box_qty.
- * ⚠️ Confirm with the owner: when a line has box_qty > 1, should each box get
- * its own add-on charge (e.g. a ribbon per box)? If so, change this one line to
- * `+ addonsTotal(item) * item.boxQty`. Kept literal to match the spec.
+ * `(price_per_piece × piece_count + add-on prices) × box_qty` (spec §6.1).
+ * Add-ons are charged PER BOX: a line with box_qty = 3 and a ribbon carries
+ * three ribbons, since identical (product + package + add-ons) configs merge
+ * into one line via box_qty (spec §8). Confirmed with the owner.
  */
 export function lineTotal(item: CartItem): number {
-  return item.unitPrice * item.pieceCount * item.boxQty + addonsTotal(item)
+  return (item.unitPrice * item.pieceCount + addonsTotal(item)) * item.boxQty
 }
 
 /**
