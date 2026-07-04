@@ -45,13 +45,17 @@ export default function Shop() {
         ))}
       </div>
 
-      <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleProducts.map((product) => (
-          <li key={product.id}>
-            <ProductCard product={product} packages={packages} addons={addons} />
-          </li>
-        ))}
-      </ul>
+      {visibleProducts.length === 0 ? (
+        <p className="mt-8 text-sm text-neutral-500">No brownies in this category yet.</p>
+      ) : (
+        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleProducts.map((product) => (
+            <li key={product.id}>
+              <ProductCard product={product} packages={packages} addons={addons} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
