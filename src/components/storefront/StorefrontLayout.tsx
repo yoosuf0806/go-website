@@ -1,10 +1,13 @@
 import { Outlet, Link } from 'react-router-dom'
+import { settings } from '../../data/catalog'
+import BannerBar from './BannerBar'
 
 // Shared storefront chrome. One Header + one Footer for every storefront page
 // (spec §8 — shared-footer duplication caused display bugs in the prototype).
 export default function StorefrontLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-neutral-900">
+      <BannerBar banner={settings.banner} />
       <Header />
       <main className="flex-1">
         <Outlet />

@@ -1,33 +1,54 @@
-import { products } from '../data/catalog'
+import { useState } from 'react'
+import { categories, products, packages, addons } from '../data/catalog'
+import ProductCard from '../components/storefront/ProductCard'
 
-// Shop — reads products from the build-time catalog.json snapshot (spec §2, §8).
-// This is a minimal read-path stub proving the snapshot loader works; the full
-// ProductCard / PackageSelector / AddonPanel UI is built in Phase 4.
+// Shop — full product grid reading from the build-time snapshot (spec §2, §10
+// Phase 4). Category filter is client-side only; the underlying data never
+// changes without a rebuild.
 export default function Shop() {
+  const [categoryId, setCategoryId] = useState<string | null>(null)
+
+  const visibleProducts = categoryId
+    ? products.filter((p) => p.categoryId === categoryId)
+    : products
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <h1 className="text-2xl font-semibold">Shop</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        {products.length} brownies · reading from the build-time snapshot
-      </p>
-      <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((product) => (
-          <li
-            key={product.id}
-            className="rounded-lg border border-neutral-200 p-4 text-left"
+      <p className="mt-1 text-sm text-neutral-500">{products.length} brownies</p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setCategoryId(null)}
+          className={`rounded-full border px-3 py-1.5 text-sm ${
+            categoryId === null
+              ? 'border-amber-600 bg-amber-600 text-white'
+              : 'border-neutral-300 bg-white text-neutral-700 hover:border-amber-400'
+          }`}
+        >
+          All
+        </button>
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            type="button"
+            onClick={() => setCategoryId(category.id)}
+            className={`rounded-full border px-3 py-1.5 text-sm ${
+              categoryId === category.id
+                ? 'border-amber-600 bg-amber-600 text-white'
+                : 'border-neutral-300 bg-white text-neutral-700 hover:border-amber-400'
+            }`}
           >
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="font-medium">{product.name}</h2>
-              {!product.inStock && (
-                <span className="shrink-0 rounded bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600">
-                  Sold out
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-sm text-neutral-600">{product.description}</p>
-            <p className="mt-2 text-sm font-semibold">
-              Rs. {product.pricePerPiece.toLocaleString('en-LK')} / piece
-            </p>
+            {category.name}
+          </button>
+        ))}
+      </div>
+
+      <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {visibleProducts.map((product) => (
+          <li key={product.id}>
+            <ProductCard product={product} packages={packages} addons={addons} />
           </li>
         ))}
       </ul>
