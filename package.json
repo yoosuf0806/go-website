@@ -9,6 +9,8 @@
     "dev": "vite",
     "prebuild": "npm run snapshot",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -32,6 +34,7 @@
     "tailwindcss": "^3.4.19",
     "tsx": "^4.23.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "^4.1.9"
   }
 }
