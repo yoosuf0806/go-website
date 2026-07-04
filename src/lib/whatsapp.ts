@@ -4,7 +4,7 @@
 // cart/checkout UI (a real prototype bug class). Encoded with encodeURIComponent;
 // `\n` line breaks become %0A in the link.
 import { formatLKR, formatDate, toWhatsAppNumber } from './format'
-import { lineTotal, type CartItem, type CartTotals } from './pricing'
+import { lineTotal, type CartAddon, type CartItem, type CartTotals } from './pricing'
 
 export interface OrderCustomer {
   name: string
@@ -36,10 +36,11 @@ export interface InquiryMessageInput {
 
 /**
  * Human-readable add-on summary for one line, or '' if the line has none.
- * Exported so the cart drawer / checkout review step render the same summary
- * text that ends up in the WhatsApp message.
+ * Takes only the add-ons array so the cart drawer, checkout review step, and
+ * admin order rows all render the same summary text that ends up in the
+ * WhatsApp message. Any object with an `addons` array satisfies it.
  */
-export function addonSummary(item: CartItem): string {
+export function addonSummary(item: { addons: CartAddon[] }): string {
   const parts: string[] = []
   for (const addon of item.addons) {
     const detail = addon.detail
