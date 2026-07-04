@@ -15,14 +15,25 @@ export interface CreateOrderInput {
   items: CartLine[]
   totals: CartTotals
   details: CheckoutDetails
+  /** 'web' for the storefront checkout; 'inquiry_conversion' from the admin. */
+  source?: string
+  /** Set when an order is created by converting an inquiry (links order → inquiry). */
+  inquiryId?: string
 }
 
 export interface CreatedOrder {
+  id: string
   orderNo: number
   phone: string
 }
 
-export async function createOrder({ items, totals, details }: CreateOrderInput): Promise<CreatedOrder> {
+export async function createOrder({
+  items,
+  totals,
+  details,
+  source = 'web',
+  inquiryId,
+}: CreateOrderInput): Promise<CreatedOrder> {
   const phone = normalizePhone(details.phone)
   if (!phone) throw new Error('Invalid phone number')
 
@@ -38,7 +49,8 @@ export async function createOrder({ items, totals, details }: CreateOrderInput):
       delivery_fee: totals.deliveryFee,
       total: totals.total,
       total_pieces: totals.totalPieces,
-      source: 'web',
+      source,
+      inquiry_id: inquiryId ?? null,
     })
     .select('id, order_no')
     .single()
@@ -66,5 +78,5 @@ export async function createOrder({ items, totals, details }: CreateOrderInput):
     throw new Error(itemsError.message)
   }
 
-  return { orderNo: order.order_no, phone }
+  return { id: order.id, orderNo: order.order_no, phone }
 }
