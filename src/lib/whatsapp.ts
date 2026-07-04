@@ -34,8 +34,12 @@ export interface InquiryMessageInput {
   message?: string
 }
 
-/** Human-readable add-on summary for one line, or '' if the line has none. */
-function addonSummary(item: CartItem): string {
+/**
+ * Human-readable add-on summary for one line, or '' if the line has none.
+ * Exported so the cart drawer / checkout review step render the same summary
+ * text that ends up in the WhatsApp message.
+ */
+export function addonSummary(item: CartItem): string {
   const parts: string[] = []
   for (const addon of item.addons) {
     const detail = addon.detail

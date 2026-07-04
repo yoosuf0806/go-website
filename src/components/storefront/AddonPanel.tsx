@@ -25,7 +25,7 @@ export function toCartAddons(addons: CatalogAddon[], selection: AddonSelection):
   const result: CartAddon[] = []
 
   const topper = addons.find((a) => a.id === 'letter_topper')
-  if (topper && selection.letterTopper.enabled) {
+  if (topper && selection.letterTopper.enabled && selection.letterTopper.lines.some((l) => l.trim() !== '')) {
     result.push({
       id: topper.id,
       label: topper.label,

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { CatalogProduct, CatalogPackage, CatalogAddon } from '../../types/catalog'
 import { lineTotal, type CartItem } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
+import { useCartStore } from '../../stores/cart'
 import PackageSelector from './PackageSelector'
 import AddonPanel, { emptyAddonSelection, toCartAddons, type AddonSelection } from './AddonPanel'
 
@@ -11,10 +12,8 @@ interface ProductCardProps {
   addons: CatalogAddon[]
 }
 
-// Browse + configure a product: pick a package, pick add-ons, see the live
-// price. This is the storefront READ path (spec §10 Phase 4) — adding the
-// configured line to a real cart happens in Phase 5, once the cart store
-// exists.
+// Browse, configure, and add a product to the cart: pick a package, pick
+// add-ons, choose a box quantity, see the live price (spec §10 Phase 4/5).
 export default function ProductCard({ product, packages, addons }: ProductCardProps) {
   // Packages locked to the four standard options, minus slab if this product
   // doesn't offer it (spec §6.1).
@@ -25,6 +24,8 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
 
   const [packageId, setPackageId] = useState(availablePackages[0]?.id ?? '')
   const [addonSelection, setAddonSelection] = useState<AddonSelection>(emptyAddonSelection())
+  const [boxQty, setBoxQty] = useState(1)
+  const addItem = useCartStore((s) => s.addItem)
 
   const selectedPackage = availablePackages.find((p) => p.id === packageId) ?? availablePackages[0]
 
@@ -35,13 +36,19 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
         productName: product.name,
         packageLabel: selectedPackage.label,
         pieceCount: selectedPackage.pieceCount,
-        boxQty: 1,
+        boxQty,
         unitPrice: product.pricePerPiece,
         addons: toCartAddons(addons, addonSelection),
       }
     : null
 
   const soldOut = !product.inStock
+
+  function handleAddToCart() {
+    if (!previewItem) return
+    addItem(previewItem)
+    setBoxQty(1)
+  }
 
   return (
     <div className="flex flex-col rounded-lg border border-neutral-200 p-4">
@@ -83,10 +90,39 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
             <p className="text-sm font-semibold text-amber-700">
               {formatLKR(lineTotal(previewItem))}
               <span className="ml-1 font-normal text-neutral-400">
-                for {selectedPackage.label.toLowerCase()}
+                for {boxQty} × {selectedPackage.label.toLowerCase()}
               </span>
             </p>
           )}
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setBoxQty((q) => Math.max(1, q - 1))}
+                aria-label="Decrease box quantity"
+                className="h-8 w-8 rounded border border-neutral-300 text-sm"
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-sm">{boxQty}</span>
+              <button
+                type="button"
+                onClick={() => setBoxQty((q) => q + 1)}
+                aria-label="Increase box quantity"
+                className="h-8 w-8 rounded border border-neutral-300 text-sm"
+              >
+                +
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="flex-1 rounded-full bg-amber-600 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              Add to cart
+            </button>
+          </div>
         </div>
       )}
     </div>
