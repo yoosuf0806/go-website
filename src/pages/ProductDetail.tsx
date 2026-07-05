@@ -19,7 +19,7 @@ export default function ProductDetail() {
     return (
       <div className="mx-auto max-w-6xl px-4 py-20 text-center">
         <h1 className="font-display text-2xl">Brownie not found</h1>
-        <Link to="/shop" className="mt-4 inline-block text-sm text-wine hover:underline">
+        <Link to="/shop" className="mt-4 inline-block text-sm text-pink hover:underline">
           Back to all brownies
         </Link>
       </div>
@@ -32,55 +32,69 @@ export default function ProductDetail() {
     .slice(0, RELATED_COUNT)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-5xl px-6 py-8">
       {/* Breadcrumbs */}
-      <nav className="text-sm text-ink/50">
-        <Link to="/" className="hover:text-wine">
+      <nav className="flex items-center gap-2 text-[13px] text-neutral-500">
+        <Link to="/" className="font-bold text-pink hover:underline">
           Home
-        </Link>{' '}
-        /{' '}
-        <Link to="/shop" className="hover:text-wine">
+        </Link>
+        <span>/</span>
+        <Link to="/shop" className="font-bold text-pink hover:underline">
           All Brownies
-        </Link>{' '}
-        / <span className="text-ink/80">{product.name}</span>
+        </Link>
+        <span>/</span>
+        <span>{product.name}</span>
       </nav>
 
-      <div className="mt-6 grid grid-cols-1 gap-8 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-12 md:grid-cols-2">
         {/* Gallery */}
-        <div>
+        <div className="md:sticky md:top-28 md:self-start">
           <BrownieImage
             src={product.imageUrl}
             alt={product.name}
-            className="aspect-square w-full rounded-3xl"
+            className="aspect-square w-full rounded-[20px] bg-warmgray"
           />
         </div>
 
         {/* Info + configurator */}
         <div>
-          <h1 className="font-display text-3xl font-semibold">{product.name}</h1>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {['🌱 Vegetarian', '🍞 Freshly Baked', '🌙 Halal'].map((b) => (
+              <span
+                key={b}
+                className="rounded-full bg-warmgray px-3 py-1.5 text-xs font-semibold text-neutral-500"
+              >
+                {b}
+              </span>
+            ))}
+          </div>
+
+          <h1 className="text-[clamp(1.8rem,3vw,2.5rem)] leading-tight text-navy">{product.name}</h1>
           <div className="mt-2 flex items-center gap-2 text-sm">
-            <span className="text-wine" aria-hidden>
+            <span className="text-[#f4a100]" aria-hidden>
               ★★★★★
             </span>
-            <Link to="/#reviews" className="text-ink/50 hover:text-wine">
+            <Link to="/#reviews" className="text-neutral-400 hover:text-pink">
               Loved by our customers
             </Link>
           </div>
 
-          {product.description && (
-            <p className="mt-4 text-ink/70">{product.description}</p>
-          )}
-
-          <p className="mt-3 text-sm text-ink/50">
-            From {formatLKR(product.pricePerPiece * 9)} · {formatLKR(product.pricePerPiece)} per piece
-            {product.inStock && product.stockQty != null && (
-              <span className="ml-2">· only {product.stockQty} left today</span>
-            )}
+          <p className="mt-3 text-[1.8rem] font-bold text-navy">
+            {formatLKR(product.pricePerPiece)}
+            <span className="ml-1 text-base font-normal text-neutral-400">per piece</span>
           </p>
 
-          <div className="mt-6">
-            <ProductConfigurator product={product} packages={packages} addons={addons} />
-          </div>
+          {product.description && <p className="mt-3 text-sm leading-relaxed text-neutral-500">{product.description}</p>}
+
+          <ul className="mt-4 flex flex-col gap-2 text-[13px] text-neutral-500">
+            <li>📅 Schedule your delivery date in the cart</li>
+            <li>🚚 Islandwide delivery available</li>
+            <li>💬 Add a free gift message at checkout</li>
+          </ul>
+
+          <hr className="my-6 border-neutral-200" />
+
+          <ProductConfigurator product={product} packages={packages} addons={addons} />
 
           <div className="mt-8">
             <Accordion
@@ -109,8 +123,8 @@ export default function ProductDetail() {
 
       {/* Related */}
       {related.length > 0 && (
-        <section className="mt-16">
-          <h2 className="font-display text-2xl font-semibold">You may also like</h2>
+        <section className="mt-16 rounded-3xl bg-warmgray p-8">
+          <h2 className="text-2xl text-navy">You may also like</h2>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {related.map((p) => (
               <ProductTile key={p.id} product={p} packages={packages} />

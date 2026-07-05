@@ -8,9 +8,8 @@ interface ProductTileProps {
   packages: CatalogPackage[]
 }
 
-// Presentational catalogue card (browniegod-style): image, name, "From Rs. X".
-// Clicking opens the product detail page where configuration happens — the card
-// itself no longer configures (cleaner flow + each product gets its own URL).
+// Reference-style catalogue card: white card, image with hover zoom + "View
+// Product" overlay, brand tag, name, and "From LKR X". Links to the product page.
 export default function ProductTile({ product, packages }: ProductTileProps) {
   const available = packages.filter((p) => !p.isSlab || product.isSlabAvailable)
   const minPieces = available.reduce((m, p) => Math.min(m, p.pieceCount), Infinity)
@@ -18,27 +17,41 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
   const soldOut = !product.inStock
 
   return (
-    <Link to={`/shop/${product.slug}`} className="group block">
-      <div className="relative overflow-hidden rounded-2xl">
+    <Link
+      to={`/shop/${product.slug}`}
+      className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white transition-all hover:-translate-y-1.5 hover:shadow-xl"
+    >
+      <div className="relative aspect-square overflow-hidden bg-warmgray">
         <BrownieImage
           src={product.imageUrl}
           alt={product.name}
-          className="aspect-square w-full transition-transform group-hover:scale-[1.03]"
+          className="h-full w-full transition-transform duration-500 group-hover:scale-105"
         />
         {soldOut ? (
-          <span className="absolute left-3 top-3 rounded-full bg-ink/80 px-2 py-0.5 text-xs text-cream">
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-navy px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
             Sold out
           </span>
         ) : (
           product.isSlabAvailable && (
-            <span className="absolute left-3 top-3 rounded-full bg-cream/90 px-2 py-0.5 text-xs font-medium text-wine">
+            <span className="absolute right-2.5 top-2.5 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-navy">
               Customise
             </span>
           )
         )}
+        <div className="absolute inset-0 flex items-center justify-center bg-navy/45 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="rounded-full bg-white px-6 py-2.5 text-[13px] font-bold text-navy">
+            View Product
+          </span>
+        </div>
       </div>
-      <h3 className="mt-2 font-display text-lg">{product.name}</h3>
-      <p className="text-sm text-ink/60">From {formatLKR(fromPrice)}</p>
+      <div className="px-4 pb-4 pt-3.5">
+        <p className="text-[10px] uppercase tracking-[0.06em] text-neutral-400">Golden Oven</p>
+        <h3 className="mt-0.5 font-display text-[0.95rem] text-navy">{product.name}</h3>
+        <p className="mt-1.5 text-sm font-bold text-navy">
+          From {formatLKR(fromPrice)}
+          <span className="ml-1 font-normal text-neutral-400">/ box</span>
+        </p>
+      </div>
     </Link>
   )
 }

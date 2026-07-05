@@ -19,7 +19,7 @@ export default function Corporate() {
       <h1 className="font-display text-3xl font-semibold">Corporate &amp; Weddings</h1>
 
       {noneEnabled && (
-        <p className="mt-4 text-ink/60">
+        <p className="mt-4 text-neutral-500">
           Bulk enquiries are currently closed. Please check back soon.
         </p>
       )}
@@ -72,14 +72,14 @@ function Hero({
   onCta: () => void
 }) {
   return (
-    <section className="mt-8 rounded-3xl bg-blush-100 p-8 sm:p-12">
-      <p className="text-xs font-medium uppercase tracking-widest text-wine">{eyebrow}</p>
+    <section className="mt-8 rounded-3xl bg-pink-light p-8 sm:p-12">
+      <p className="text-xs font-medium uppercase tracking-widest text-pink">{eyebrow}</p>
       <h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">{title}</h2>
-      <p className="mt-2 max-w-2xl text-ink/70">{body}</p>
+      <p className="mt-2 max-w-2xl text-neutral-500">{body}</p>
       <button
         type="button"
         onClick={onCta}
-        className="mt-5 rounded-full bg-ink px-7 py-3 text-sm font-semibold text-cream hover:bg-wine"
+        className="mt-5 rounded-full bg-pink px-7 py-3 text-sm font-bold text-white hover:bg-pink-dark"
       >
         Get Your Quotation
       </button>

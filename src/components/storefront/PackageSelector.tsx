@@ -1,7 +1,7 @@
 import type { CatalogPackage } from '../../types/catalog'
 
-// Package picker keyed by package.id — never array index (spec §6.1: index-based
-// selection was a proven bug source in the prototype).
+// Package picker keyed by package.id — never array index (spec §6.1). Reference
+// "package card" style: label + piece sublabel, pink when active.
 interface PackageSelectorProps {
   packages: CatalogPackage[]
   selectedId: string
@@ -16,7 +16,7 @@ export default function PackageSelector({
   disabled,
 }: PackageSelectorProps) {
   return (
-    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Package">
+    <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Package">
       {packages.map((pkg) => {
         const selected = pkg.id === selectedId
         return (
@@ -28,13 +28,16 @@ export default function PackageSelector({
             aria-checked={selected}
             disabled={disabled}
             onClick={() => onSelect(pkg.id)}
-            className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`flex flex-col items-center gap-0.5 rounded-[10px] border-2 px-4 py-2.5 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               selected
-                ? 'border-ink bg-ink text-cream'
-                : 'border-ink/20 bg-white text-ink/80 hover:border-wine'
+                ? 'border-pink bg-pink-light text-pink'
+                : 'border-neutral-200 bg-white text-navy hover:border-pink'
             }`}
           >
             {pkg.label}
+            <span className={`text-[11px] font-medium ${selected ? 'text-pink' : 'text-neutral-400'}`}>
+              {pkg.pieceCount} pcs
+            </span>
           </button>
         )
       })}

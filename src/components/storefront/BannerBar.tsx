@@ -19,7 +19,7 @@ export default function BannerBar({ banner }: BannerBarProps) {
   if (!isBannerActive(banner)) return null
 
   return (
-    <div className="bg-wine px-4 py-2 text-center text-sm font-medium text-cream">
+    <div className="bg-navy px-4 py-2 text-center text-sm font-medium text-white">
       {banner.text}
     </div>
   )

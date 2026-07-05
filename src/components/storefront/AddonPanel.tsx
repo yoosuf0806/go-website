@@ -184,8 +184,8 @@ export default function AddonPanel({
                   onClick={() => onChange({ ...value, giftRibbon: { ...value.giftRibbon, color } })}
                   className={`rounded-full border px-3 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
                     value.giftRibbon.color === color
-                      ? 'border-ink bg-ink text-cream'
-                      : 'border-ink/20 bg-white text-ink/80 hover:border-wine'
+                      ? 'border-pink bg-pink-light text-pink'
+                      : 'border-neutral-200 bg-white text-navy hover:border-pink'
                   }`}
                 >
                   {color}

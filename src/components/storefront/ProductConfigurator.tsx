@@ -49,7 +49,7 @@ export default function ProductConfigurator({
 
   if (!product.inStock) {
     return (
-      <div className="rounded-2xl bg-blush-50 p-4 text-sm text-ink/70">
+      <div className="rounded-2xl bg-pink-light p-4 text-sm text-neutral-500">
         This flavour is sold out today — check back tomorrow or explore other brownies below.
       </div>
     )
@@ -67,8 +67,8 @@ export default function ProductConfigurator({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm font-medium text-ink/70">Box size</p>
-        <div className="mt-2">
+        <p className="text-[13px] font-bold text-navy">Choose your package</p>
+        <div className="mt-2.5">
           <PackageSelector
             packages={availablePackages}
             selectedId={selectedPackage.id}
@@ -85,43 +85,48 @@ export default function ProductConfigurator({
         onChange={setAddonSelection}
       />
 
-      {previewItem && (
-        <p className="font-display text-2xl">
-          {formatLKR(lineTotal(previewItem))}
-          <span className="ml-2 align-middle text-sm font-normal text-ink/50">
-            for {boxQty} × {selectedPackage.label.toLowerCase()}
+      {/* Itemised summary */}
+      <div className="rounded-2xl bg-warmgray px-5 py-4">
+        <div className="flex items-center justify-between border-t border-neutral-200 pt-3 first:border-t-0 first:pt-0">
+          <span className="text-[13px] text-neutral-500">
+            {boxQty === 1 ? '1 box' : `${boxQty} boxes`} · {selectedPackage.pieceCount * boxQty} pcs
           </span>
-        </p>
-      )}
+          <span className="font-display text-[1.3rem] text-navy">
+            {previewItem ? formatLKR(lineTotal(previewItem)) : '—'}
+          </span>
+        </div>
+      </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between rounded-xl bg-warmgray px-4 py-3">
+        <span className="text-[13px] font-bold text-navy">How many boxes?</span>
+        <div className="flex items-center overflow-hidden rounded-full border-2 border-neutral-200 bg-white">
           <button
             type="button"
             onClick={() => setBoxQty((q) => Math.max(1, q - 1))}
             aria-label="Decrease box quantity"
-            className="h-10 w-10 rounded-full border border-ink/20"
+            className="flex h-9 w-9 items-center justify-center text-xl font-bold text-navy hover:bg-pink-light hover:text-pink"
           >
             −
           </button>
-          <span className="w-6 text-center">{boxQty}</span>
+          <span className="min-w-9 text-center font-bold text-navy">{boxQty}</span>
           <button
             type="button"
             onClick={() => setBoxQty((q) => q + 1)}
             aria-label="Increase box quantity"
-            className="h-10 w-10 rounded-full border border-ink/20"
+            className="flex h-9 w-9 items-center justify-center text-xl font-bold text-navy hover:bg-pink-light hover:text-pink"
           >
             +
           </button>
         </div>
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          className="flex-1 rounded-full bg-ink py-3 text-sm font-semibold text-cream hover:bg-wine"
-        >
-          Add to cart
-        </button>
       </div>
+
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark"
+      >
+        Add to Cart 🛒
+      </button>
     </div>
   )
 }

@@ -13,7 +13,7 @@ export default function BrownieImage({ src, alt, className = '' }: BrownieImageP
   }
   return (
     <div
-      className={`flex items-center justify-center bg-gradient-to-br from-blush-100 to-blush-200 ${className}`}
+      className={`flex items-center justify-center bg-gradient-to-br from-pink-light to-[#f7d0da] ${className}`}
       aria-label={alt}
       role="img"
     >
