@@ -1,11 +1,12 @@
 // Inquiry insert (spec §6.6). The storefront's second runtime write (after the
-// order insert). Anon-key INSERT only — RLS permits insert but not select.
+// order). Anon-key INSERT only — RLS permits insert but NOT select, so we must
+// not use .select()/RETURNING here (it would be blocked). The caller only needs
+// the normalised phone for the WhatsApp deep link, not the new row's id.
 import { supabase } from './supabase'
 import type { InquiryForm } from '../schemas/inquiry'
 import { normalizePhone } from './format'
 
 export interface CreatedInquiry {
-  id: string
   phone: string
 }
 
@@ -16,23 +17,19 @@ export async function createInquiry(form: InquiryForm): Promise<CreatedInquiry> 
   const guestCount =
     typeof form.guestCount === 'number' && Number.isFinite(form.guestCount) ? form.guestCount : null
 
-  const { data, error } = await supabase
-    .from('inquiries')
-    .insert({
-      category: form.category,
-      name: form.name,
-      phone,
-      email: form.email || null,
-      event_date: form.eventDate || null,
-      guest_count: guestCount,
-      message: form.message || null,
-    })
-    .select('id')
-    .single()
+  const { error } = await supabase.from('inquiries').insert({
+    category: form.category,
+    name: form.name,
+    phone,
+    email: form.email || null,
+    event_date: form.eventDate || null,
+    guest_count: guestCount,
+    message: form.message || null,
+  })
 
-  if (error || !data) {
-    throw new Error(error?.message ?? 'Failed to submit inquiry')
+  if (error) {
+    throw new Error(error.message)
   }
 
-  return { id: data.id, phone }
+  return { phone }
 }
