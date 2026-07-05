@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useCartStore, cartLineKey } from './cart'
+import { useCartStore, cartLineKey, repriceLine, type CartLine } from './cart'
+import { products, packages } from '../data/catalog'
 import type { CartItem } from '../lib/pricing'
 
 function makeItem(overrides: Partial<CartItem> = {}): CartItem {
@@ -76,5 +77,37 @@ describe('cart store (spec §8)', () => {
     useCartStore.getState().addItem(makeItem())
     useCartStore.getState().clear()
     expect(useCartStore.getState().items).toHaveLength(0)
+  })
+})
+
+describe('repriceLine (stale-price guard, PR review)', () => {
+  const product = products[0]
+  const pkg = packages[0]
+
+  function persistedLine(overrides: Partial<CartLine> = {}): CartLine {
+    const base = {
+      productId: product.id,
+      packageId: pkg.id,
+      productName: 'Old Name',
+      packageLabel: 'Old Label',
+      pieceCount: 999,
+      boxQty: 2,
+      unitPrice: 1, // deliberately stale
+      addons: [],
+    }
+    return { ...base, key: cartLineKey(base.productId, base.packageId, base.addons), ...overrides }
+  }
+
+  it('refreshes price/label/pieces from the current catalog, keeping box qty', () => {
+    const repriced = repriceLine(persistedLine())
+    expect(repriced).not.toBeNull()
+    expect(repriced!.unitPrice).toBe(product.pricePerPiece)
+    expect(repriced!.productName).toBe(product.name)
+    expect(repriced!.pieceCount).toBe(pkg.pieceCount)
+    expect(repriced!.boxQty).toBe(2)
+  })
+
+  it('drops a line whose product no longer exists', () => {
+    expect(repriceLine(persistedLine({ productId: 'gone-forever' }))).toBeNull()
   })
 })

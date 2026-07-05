@@ -2,8 +2,10 @@
 //
 // The storefront reads THIS, never the database, while a customer browses
 // (spec §2). The snapshot script (scripts/snapshot.ts) produces it — from
-// Supabase on a real build, or from seed data locally. All fields are camelCase
-// (app-facing), converted from the snake_case DB columns during the snapshot.
+// Supabase on a real build, or from seed data locally. The snapshot converts
+// DB *columns* to camelCase (app-facing). Raw JSONB blobs stored as a unit —
+// add-on `config` and the `settings` values — are passed through verbatim, so
+// they keep their snake_case DB keys (e.g. max_chars_per_line, starts_at).
 
 export interface CatalogCategory {
   id: string
@@ -35,13 +37,15 @@ export interface CatalogPackage {
   sortOrder: number
 }
 
+// Add-on `config` blobs keep their snake_case DB keys (stored as a JSONB unit,
+// not column-mapped by the snapshot). Match the shapes seeded in seed-data.ts.
 export interface LetterTopperConfig {
   lines: number
-  maxCharsPerLine: number
-  slabOnly: boolean
+  max_chars_per_line: number
+  slab_only: boolean
 }
 export interface GiftMessageConfig {
-  maxChars: number
+  max_chars: number
 }
 export interface GiftRibbonConfig {
   colors: string[]

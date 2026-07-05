@@ -80,6 +80,12 @@ export default function AddonPanel({
   const message = addons.find((a) => a.id === 'gift_message')
   const ribbon = addons.find((a) => a.id === 'gift_ribbon')
 
+  // config is admin-editable JSON, so never trust its shape — a malformed
+  // `colors` (non-array) would crash the storefront on .map (PR review).
+  const ribbonColors = ribbon && Array.isArray((ribbon.config as GiftRibbonConfig).colors)
+    ? (ribbon.config as GiftRibbonConfig).colors
+    : []
+
   const showTopper = topper && isSlabPackage && productAllowsLetterTopper
 
   return (
@@ -170,7 +176,7 @@ export default function AddonPanel({
           </label>
           {value.giftRibbon.enabled && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {(ribbon.config as GiftRibbonConfig).colors.map((color) => (
+              {ribbonColors.map((color) => (
                 <button
                   key={color}
                   type="button"
