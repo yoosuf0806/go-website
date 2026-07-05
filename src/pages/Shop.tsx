@@ -12,21 +12,18 @@ export default function Shop() {
     ? products.filter((p) => p.categoryId === categoryId)
     : products
 
+  const chip = (active: boolean) =>
+    `rounded-full border px-4 py-1.5 text-sm transition-colors ${
+      active ? 'border-ink bg-ink text-cream' : 'border-ink/20 bg-white text-ink/80 hover:border-wine'
+    }`
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
-      <h1 className="text-2xl font-semibold">Shop</h1>
-      <p className="mt-1 text-sm text-neutral-500">{products.length} brownies</p>
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <h1 className="font-display text-3xl font-semibold">All Brownies</h1>
+      <p className="mt-1 text-sm text-ink/60">{products.length} handmade flavours, baked to order</p>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setCategoryId(null)}
-          className={`rounded-full border px-3 py-1.5 text-sm ${
-            categoryId === null
-              ? 'border-amber-600 bg-amber-600 text-white'
-              : 'border-neutral-300 bg-white text-neutral-700 hover:border-amber-400'
-          }`}
-        >
+        <button type="button" onClick={() => setCategoryId(null)} className={chip(categoryId === null)}>
           All
         </button>
         {categories.map((category) => (
@@ -34,11 +31,7 @@ export default function Shop() {
             key={category.id}
             type="button"
             onClick={() => setCategoryId(category.id)}
-            className={`rounded-full border px-3 py-1.5 text-sm ${
-              categoryId === category.id
-                ? 'border-amber-600 bg-amber-600 text-white'
-                : 'border-neutral-300 bg-white text-neutral-700 hover:border-amber-400'
-            }`}
+            className={chip(categoryId === category.id)}
           >
             {category.name}
           </button>
@@ -46,9 +39,9 @@ export default function Shop() {
       </div>
 
       {visibleProducts.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-500">No brownies in this category yet.</p>
+        <p className="mt-8 text-sm text-ink/60">No brownies in this category yet.</p>
       ) : (
-        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visibleProducts.map((product) => (
             <li key={product.id}>
               <ProductCard product={product} packages={packages} addons={addons} />

@@ -30,8 +30,8 @@ export default function PackageSelector({
             onClick={() => onSelect(pkg.id)}
             className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               selected
-                ? 'border-amber-600 bg-amber-600 text-white'
-                : 'border-neutral-300 bg-white text-neutral-700 hover:border-amber-400'
+                ? 'border-ink bg-ink text-cream'
+                : 'border-ink/20 bg-white text-ink/80 hover:border-wine'
             }`}
           >
             {pkg.label}

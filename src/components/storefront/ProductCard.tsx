@@ -3,6 +3,7 @@ import type { CatalogProduct, CatalogPackage, CatalogAddon } from '../../types/c
 import { lineTotal, type CartItem } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { useCartStore } from '../../stores/cart'
+import BrownieImage from './BrownieImage'
 import PackageSelector from './PackageSelector'
 import AddonPanel, { emptyAddonSelection, toCartAddons, type AddonSelection } from './AddonPanel'
 
@@ -51,26 +52,32 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
   }
 
   return (
-    <div className="flex flex-col rounded-lg border border-neutral-200 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="font-medium">{product.name}</h2>
+    <div className="flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-ink/10">
+      <div className="relative">
+        <BrownieImage
+          src={product.imageUrl}
+          alt={product.name}
+          className="aspect-square w-full"
+        />
         {soldOut && (
-          <span className="shrink-0 rounded bg-neutral-200 px-2 py-0.5 text-xs text-neutral-600">
+          <span className="absolute left-3 top-3 rounded-full bg-ink/80 px-2 py-0.5 text-xs text-cream">
             Sold out
           </span>
         )}
       </div>
 
-      {product.description && (
-        <p className="mt-1 text-sm text-neutral-600">{product.description}</p>
-      )}
-
-      <p className="mt-2 text-sm font-semibold">
-        {formatLKR(product.pricePerPiece)} / piece
-        {!soldOut && product.stockQty != null && (
-          <span className="ml-2 font-normal text-neutral-500">Only {product.stockQty} left today</span>
+      <div className="flex flex-col p-4">
+        <h2 className="font-display text-lg">{product.name}</h2>
+        {product.description && (
+          <p className="mt-1 text-sm text-ink/60">{product.description}</p>
         )}
-      </p>
+
+        <p className="mt-2 text-sm font-semibold">
+          {formatLKR(product.pricePerPiece)} / piece
+          {!soldOut && product.stockQty != null && (
+            <span className="ml-2 font-normal text-ink/50">Only {product.stockQty} left today</span>
+          )}
+        </p>
 
       {!soldOut && selectedPackage && (
         <div className="mt-4 flex flex-col gap-4">
@@ -87,9 +94,9 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
             onChange={setAddonSelection}
           />
           {previewItem && (
-            <p className="text-sm font-semibold text-amber-700">
+            <p className="text-sm font-semibold text-wine">
               {formatLKR(lineTotal(previewItem))}
-              <span className="ml-1 font-normal text-neutral-400">
+              <span className="ml-1 font-normal text-ink/40">
                 for {boxQty} × {selectedPackage.label.toLowerCase()}
               </span>
             </p>
@@ -101,7 +108,7 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
                 type="button"
                 onClick={() => setBoxQty((q) => Math.max(1, q - 1))}
                 aria-label="Decrease box quantity"
-                className="h-8 w-8 rounded border border-neutral-300 text-sm"
+                className="h-8 w-8 rounded-full border border-ink/20 text-sm"
               >
                 −
               </button>
@@ -110,7 +117,7 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
                 type="button"
                 onClick={() => setBoxQty((q) => q + 1)}
                 aria-label="Increase box quantity"
-                className="h-8 w-8 rounded border border-neutral-300 text-sm"
+                className="h-8 w-8 rounded-full border border-ink/20 text-sm"
               >
                 +
               </button>
@@ -118,13 +125,14 @@ export default function ProductCard({ product, packages, addons }: ProductCardPr
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex-1 rounded-full bg-amber-600 py-2 text-sm font-medium text-white hover:bg-amber-700"
+              className="flex-1 rounded-full bg-ink py-2 text-sm font-medium text-cream hover:bg-wine"
             >
               Add to cart
             </button>
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

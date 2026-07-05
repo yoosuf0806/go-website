@@ -15,11 +15,11 @@ export default function Corporate() {
   const noneEnabled = !corporate_section && !wedding_section
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
-      <h1 className="text-2xl font-semibold">Corporate &amp; Weddings</h1>
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <h1 className="font-display text-3xl font-semibold">Corporate &amp; Weddings</h1>
 
       {noneEnabled && (
-        <p className="mt-4 text-neutral-600">
+        <p className="mt-4 text-ink/60">
           Bulk enquiries are currently closed. Please check back soon.
         </p>
       )}
@@ -72,14 +72,14 @@ function Hero({
   onCta: () => void
 }) {
   return (
-    <section className="mt-8 rounded-lg bg-pink-50 p-8">
-      <p className="text-sm font-medium uppercase tracking-wide text-pink-600">{eyebrow}</p>
-      <h2 className="mt-2 text-xl font-semibold">{title}</h2>
-      <p className="mt-2 max-w-2xl text-neutral-600">{body}</p>
+    <section className="mt-8 rounded-3xl bg-blush-100 p-8 sm:p-12">
+      <p className="text-xs font-medium uppercase tracking-widest text-wine">{eyebrow}</p>
+      <h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">{title}</h2>
+      <p className="mt-2 max-w-2xl text-ink/70">{body}</p>
       <button
         type="button"
         onClick={onCta}
-        className="mt-4 rounded-full bg-pink-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-pink-700"
+        className="mt-5 rounded-full bg-ink px-7 py-3 text-sm font-semibold text-cream hover:bg-wine"
       >
         Get Your Quotation
       </button>

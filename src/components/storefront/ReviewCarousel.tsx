@@ -11,19 +11,22 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
   if (reviews.length === 0) return null
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
       {reviews.map((review) => (
-        <div
+        <figure
           key={review.id}
-          className="w-72 shrink-0 rounded-lg border border-neutral-200 p-4"
+          className="flex w-72 shrink-0 flex-col rounded-2xl bg-blush-50 p-5"
         >
-          <div className="text-amber-500" aria-label={`${review.rating} out of 5 stars`}>
+          <div className="text-wine" aria-label={`${review.rating} out of 5 stars`}>
             {'★'.repeat(review.rating)}
-            {'☆'.repeat(Math.max(0, 5 - review.rating))}
+            <span className="text-blush-300">{'★'.repeat(Math.max(0, 5 - review.rating))}</span>
           </div>
-          <p className="mt-2 text-sm text-neutral-700">{review.body}</p>
-          <p className="mt-2 text-sm font-medium">{review.author}</p>
-        </div>
+          <blockquote className="mt-3 flex-1 text-sm text-ink/80">“{review.body}”</blockquote>
+          <figcaption className="mt-4 text-sm font-semibold">
+            {review.author}
+            <span className="ml-2 font-normal text-ink/50">Verified customer</span>
+          </figcaption>
+        </figure>
       ))}
     </div>
   )

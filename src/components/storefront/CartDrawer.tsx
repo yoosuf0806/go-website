@@ -108,7 +108,7 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
             <button
               type="button"
               onClick={onCheckout}
-              className="mt-4 w-full rounded-full bg-amber-600 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
+              className="mt-4 w-full rounded-full bg-ink py-2.5 text-sm font-medium text-cream hover:bg-wine"
             >
               Checkout
             </button>

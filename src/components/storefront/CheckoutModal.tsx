@@ -96,7 +96,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="mt-6 rounded-full bg-amber-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
+              className="mt-6 rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-cream hover:bg-wine"
             >
               Done
             </button>
@@ -151,7 +151,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
             <button
               type="button"
               onClick={handleContinue}
-              className="mt-6 w-full rounded-full bg-amber-600 py-2.5 text-sm font-medium text-white hover:bg-amber-700"
+              className="mt-6 w-full rounded-full bg-ink py-2.5 text-sm font-medium text-cream hover:bg-wine"
             >
               Continue to review
             </button>
@@ -207,7 +207,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                 type="button"
                 onClick={handleConfirm}
                 disabled={mutation.isPending}
-                className="flex-1 rounded-full bg-amber-600 py-2.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                className="flex-1 rounded-full bg-ink py-2.5 text-sm font-medium text-cream hover:bg-wine disabled:opacity-50"
               >
                 {mutation.isPending
                   ? 'Confirming…'
