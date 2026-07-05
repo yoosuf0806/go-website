@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { categories, products, packages, addons } from '../data/catalog'
-import ProductCard from '../components/storefront/ProductCard'
+import { categories, products, packages } from '../data/catalog'
+import ProductTile from '../components/storefront/ProductTile'
 
 // Shop — full product grid reading from the build-time snapshot (spec §2, §10
 // Phase 4). Category filter is client-side only; the underlying data never
@@ -41,10 +41,10 @@ export default function Shop() {
       {visibleProducts.length === 0 ? (
         <p className="mt-8 text-sm text-ink/60">No brownies in this category yet.</p>
       ) : (
-        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
           {visibleProducts.map((product) => (
             <li key={product.id}>
-              <ProductCard product={product} packages={packages} addons={addons} />
+              <ProductTile product={product} packages={packages} />
             </li>
           ))}
         </ul>

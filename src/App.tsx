@@ -4,6 +4,7 @@ import StorefrontLayout from './components/storefront/StorefrontLayout'
 import ProtectedRoute from './router/ProtectedRoute'
 import Home from './pages/Home'
 import Shop from './pages/Shop'
+import ProductDetail from './pages/ProductDetail'
 import Corporate from './pages/Corporate'
 import NotFound from './pages/NotFound'
 
@@ -36,6 +37,7 @@ export default function App() {
       <Route element={<StorefrontLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/:slug" element={<ProductDetail />} />
         <Route path="/corporate" element={<Corporate />} />
       </Route>
 

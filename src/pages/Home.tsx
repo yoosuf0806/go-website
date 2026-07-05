@@ -51,7 +51,7 @@ export default function Home() {
             {hotPicks.map((product) => (
               <Link
                 key={product.id}
-                to="/shop"
+                to={`/shop/${product.slug}`}
                 className="group w-48 shrink-0"
               >
                 <div className="relative overflow-hidden rounded-2xl">
@@ -86,7 +86,7 @@ export default function Home() {
           <p className="mt-1 text-sm text-ink/60">Available across all our brownie boxes</p>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {flavours.map((product) => (
-              <Link key={product.id} to="/shop" className="group">
+              <Link key={product.id} to={`/shop/${product.slug}`} className="group">
                 <BrownieImage
                   src={product.imageUrl}
                   alt={product.name}
