@@ -1,25 +1,22 @@
 const MESSAGES = [
-  'Just dropped: July Brownie Mix 🍫',
-  'Handmade in Sri Lanka',
-  'Order on WhatsApp — no online payment needed',
-  'Free delivery over Rs. 10,000',
-  'Personalise a letter-topper slab 🎂',
+  '🚚 Next day delivery available!',
+  '🍰 Islandwide delivery across Sri Lanka',
+  "🎁 Gift something they'll actually love",
+  '🍫 Freshly baked to order, never pre-made',
+  '♥️ 100% Halal Certified',
 ]
 
-// Slim scrolling promo strip at the very top of the storefront (browniegod-style
-// ticker). Doubled content + 50% marquee gives a seamless loop; pauses under
+// Slim scrolling promo strip at the very top (reference-matched pink marquee).
+// Doubled content + 50% marquee gives a seamless loop; pauses under
 // prefers-reduced-motion (see index.css).
 export default function PromoTicker() {
   const row = [...MESSAGES, ...MESSAGES]
   return (
-    <div className="overflow-hidden border-b border-ink/10 bg-ink py-2 text-xs font-medium text-cream">
-      <div className="flex w-max animate-marquee gap-10 whitespace-nowrap pr-10">
+    <div className="overflow-hidden bg-pink py-2.5 text-[13px] font-semibold tracking-wide text-white">
+      <div className="flex w-max animate-marquee whitespace-nowrap">
         {row.map((msg, i) => (
-          <span key={i} className="flex items-center gap-10">
+          <span key={i} className="px-12">
             {msg}
-            <span aria-hidden className="text-blush-300">
-              ✦
-            </span>
           </span>
         ))}
       </div>

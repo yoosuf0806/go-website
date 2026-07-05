@@ -4,12 +4,12 @@
 
 @layer base {
   body {
-    @apply bg-cream font-sans text-ink antialiased;
+    @apply bg-white font-sans text-navy antialiased;
   }
   h1,
   h2,
   h3 {
-    @apply font-display;
+    @apply font-display font-normal;
   }
 }
 

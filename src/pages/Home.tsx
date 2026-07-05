@@ -1,183 +1,228 @@
 import { Link } from 'react-router-dom'
-import { products, featuredReviews, settings } from '../data/catalog'
-import { formatLKR } from '../lib/format'
-import BrownieImage from '../components/storefront/BrownieImage'
-import ReviewCarousel from '../components/storefront/ReviewCarousel'
-import FaqSection from '../components/storefront/FaqSection'
+import { featuredReviews, settings } from '../data/catalog'
+import Slideshow from '../components/storefront/Slideshow'
 
-// Home — premium brownie-gifting landing page (browniegod-inspired). Hero,
-// hot picks, flavour grid, editorial block, promise row, reviews, and FAQ, all
-// reading from the build-time catalog snapshot.
+// Home — reference-matched landing page: hero, trust bar, slideshow, occasion
+// grid, CTA, how-it-works, testimonials, and a badge strip. Content is hard-
+// coded here for now; it becomes admin-editable in the Content CMS chunk.
 export default function Home() {
-  const hotPicks = products.slice(0, 5)
-  const flavours = products.slice(0, 5)
-  const { corporate_section, wedding_section, reviews_section } = settings.features
+  const { reviews_section } = settings.features
 
   return (
     <div>
-      {/* Hero */}
-      <section className="bg-blush-100 px-4 py-6 sm:py-10">
-        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl">
-          <div className="aspect-[16/10] w-full bg-gradient-to-br from-wine to-wine-900 sm:aspect-[16/7]">
-            <BrownieImage
-              src={products[0]?.imageUrl ?? null}
-              alt="Signature brownie box"
-              className="h-full w-full opacity-90 mix-blend-luminosity"
-            />
-          </div>
-          <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-ink/70 to-transparent p-6 sm:p-10">
-            <h1 className="max-w-lg font-display text-3xl font-semibold text-cream sm:text-5xl">
-              Brownies made <em className="not-italic text-blush-200">for them</em>
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-cream/85 sm:text-base">
-              Fudgy, made-to-order, and delivered across Sri Lanka. A gift that goes beyond “thinking
-              of you”.
-            </p>
+      {/* HERO */}
+      <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-6 py-16 md:grid-cols-2">
+        <div>
+          <h1 className="text-[clamp(2.8rem,5vw,4.2rem)] leading-[1.1] text-navy">
+            Gift something they'll <em className="not-italic text-pink">actually</em> love.
+          </h1>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-500">
+            Freshly baked brownies. Islandwide delivery. Made to order — for every little celebration
+            worth sharing.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-4">
             <Link
               to="/shop"
-              className="mt-5 inline-block w-fit rounded-full bg-cream px-6 py-3 text-sm font-semibold text-ink transition-colors hover:bg-white"
+              className="rounded-full bg-pink px-8 py-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-pink-dark"
             >
-              Shop now
+              Shop All Brownies
             </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Hot picks */}
-      {hotPicks.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-2xl font-semibold">Hot Picks 🔥</h2>
-          <div className="mt-6 flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
-            {hotPicks.map((product) => (
-              <Link
-                key={product.id}
-                to={`/shop/${product.slug}`}
-                className="group w-48 shrink-0"
-              >
-                <div className="relative overflow-hidden rounded-2xl">
-                  <BrownieImage
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="aspect-square w-full transition-transform group-hover:scale-105"
-                  />
-                  {!product.inStock && (
-                    <span className="absolute left-2 top-2 rounded-full bg-ink/80 px-2 py-0.5 text-xs text-cream">
-                      Sold out
-                    </span>
-                  )}
-                  {product.isSlabAvailable && product.inStock && (
-                    <span className="absolute left-2 top-2 rounded-full bg-cream/90 px-2 py-0.5 text-xs font-medium text-wine">
-                      Customise
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm font-medium">{product.name}</p>
-                <p className="text-sm text-ink/60">From {formatLKR(product.pricePerPiece * 9)}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Flavour grid */}
-      {flavours.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-2xl font-semibold">Meet Our Brownie Flavours</h2>
-          <p className="mt-1 text-sm text-ink/60">Available across all our brownie boxes</p>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {flavours.map((product) => (
-              <Link key={product.id} to={`/shop/${product.slug}`} className="group">
-                <BrownieImage
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="aspect-square w-full rounded-2xl transition-transform group-hover:scale-[1.03]"
-                />
-                <p className="mt-2 text-sm font-medium">{product.name}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Editorial block */}
-      <section className="px-4 py-12">
-        <div className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl md:grid-cols-2">
-          <BrownieImage
-            src={products[1]?.imageUrl ?? null}
-            alt="Freshly baked brownies"
-            className="min-h-[240px] w-full md:min-h-full"
-          />
-          <div className="flex flex-col justify-center bg-wine p-8 text-cream sm:p-12">
-            <p className="text-xs uppercase tracking-widest text-blush-200">
-              The island’s favourite brownies
-            </p>
-            <h2 className="mt-3 font-display text-2xl font-semibold sm:text-3xl">
-              A gift that goes beyond{' '}
-              <em className="text-blush-200">“thinking of you”</em> — it’s made for them.
-            </h2>
-            <Link
-              to="/shop"
-              className="mt-6 inline-block w-fit rounded-full bg-cream px-6 py-3 text-sm font-semibold text-wine hover:bg-white"
-            >
-              Explore the collection
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Promise row */}
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-          <Promise title="Made Personal" body="Every detail speaks directly to the moment." />
-          <Promise title="Made Fresh" body="Only the finest ingredients, baked to order." />
-          <Promise title="Made to Gift" body="Thoughtfully packaged and ready to impress." />
-          <Promise title="Made Inclusive" body="Crafted to celebrate every culture and occasion." />
-        </div>
-      </section>
-
-      {/* Corporate / wedding promo */}
-      {(corporate_section || wedding_section) && (
-        <section className="px-4 py-12">
-          <div className="mx-auto max-w-6xl rounded-3xl bg-blush-100 p-8 text-center sm:p-14">
-            <p className="text-sm font-medium text-wine">Best seller</p>
-            <h2 className="mt-2 font-display text-2xl font-semibold sm:text-4xl">
-              The Original, The Only One
-            </h2>
-            <p className="mx-auto mt-3 max-w-md text-sm text-ink/70">
-              Our custom letter-topper slab is the signature gift for messages that matter — for
-              offices, weddings, and everything in between.
-            </p>
             <Link
               to="/corporate"
-              className="mt-6 inline-block rounded-full bg-ink px-7 py-3 text-sm font-semibold text-cream hover:bg-wine"
+              className="rounded-full border-2 border-navy px-7 py-3 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
             >
-              Get your quotation
+              Corporate Gifting
             </Link>
           </div>
-        </section>
-      )}
+        </div>
+        <div className="relative flex items-center justify-center">
+          <div className="grid max-w-[480px] grid-cols-2 gap-4">
+            <div className="mt-8 flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#fce4ec] to-[#fff3e0] text-6xl">
+              🍫
+            </div>
+            <div className="-mt-8 flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#f8bbd0] to-[#fce4ec] text-6xl">
+              🍫
+            </div>
+            <div className="flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#fff3e0] to-[#ffecb3] text-6xl">
+              🤍
+            </div>
+            <div className="flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#fce4ec] to-[#f8bbd0] text-6xl">
+              ✨
+            </div>
+          </div>
+          <div className="absolute -right-3 -top-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
+            🎁 Gift-ready boxes
+          </div>
+          <div className="absolute -bottom-2 -left-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
+            ⭐ 100+ happy customers
+          </div>
+        </div>
+      </section>
 
-      {/* Reviews */}
+      {/* TRUST BAR */}
+      <div className="bg-navy py-8 text-white">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
+          <Trust icon="🍫" title="Freshly Baked" body="Baked to order, never pre-made" />
+          <Trust icon="🚚" title="Islandwide Delivery" body="Next day delivery available" />
+          <Trust icon="♥️" title="Halal Certified" body="100% halal ingredients" />
+        </div>
+      </div>
+
+      {/* SLIDESHOW */}
+      <Slideshow />
+
+      {/* CATEGORY GRID */}
+      <section className="px-6 py-20">
+        <div className="mx-auto max-w-6xl">
+          <SectionHeader
+            title="Find Your Perfect Box"
+            sub="Browse by occasion — from everyday treats to corporate gifts and wedding favours."
+          />
+          <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-4">
+            <CategoryCard to="/shop" gradient="from-[#fce4ec] to-[#f8bbd0]" emoji="🍫" title="Shop All" body="Browse our full collection of freshly baked brownies." cta="Browse All →" />
+            <CategoryCard to="/corporate" gradient="from-[#e8eaf6] to-[#c5cae9]" emoji="🏢" title="Corporate Gifting" body="Bulk pricing for teams, events and client gifting." cta="View Range →" />
+            <CategoryCard to="/corporate" gradient="from-[#fff3e0] to-[#ffe0b2]" emoji="💍" title="For Weddings" body="Elegant wedding favours with bulk pricing." cta="Explore →" />
+            <CategoryCard to="/shop" gradient="from-[#f3e5f5] to-[#e1bee7]" emoji="🍰" title="Brownie Slab" body="Personalise with letter toppers and sparkles." cta="Customise →" />
+          </div>
+        </div>
+      </section>
+
+      {/* CTA BANNER */}
+      <section className="bg-pink px-6 py-20 text-center text-white">
+        <h2 className="text-[clamp(2rem,4vw,3.5rem)]">Made for Every Little Win</h2>
+        <p className="mx-auto mt-4 max-w-md text-lg opacity-90">
+          From birthday boxes to corporate hampers — freshly baked, islandwide delivery, made to
+          order.
+        </p>
+        <Link
+          to="/shop"
+          className="mt-8 inline-block rounded-full bg-white px-11 py-4 font-display text-lg text-pink transition-transform hover:-translate-y-0.5"
+        >
+          Browse All Brownies →
+        </Link>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="bg-warmgray px-6 py-20">
+        <div className="mx-auto max-w-6xl">
+          <SectionHeader title="How It Works" sub="From box to door in 4 simple steps." />
+          <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <Step n={1} title="Choose a Category" body="Browse Shop All, Corporate, Wedding, or Brownie Slab." />
+            <Step n={2} title="Pick Your Package" body="Select a 9, 12, or 15-piece box, or a slab." />
+            <Step n={3} title="Personalise It" body="Letter toppers and sparkles on slab orders." />
+            <Step n={4} title="We Deliver Fresh" body="Baked fresh and delivered to your door, islandwide." />
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
       {reviews_section && featuredReviews.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-2xl font-semibold">Don’t just take it from us…</h2>
-          <div className="mt-6">
-            <ReviewCarousel reviews={featuredReviews} />
+        <section className="bg-pink-light px-6 py-20">
+          <div className="mx-auto max-w-6xl">
+            <SectionHeader title="Little Wins, Big Smiles" sub="What our customers are saying." />
+            <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+              {featuredReviews.slice(0, 3).map((review) => (
+                <figure key={review.id} className="rounded-[20px] border-l-4 border-pink bg-white p-8">
+                  <div className="tracking-[2px] text-[#f4a100]">{'★'.repeat(review.rating)}</div>
+                  <blockquote className="mt-4 text-sm italic leading-relaxed text-neutral-700">
+                    “{review.body}”
+                  </blockquote>
+                  <figcaption className="mt-5 flex items-center gap-2.5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-light text-xl">
+                      🧁
+                    </span>
+                    <span className="text-[13px] font-bold text-navy">{review.author}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      {/* FAQ */}
-      <FaqSection />
+      {/* BADGE STRIP */}
+      <div className="bg-warmgray px-6 py-14">
+        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 lg:grid-cols-4">
+          <Badge icon="🍫" title="Baked Fresh Daily" body="Every order baked to order — never stored, never stale" />
+          <Badge icon="🚚" title="Islandwide Delivery" body="We deliver across Sri Lanka — next day options available" />
+          <Badge icon="🌙" title="100% Halal" body="All ingredients fully halal certified — everyone can enjoy" />
+          <Badge icon="🎁" title="Gift-Ready Boxes" body="Beautiful packaging — ready to give straight from the box" />
+        </div>
+      </div>
     </div>
   )
 }
 
-function Promise({ title, body }: { title: string; body: string }) {
+function SectionHeader({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div className="text-center">
+      <h2 className="text-[clamp(2rem,4vw,3rem)] text-navy">{title}</h2>
+      <p className="mx-auto mt-3 max-w-xl leading-relaxed text-neutral-500">{sub}</p>
+    </div>
+  )
+}
+
+function Trust({ icon, title, body }: { icon: string; title: string; body: string }) {
   return (
     <div>
-      <h3 className="font-display text-lg">{title}</h3>
-      <p className="mt-1 text-sm text-ink/60">{body}</p>
+      <div className="text-3xl">{icon}</div>
+      <strong className="mt-2 block font-display text-base font-normal text-pink">{title}</strong>
+      <p className="text-[13px] text-white/80">{body}</p>
+    </div>
+  )
+}
+
+function CategoryCard({
+  to,
+  gradient,
+  emoji,
+  title,
+  body,
+  cta,
+}: {
+  to: string
+  gradient: string
+  emoji: string
+  title: string
+  body: string
+  cta: string
+}) {
+  return (
+    <Link to={to} className="group relative block aspect-[3/4] overflow-hidden rounded-[20px]">
+      <div
+        className={`flex h-full w-full items-center justify-center bg-gradient-to-b ${gradient} text-6xl transition-transform duration-500 group-hover:scale-105`}
+      >
+        {emoji}
+      </div>
+      <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-navy/85 to-transparent p-6 text-white">
+        <h3 className="text-xl">{title}</h3>
+        <p className="mt-1.5 text-xs leading-relaxed opacity-85">{body}</p>
+        <span className="mt-3 text-xs font-bold text-white/90">{cta}</span>
+      </div>
+    </Link>
+  )
+}
+
+function Step({ n, title, body }: { n: number; title: string; body: string }) {
+  return (
+    <div className="text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-pink font-display text-xl text-white shadow-lg shadow-pink/30">
+        {n}
+      </div>
+      <h3 className="mt-5 text-base text-navy">{title}</h3>
+      <p className="mt-2 text-[13px] leading-relaxed text-neutral-500">{body}</p>
+    </div>
+  )
+}
+
+function Badge({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl shadow">
+        {icon}
+      </div>
+      <h4 className="font-display text-[15px] text-navy">{title}</h4>
+      <p className="max-w-[160px] text-xs leading-relaxed text-neutral-500">{body}</p>
     </div>
   )
 }
