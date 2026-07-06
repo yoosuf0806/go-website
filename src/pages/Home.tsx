@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
-import { featuredReviews, settings } from '../data/catalog'
+import { featuredReviews, settings, content } from '../data/catalog'
 import Slideshow from '../components/storefront/Slideshow'
 
-// Home — reference-matched landing page: hero, trust bar, slideshow, occasion
-// grid, CTA, how-it-works, testimonials, and a badge strip. Content is hard-
-// coded here for now; it becomes admin-editable in the Content CMS chunk.
+// Home — reference-matched landing page. Every section's copy comes from the
+// editable content blob (admin Content module), with DEFAULT_CONTENT fallbacks.
 export default function Home() {
   const { reviews_section } = settings.features
+  const { hero, trust, categories, ctaBanner, howItWorks, badges, testimonialsHeading } = content
 
   return (
     <div>
@@ -14,41 +14,42 @@ export default function Home() {
       <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-6 py-16 md:grid-cols-2">
         <div>
           <h1 className="text-[clamp(2.8rem,5vw,4.2rem)] leading-[1.1] text-navy">
-            Gift something they'll <em className="not-italic text-pink">actually</em> love.
+            {hero.title} <em className="not-italic text-pink">{hero.highlight}</em> {hero.titleAfter}
           </h1>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-500">
-            Freshly baked brownies. Islandwide delivery. Made to order — for every little celebration
-            worth sharing.
-          </p>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-500">{hero.subtitle}</p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
               to="/shop"
               className="rounded-full bg-pink px-8 py-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-pink-dark"
             >
-              Shop All Brownies
+              {hero.primaryCta}
             </Link>
             <Link
               to="/corporate"
               className="rounded-full border-2 border-navy px-7 py-3 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
             >
-              Corporate Gifting
+              {hero.secondaryCta}
             </Link>
           </div>
         </div>
         <div className="relative flex items-center justify-center">
           <div className="grid max-w-[480px] grid-cols-2 gap-4">
-            <div className="mt-8 flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#fce4ec] to-[#fff3e0] text-6xl">
-              🍫
-            </div>
-            <div className="-mt-8 flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#f8bbd0] to-[#fce4ec] text-6xl">
-              🍫
-            </div>
-            <div className="flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#fff3e0] to-[#ffecb3] text-6xl">
-              🤍
-            </div>
-            <div className="flex aspect-square items-center justify-center rounded-[20px] bg-gradient-to-br from-[#fce4ec] to-[#f8bbd0] text-6xl">
-              ✨
-            </div>
+            {['🍫', '🍫', '🤍', '✨'].map((e, i) => (
+              <div
+                key={i}
+                className={`flex aspect-square items-center justify-center rounded-[20px] text-6xl ${
+                  i === 0
+                    ? 'mt-8 bg-gradient-to-br from-[#fce4ec] to-[#fff3e0]'
+                    : i === 1
+                      ? '-mt-8 bg-gradient-to-br from-[#f8bbd0] to-[#fce4ec]'
+                      : i === 2
+                        ? 'bg-gradient-to-br from-[#fff3e0] to-[#ffecb3]'
+                        : 'bg-gradient-to-br from-[#fce4ec] to-[#f8bbd0]'
+                }`}
+              >
+                {e}
+              </div>
+            ))}
           </div>
           <div className="absolute -right-3 -top-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
             🎁 Gift-ready boxes
@@ -62,9 +63,9 @@ export default function Home() {
       {/* TRUST BAR */}
       <div className="bg-navy py-8 text-white">
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
-          <Trust icon="🍫" title="Freshly Baked" body="Baked to order, never pre-made" />
-          <Trust icon="🚚" title="Islandwide Delivery" body="Next day delivery available" />
-          <Trust icon="♥️" title="Halal Certified" body="100% halal ingredients" />
+          {trust.map((t) => (
+            <Trust key={t.title} icon={t.icon} title={t.title} body={t.body} />
+          ))}
         </div>
       </div>
 
@@ -79,26 +80,30 @@ export default function Home() {
             sub="Browse by occasion — from everyday treats to corporate gifts and wedding favours."
           />
           <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-4">
-            <CategoryCard to="/shop" gradient="from-[#fce4ec] to-[#f8bbd0]" emoji="🍫" title="Shop All" body="Browse our full collection of freshly baked brownies." cta="Browse All →" />
-            <CategoryCard to="/corporate" gradient="from-[#e8eaf6] to-[#c5cae9]" emoji="🏢" title="Corporate Gifting" body="Bulk pricing for teams, events and client gifting." cta="View Range →" />
-            <CategoryCard to="/corporate" gradient="from-[#fff3e0] to-[#ffe0b2]" emoji="💍" title="For Weddings" body="Elegant wedding favours with bulk pricing." cta="Explore →" />
-            <CategoryCard to="/shop" gradient="from-[#f3e5f5] to-[#e1bee7]" emoji="🍰" title="Brownie Slab" body="Personalise with letter toppers and sparkles." cta="Customise →" />
+            {categories.map((c, i) => (
+              <CategoryCard
+                key={c.title}
+                to={c.to}
+                gradient={CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length]}
+                emoji={c.emoji}
+                title={c.title}
+                body={c.body}
+                cta={c.cta}
+              />
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA BANNER */}
       <section className="bg-pink px-6 py-20 text-center text-white">
-        <h2 className="text-[clamp(2rem,4vw,3.5rem)]">Made for Every Little Win</h2>
-        <p className="mx-auto mt-4 max-w-md text-lg opacity-90">
-          From birthday boxes to corporate hampers — freshly baked, islandwide delivery, made to
-          order.
-        </p>
+        <h2 className="text-[clamp(2rem,4vw,3.5rem)]">{ctaBanner.title}</h2>
+        <p className="mx-auto mt-4 max-w-md text-lg opacity-90">{ctaBanner.body}</p>
         <Link
           to="/shop"
           className="mt-8 inline-block rounded-full bg-white px-11 py-4 font-display text-lg text-pink transition-transform hover:-translate-y-0.5"
         >
-          Browse All Brownies →
+          {ctaBanner.cta}
         </Link>
       </section>
 
@@ -107,10 +112,9 @@ export default function Home() {
         <div className="mx-auto max-w-6xl">
           <SectionHeader title="How It Works" sub="From box to door in 4 simple steps." />
           <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <Step n={1} title="Choose a Category" body="Browse Shop All, Corporate, Wedding, or Brownie Slab." />
-            <Step n={2} title="Pick Your Package" body="Select a 9, 12, or 15-piece box, or a slab." />
-            <Step n={3} title="Personalise It" body="Letter toppers and sparkles on slab orders." />
-            <Step n={4} title="We Deliver Fresh" body="Baked fresh and delivered to your door, islandwide." />
+            {howItWorks.map((step) => (
+              <Step key={step.title} n={step.icon} title={step.title} body={step.body} />
+            ))}
           </div>
         </div>
       </section>
@@ -119,7 +123,7 @@ export default function Home() {
       {reviews_section && featuredReviews.length > 0 && (
         <section className="bg-pink-light px-6 py-20">
           <div className="mx-auto max-w-6xl">
-            <SectionHeader title="Little Wins, Big Smiles" sub="What our customers are saying." />
+            <SectionHeader title={testimonialsHeading.title} sub={testimonialsHeading.sub} />
             <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
               {featuredReviews.slice(0, 3).map((review) => (
                 <figure key={review.id} className="rounded-[20px] border-l-4 border-pink bg-white p-8">
@@ -143,15 +147,21 @@ export default function Home() {
       {/* BADGE STRIP */}
       <div className="bg-warmgray px-6 py-14">
         <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 lg:grid-cols-4">
-          <Badge icon="🍫" title="Baked Fresh Daily" body="Every order baked to order — never stored, never stale" />
-          <Badge icon="🚚" title="Islandwide Delivery" body="We deliver across Sri Lanka — next day options available" />
-          <Badge icon="🌙" title="100% Halal" body="All ingredients fully halal certified — everyone can enjoy" />
-          <Badge icon="🎁" title="Gift-Ready Boxes" body="Beautiful packaging — ready to give straight from the box" />
+          {badges.map((b) => (
+            <Badge key={b.title} icon={b.icon} title={b.title} body={b.body} />
+          ))}
         </div>
       </div>
     </div>
   )
 }
+
+const CATEGORY_GRADIENTS = [
+  'from-[#fce4ec] to-[#f8bbd0]',
+  'from-[#e8eaf6] to-[#c5cae9]',
+  'from-[#fff3e0] to-[#ffe0b2]',
+  'from-[#f3e5f5] to-[#e1bee7]',
+]
 
 function SectionHeader({ title, sub }: { title: string; sub: string }) {
   return (
@@ -203,7 +213,7 @@ function CategoryCard({
   )
 }
 
-function Step({ n, title, body }: { n: number; title: string; body: string }) {
+function Step({ n, title, body }: { n: string; title: string; body: string }) {
   return (
     <div className="text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-pink font-display text-xl text-white shadow-lg shadow-pink/30">

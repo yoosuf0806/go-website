@@ -6,6 +6,7 @@
 // git-ignored; it always exists before a build or dev server starts.
 import catalogJson from './catalog.json'
 import type { Catalog } from '../types/catalog'
+import { mergeContent } from '../types/content'
 
 export const catalog = catalogJson as Catalog
 
@@ -16,6 +17,9 @@ export const addons = catalog.addons
 export const deliveryTiers = catalog.deliveryTiers
 export const featuredReviews = catalog.reviews
 export const settings = catalog.settings
+// mergeContent guarantees a full SiteContent even for older snapshots that
+// predate the content field.
+export const content = mergeContent(catalog.content)
 
 export function getProductBySlug(slug: string) {
   return products.find((p) => p.slug === slug)

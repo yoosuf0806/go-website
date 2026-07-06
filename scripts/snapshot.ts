@@ -37,6 +37,7 @@ import type {
   FeaturesSetting,
   BusinessSetting,
 } from '../src/types/catalog.ts'
+import { mergeContent, type SiteContent } from '../src/types/content.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUT_PATH = resolve(__dirname, '../src/data/catalog.json')
@@ -139,6 +140,7 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
     deliveryTiers: mapDeliveryTiers(data.deliveryTiers),
     reviews: mapReviews(data.reviews),
     settings: mapSettings(data.settings),
+    content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
   }
 }
 
@@ -180,6 +182,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       banner: (settingsByKey.banner ?? {}) as Record<string, unknown>,
       features: (settingsByKey.features ?? {}) as Record<string, unknown>,
       business: (settingsByKey.business ?? {}) as Record<string, unknown>,
+      content: (settingsByKey.content ?? undefined) as Record<string, unknown> | undefined,
     },
   }
 }

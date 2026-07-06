@@ -1,3 +1,5 @@
+import type { SiteContent } from './content'
+
 // Shape of the build-time catalogue snapshot (src/data/catalog.json).
 //
 // The storefront reads THIS, never the database, while a customer browses
@@ -112,4 +114,6 @@ export interface Catalog {
   deliveryTiers: CatalogDeliveryTier[]
   reviews: CatalogReview[]
   settings: CatalogSettings
+  /** Editable storefront copy + SEO (admin Content module). */
+  content: SiteContent
 }

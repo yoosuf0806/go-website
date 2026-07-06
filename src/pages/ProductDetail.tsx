@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { products, packages, addons, getProductBySlug } from '../data/catalog'
+import { products, packages, addons, getProductBySlug, content } from '../data/catalog'
 import { formatLKR } from '../lib/format'
 import BrownieImage from '../components/storefront/BrownieImage'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
@@ -107,13 +107,11 @@ export default function ProductDetail() {
                 },
                 {
                   title: 'Freshness & Storage',
-                  content:
-                    'Baked fresh to order. Best enjoyed within 5 days; keep sealed at room temperature, or refrigerate to keep longer.',
+                  content: content.productInfo.freshness,
                 },
                 {
                   title: 'Allergens',
-                  content:
-                    'Made in a kitchen that handles wheat, dairy, eggs, and nuts. Please tell us about any allergies when you order.',
+                  content: content.productInfo.allergens,
                 },
               ]}
             />

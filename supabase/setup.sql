@@ -180,7 +180,10 @@ where not exists (select 1 from delivery_tiers);
 insert into site_settings (key, value) values
   ('banner',   '{"enabled": false, "text": "", "starts_at": null, "ends_at": null}'::jsonb),
   ('features', '{"corporate_section": true, "wedding_section": true, "reviews_section": true}'::jsonb),
-  ('business', '{"whatsapp_number": "", "google_business_url": ""}'::jsonb)
+  ('business', '{"whatsapp_number": "", "google_business_url": ""}'::jsonb),
+  -- Editable storefront content (admin Content & SEO). Starts empty: the app
+  -- fills defaults until the admin saves, which writes the full blob here.
+  ('content',  '{}'::jsonb)
 on conflict (key) do nothing;
 
 -- ============================================================================

@@ -70,6 +70,8 @@ export interface RawSettings {
   banner: Record<string, unknown>
   features: Record<string, unknown>
   business: Record<string, unknown>
+  /** Editable storefront content blob; undefined → DEFAULT_CONTENT at build. */
+  content?: Record<string, unknown>
 }
 
 export interface SeedData {

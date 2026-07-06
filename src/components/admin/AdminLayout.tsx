@@ -9,6 +9,7 @@ const navItems = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/orders', label: 'Orders' },
   { to: '/admin/inquiries', label: 'Inquiries' },
+  { to: '/admin/content', label: 'Content & SEO' },
   { to: '/admin/products', label: 'Products' },
   { to: '/admin/addon-pricing', label: 'Add-on Pricing' },
   { to: '/admin/reviews', label: 'Reviews' },

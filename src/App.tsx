@@ -16,6 +16,7 @@ const Login = lazy(() => import('./pages/admin/Login'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Orders = lazy(() => import('./pages/admin/Orders'))
 const Inquiries = lazy(() => import('./pages/admin/Inquiries'))
+const Content = lazy(() => import('./pages/admin/Content'))
 const Products = lazy(() => import('./pages/admin/Products'))
 const AddonPricing = lazy(() => import('./pages/admin/AddonPricing'))
 const Reviews = lazy(() => import('./pages/admin/Reviews'))
@@ -77,6 +78,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="orders" element={<Orders />} />
         <Route path="inquiries" element={<Inquiries />} />
+        <Route path="content" element={<Content />} />
         <Route path="products" element={<Products />} />
         <Route path="addon-pricing" element={<AddonPricing />} />
         <Route path="reviews" element={<Reviews />} />
