@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { settings } from '../data/catalog'
+import { settings, content } from '../data/catalog'
 import type { InquiryCategory } from '../schemas/inquiry'
 import InquiryModal from '../components/storefront/InquiryModal'
 import Toast from '../components/ui/Toast'
+import Seo from '../components/Seo'
 
 // Corporate + wedding hero sections and the pink inquiry modal (spec §6.6).
 // Each hero is feature-toggleable via site_settings.features; the "Get Your
@@ -16,6 +17,11 @@ export default function Corporate() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
+      <Seo
+        title={content.seo.corporate.title}
+        description={content.seo.corporate.description}
+        path="/corporate"
+      />
       <h1 className="font-display text-3xl font-semibold">Corporate &amp; Weddings</h1>
 
       {noneEnabled && (

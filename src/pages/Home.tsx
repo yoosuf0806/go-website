@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { featuredReviews, settings, content } from '../data/catalog'
 import Slideshow from '../components/storefront/Slideshow'
+import Seo, { organizationJsonLd } from '../components/Seo'
 
 // Home — reference-matched landing page. Every section's copy comes from the
 // editable content blob (admin Content module), with DEFAULT_CONTENT fallbacks.
@@ -10,6 +11,12 @@ export default function Home() {
 
   return (
     <div>
+      <Seo
+        title={content.seo.home.title}
+        description={content.seo.home.description}
+        path="/"
+        jsonLd={[organizationJsonLd()]}
+      />
       {/* HERO */}
       <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-6 py-16 md:grid-cols-2">
         <div>

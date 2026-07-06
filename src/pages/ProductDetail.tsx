@@ -5,6 +5,7 @@ import BrownieImage from '../components/storefront/BrownieImage'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
 import ProductTile from '../components/storefront/ProductTile'
 import Accordion from '../components/storefront/Accordion'
+import Seo, { SITE_URL } from '../components/Seo'
 
 const RELATED_COUNT = 4
 
@@ -31,8 +32,44 @@ export default function ProductDetail() {
     .concat(products.filter((p) => p.id !== product.id && p.categoryId !== product.categoryId))
     .slice(0, RELATED_COUNT)
 
+  const path = `/shop/${product.slug}`
+  const seoDescription = product.description ?? content.seo.shop.description
+  const productLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: seoDescription,
+    ...(product.imageUrl ? { image: product.imageUrl } : {}),
+    brand: { '@type': 'Brand', name: content.seo.siteName },
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'LKR',
+      price: product.pricePerPiece,
+      availability: product.inStock
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      url: `${SITE_URL}${path}`,
+    },
+  }
+  const breadcrumbLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'All Brownies', item: `${SITE_URL}/shop` },
+      { '@type': 'ListItem', position: 3, name: product.name, item: `${SITE_URL}${path}` },
+    ],
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
+      <Seo
+        title={`${product.name} — ${content.seo.siteName}`}
+        description={seoDescription}
+        path={path}
+        image={product.imageUrl ?? undefined}
+        jsonLd={[productLd, breadcrumbLd]}
+      />
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-[13px] text-neutral-500">
         <Link to="/" className="font-bold text-pink hover:underline">

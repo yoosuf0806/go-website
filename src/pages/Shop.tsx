@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { categories, products, packages } from '../data/catalog'
+import { categories, products, packages, content } from '../data/catalog'
 import ProductTile from '../components/storefront/ProductTile'
+import Seo from '../components/Seo'
 
 type Sort = '' | 'low' | 'high'
 
@@ -25,6 +26,7 @@ export default function Shop() {
 
   return (
     <div>
+      <Seo title={content.seo.shop.title} description={content.seo.shop.description} path="/shop" />
       <section className="border-b border-neutral-200 bg-pink-light px-6 py-14 text-center">
         <h1 className="text-[clamp(2.2rem,4vw,3.5rem)] text-navy">All Brownies</h1>
         <p className="mx-auto mt-3 max-w-xl text-neutral-500">
