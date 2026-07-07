@@ -16,6 +16,12 @@ export interface CatalogCategory {
   sortOrder: number
 }
 
+/** One item in a product's gallery — media[0] is the "cover" shown on tiles. */
+export interface CatalogMedia {
+  url: string
+  type: 'image' | 'video'
+}
+
 export interface CatalogProduct {
   id: string
   categoryId: string | null
@@ -23,7 +29,10 @@ export interface CatalogProduct {
   slug: string
   description: string | null
   pricePerPiece: number
+  /** Derived convenience field = media[0]?.url. Kept for tiles/SEO/JSON-LD. */
   imageUrl: string | null
+  /** Ordered image/video gallery, shown as a carousel on the product page. */
+  media: CatalogMedia[]
   inStock: boolean
   stockQty: number | null
   isSlabAvailable: boolean

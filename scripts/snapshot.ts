@@ -63,7 +63,10 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
       slug: r.slug,
       description: r.description,
       pricePerPiece: Number(r.price_per_piece),
-      imageUrl: r.image_url,
+      // imageUrl is derived (media[0], falling back to the legacy column) so
+      // tiles/SEO/JSON-LD keep working unchanged for anything reading it.
+      imageUrl: r.media?.[0]?.url ?? r.image_url,
+      media: r.media ?? [],
       inStock: r.in_stock,
       stockQty: r.stock_qty,
       isSlabAvailable: r.is_slab_available,

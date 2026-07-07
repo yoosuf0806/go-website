@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import {
-  uploadProductImage,
+  uploadProductMedia,
   type AdminCategory,
   type AdminProduct,
   type ProductInput,
+  type ProductMedia,
 } from '../../lib/adminProducts'
 
 interface ProductFormModalProps {
@@ -29,6 +30,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     description: '',
     price_per_piece: 0,
     image_url: null,
+    media: [],
     is_visible: true,
     in_stock: true,
     stock_qty: null,
@@ -57,19 +59,42 @@ export default function ProductFormModal({
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  // Uploads every selected file (images and/or videos), appending each to the
+  // gallery as it completes so the grid fills in progressively rather than
+  // blocking on the slowest upload. One failure doesn't drop the others.
+  async function handleMediaSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = '' // allow re-selecting the same file(s) later
+    if (files.length === 0) return
     setUploadError(null)
     setUploading(true)
-    try {
-      const url = await uploadProductImage(file)
-      set('image_url', url)
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      setUploading(false)
+    const failures: string[] = []
+    for (const file of files) {
+      try {
+        const item = await uploadProductMedia(file)
+        setForm((f) => ({ ...f, media: [...f.media, item] }))
+      } catch (err) {
+        failures.push(`${file.name}: ${err instanceof Error ? err.message : 'Upload failed'}`)
+      }
     }
+    setUploading(false)
+    if (failures.length > 0) setUploadError(failures.join('; '))
+  }
+
+  function removeMedia(index: number) {
+    setForm((f) => ({ ...f, media: f.media.filter((_, i) => i !== index) }))
+  }
+
+  // Moves an item earlier/later in the gallery order; index 0 is the cover
+  // image shown on tiles, SEO, and JSON-LD.
+  function moveMedia(index: number, direction: -1 | 1) {
+    setForm((f) => {
+      const next = [...f.media]
+      const target = index + direction
+      if (target < 0 || target >= next.length) return f
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return { ...f, media: next }
+    })
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -78,6 +103,9 @@ export default function ProductFormModal({
     const cleaned: ProductInput = {
       ...form,
       allows_letter_topper: form.is_slab_available ? form.allows_letter_topper : false,
+      // image_url is derived from the gallery cover so legacy readers
+      // (SEO/JSON-LD/ProductTile) that only look at image_url keep working.
+      image_url: form.media[0]?.url ?? null,
     }
     onSubmit(cleaned)
   }
@@ -169,16 +197,75 @@ export default function ProductFormModal({
           </div>
 
           <div className="text-sm">
-            <span className="block text-neutral-600">Image</span>
-            <input type="file" accept="image/*" onChange={handleImage} className="mt-1 text-sm" />
+            <span className="block text-neutral-600">
+              Photos &amp; videos
+              <span className="ml-1 font-normal text-neutral-400">
+                — shown as a carousel; first item is the cover
+              </span>
+            </span>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={handleMediaSelect}
+              className="mt-1 text-sm"
+            />
             {uploading && <p className="mt-1 text-xs text-neutral-500">Uploading…</p>}
             {uploadError && <p className="mt-1 text-xs text-red-600">{uploadError}</p>}
-            {form.image_url && (
-              <img
-                src={form.image_url}
-                alt=""
-                className="mt-2 h-20 w-20 rounded object-cover"
-              />
+
+            {form.media.length > 0 && (
+              <ul className="mt-3 grid grid-cols-4 gap-2">
+                {form.media.map((item: ProductMedia, i: number) => (
+                  <li key={`${item.url}-${i}`} className="group relative">
+                    {item.type === 'video' ? (
+                      <video
+                        src={item.url}
+                        muted
+                        className="h-20 w-20 rounded object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={item.url}
+                        alt=""
+                        className="h-20 w-20 rounded object-cover"
+                      />
+                    )}
+                    {i === 0 && (
+                      <span className="absolute left-1 top-1 rounded bg-navy/80 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
+                        Cover
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex justify-center gap-1 bg-black/50 py-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => moveMedia(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Move earlier"
+                        className="text-xs text-white disabled:opacity-30"
+                      >
+                        ◀
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeMedia(i)}
+                        aria-label="Remove"
+                        className="text-xs text-white"
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveMedia(i, 1)}
+                        disabled={i === form.media.length - 1}
+                        aria-label="Move later"
+                        className="text-xs text-white disabled:opacity-30"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 

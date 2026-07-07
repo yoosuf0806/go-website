@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { products, packages, addons, getProductBySlug, content } from '../data/catalog'
 import { formatLKR } from '../lib/format'
-import BrownieImage from '../components/storefront/BrownieImage'
+import ProductGallery from '../components/storefront/ProductGallery'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
 import ProductTile from '../components/storefront/ProductTile'
 import Accordion from '../components/storefront/Accordion'
@@ -86,10 +86,11 @@ export default function ProductDetail() {
       <div className="mt-6 grid grid-cols-1 gap-12 md:grid-cols-2">
         {/* Gallery */}
         <div className="md:sticky md:top-28 md:self-start">
-          <BrownieImage
-            src={product.imageUrl}
+          <ProductGallery
+            media={product.media}
+            fallbackImageUrl={product.imageUrl}
             alt={product.name}
-            className="aspect-square w-full rounded-[20px] bg-warmgray"
+            className="aspect-square w-full"
           />
         </div>
 
