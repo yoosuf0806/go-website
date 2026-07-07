@@ -45,6 +45,7 @@ create table if not exists products (
   description text,
   price_per_piece numeric(10,2) not null check (price_per_piece >= 0),
   image_url text,
+  media jsonb not null default '[]'::jsonb, -- ordered [{url, type: 'image'|'video'}]; [0] mirrors image_url
   is_visible boolean not null default true,
   in_stock boolean not null default true,
   stock_qty int,

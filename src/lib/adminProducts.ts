@@ -10,6 +10,12 @@ export interface AdminCategory {
   sort_order: number
 }
 
+/** One item in a product's gallery — media[0] is the "cover" shown on tiles. */
+export interface ProductMedia {
+  url: string
+  type: 'image' | 'video'
+}
+
 export interface AdminProduct {
   id: string
   category_id: string | null
@@ -17,7 +23,10 @@ export interface AdminProduct {
   slug: string
   description: string | null
   price_per_piece: number
+  /** Derived = media[0]?.url, kept in sync on save; don't hand-edit. */
   image_url: string | null
+  /** Ordered image/video gallery, shown as a carousel on the storefront. */
+  media: ProductMedia[]
   is_visible: boolean
   in_stock: boolean
   stock_qty: number | null
@@ -70,9 +79,14 @@ export async function updateCategory(
   if (error) throw new Error(error.message)
 }
 
-/** Upload an image to the public product-images bucket, return its public URL. */
-export async function uploadProductImage(file: File): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'jpg'
+/**
+ * Upload a single image or video file to the public product-images bucket
+ * and return its gallery entry ({ url, type }). Used for the product gallery
+ * (multiple images/videos per product, shown as a carousel on the storefront).
+ */
+export async function uploadProductMedia(file: File): Promise<ProductMedia> {
+  const isVideo = file.type.startsWith('video/')
+  const ext = file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')
   const path = `${crypto.randomUUID()}.${ext}`
   const { error } = await supabase.storage.from('product-images').upload(path, file, {
     cacheControl: '3600',
@@ -80,5 +94,5 @@ export async function uploadProductImage(file: File): Promise<string> {
   })
   if (error) throw new Error(error.message)
   const { data } = supabase.storage.from('product-images').getPublicUrl(path)
-  return data.publicUrl
+  return { url: data.publicUrl, type: isVideo ? 'video' : 'image' }
 }

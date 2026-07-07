@@ -15,6 +15,11 @@ export interface RawCategory {
   sort_order: number
 }
 
+export interface RawMedia {
+  url: string
+  type: 'image' | 'video'
+}
+
 export interface RawProduct {
   id: string
   category_id: string | null
@@ -23,6 +28,8 @@ export interface RawProduct {
   description: string | null
   price_per_piece: number
   image_url: string | null
+  /** Ordered gallery; media[0] is the cover (mirrors image_url in the DB). */
+  media: RawMedia[]
   is_visible: boolean
   in_stock: boolean
   stock_qty: number | null
@@ -102,6 +109,7 @@ export const seedData: SeedData = {
       description: 'Our signature fudgy classic — rich, dense, and unadorned.',
       price_per_piece: 150,
       image_url: null,
+      media: [],
       is_visible: true,
       in_stock: true,
       stock_qty: null,
@@ -117,6 +125,7 @@ export const seedData: SeedData = {
       description: 'Classic brownie loaded with toasted walnuts.',
       price_per_piece: 170,
       image_url: null,
+      media: [],
       is_visible: true,
       in_stock: true,
       stock_qty: null,
@@ -132,6 +141,7 @@ export const seedData: SeedData = {
       description: 'Buttery Sri Lankan cashews over a dark-chocolate base.',
       price_per_piece: 190,
       image_url: null,
+      media: [],
       is_visible: true,
       in_stock: true,
       stock_qty: 40,
@@ -147,6 +157,7 @@ export const seedData: SeedData = {
       description: 'Dark, milk, and white chocolate in every bite.',
       price_per_piece: 210,
       image_url: null,
+      media: [],
       is_visible: true,
       in_stock: true,
       stock_qty: null,
@@ -162,6 +173,7 @@ export const seedData: SeedData = {
       description: 'Molten salted-caramel swirl on a fudge brownie.',
       price_per_piece: 200,
       image_url: null,
+      media: [],
       is_visible: true,
       in_stock: false,
       stock_qty: null,
