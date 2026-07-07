@@ -11,9 +11,9 @@ interface ProductGalleryProps {
 }
 
 // Product page gallery: images and short videos in one carousel (arrows +
-// dots, matching Slideshow's styling; swipe on touch devices via native
-// horizontal scroll snap). Falls back to the single legacy image, then to
-// BrownieImage's placeholder, for products with no gallery yet.
+// dots, matching Slideshow's styling; uses a translateX transition between
+// items). Falls back to the single legacy image, then to BrownieImage's
+// placeholder, for products with no gallery yet.
 export default function ProductGallery({
   media,
   fallbackImageUrl,
