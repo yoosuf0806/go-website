@@ -47,6 +47,8 @@ export function buildOrderSlipHtml(order: AdminOrder): string {
     .join('')
 
   const meta: string[] = [`<div><strong>Phone:</strong> ${esc(order.phone)}</div>`]
+  if (order.alt_phone) meta.push(`<div><strong>Alt phone:</strong> ${esc(order.alt_phone)}</div>`)
+  if (order.email) meta.push(`<div><strong>Email:</strong> ${esc(order.email)}</div>`)
   if (order.address) meta.push(`<div><strong>Address:</strong> ${esc(order.address)}</div>`)
   if (order.delivery_date)
     meta.push(`<div><strong>Delivery:</strong> ${esc(formatDate(order.delivery_date))}</div>`)

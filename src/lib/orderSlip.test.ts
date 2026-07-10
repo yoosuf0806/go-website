@@ -8,6 +8,8 @@ const order: AdminOrder = {
   status: 'confirmed',
   customer_name: 'Nadeesha P.',
   phone: '+94771234567',
+  email: 'nadeesha@example.com',
+  alt_phone: '+94712223344',
   address: '123 Galle Rd, Colombo',
   delivery_date: '2026-07-10',
   note: 'Leave with security',
@@ -54,5 +56,13 @@ describe('buildOrderSlipHtml (spec §7 Orders)', () => {
     })
     expect(xss).not.toContain('<script>alert(1)</script>')
     expect(xss).toContain('&lt;script&gt;')
+  })
+})
+
+describe('order slip contact fields (PR: checkout contact redesign)', () => {
+  it('renders email and alternative phone when present', () => {
+    const html = buildOrderSlipHtml(order)
+    expect(html).toContain('nadeesha@example.com')
+    expect(html).toContain('+94712223344')
   })
 })

@@ -34,6 +34,8 @@ export default function ConvertToOrderModal({
   const [details, setDetails] = useState<CheckoutDetails>({
     name: inquiry.name,
     phone: inquiry.phone,
+    email: inquiry.email ?? '',
+    altPhone: '',
     address: '',
     deliveryDate: inquiry.event_date ?? '',
     note: inquiry.message ?? '',
@@ -97,6 +99,22 @@ export default function ConvertToOrderModal({
               type="text"
               value={details.name}
               onChange={(e) => setDetails({ ...details, name: e.target.value })}
+              className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </TextField>
+          <TextField label="Email" error={errors.email}>
+            <input
+              type="email"
+              value={details.email}
+              onChange={(e) => setDetails({ ...details, email: e.target.value })}
+              className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </TextField>
+          <TextField label="Alternative contact (optional)" error={errors.altPhone}>
+            <input
+              type="tel"
+              value={details.altPhone ?? ''}
+              onChange={(e) => setDetails({ ...details, altPhone: e.target.value })}
               className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
             />
           </TextField>

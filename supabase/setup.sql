@@ -97,6 +97,8 @@ create table if not exists orders (
   status order_status not null default 'pending',
   customer_name text not null,
   phone text not null,
+  email text,
+  alt_phone text,
   address text,
   delivery_date date,
   note text,
@@ -288,8 +290,12 @@ create policy "admin manage inquiries" on inquiries for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- ── Atomic order-create RPC (anon checkout) ─────────────────────────────────
+drop function if exists create_order(
+  text, text, text, date, text, numeric, numeric, numeric, int, jsonb
+);
 create or replace function create_order(
-  p_customer_name text, p_phone text, p_address text, p_delivery_date date, p_note text,
+  p_customer_name text, p_phone text, p_email text, p_alt_phone text,
+  p_address text, p_delivery_date date, p_note text,
   p_subtotal numeric, p_delivery_fee numeric, p_total numeric, p_total_pieces int, p_items jsonb
 )
 returns table (id uuid, order_no int)
@@ -297,10 +303,11 @@ language plpgsql security definer set search_path = public as $$
 declare v_id uuid; v_order_no int;
 begin
   insert into orders (
-    customer_name, phone, address, delivery_date, note,
+    customer_name, phone, email, alt_phone, address, delivery_date, note,
     subtotal, delivery_fee, total, total_pieces, status, source, inquiry_id
   ) values (
-    p_customer_name, p_phone, p_address, p_delivery_date, p_note,
+    p_customer_name, p_phone, nullif(p_email, ''), nullif(p_alt_phone, ''),
+    p_address, p_delivery_date, p_note,
     p_subtotal, p_delivery_fee, p_total, p_total_pieces, 'pending', 'web', null
   ) returning orders.id, orders.order_no into v_id, v_order_no;
 
@@ -324,7 +331,7 @@ begin
 end; $$;
 
 grant execute on function create_order(
-  text, text, text, date, text, numeric, numeric, numeric, int, jsonb
+  text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb
 ) to anon, authenticated;
 
 -- ============================================================================
