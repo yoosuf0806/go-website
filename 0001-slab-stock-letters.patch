@@ -1,0 +1,1533 @@
+From dc771142c1e255758b38c988c3cf0148199afde1 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 10 Jul 2026 13:30:15 +0000
+Subject: [PATCH] Add 15pc slab, free per-package letter topper,
+ per-product-per-package stock
+
+Three features (PR #2/#4 scope) plus full wiring end-to-end:
+
+1. Slab sizing - new slab-15 package alongside slab-12. Admin gets two
+   independent per-size toggles (is_slab_available, is_slab_15_available).
+
+2. Letter topper reworked from a paid LKR-350 addon to a free, built-in
+   option. Limit is now per-package (packages.letter_max_chars): 7 chars/line
+   for both slab sizes, 5 for the 15pc box, 4 for the 12pc box, not offered
+   for the 9pc box. The old letter_topper addon row is kept (price 0,
+   disabled) only so historical orders still render.
+
+3. Per-product-per-package stock (product_package_stock table) - any
+   product x package combo can be individually marked sold out (no row = in
+   stock). Out-of-stock combos show disabled/struck-through in the storefront
+   package selector rather than disappearing.
+
+Wired through migration -> setup.sql -> seed-data.ts -> snapshot.ts ->
+liveCatalog.ts (the runtime fetch path added by live-catalog-reads) ->
+types/catalog.ts -> ProductConfigurator/PackageSelector/AddonPanel ->
+admin ProductFormModal/Products page + new admin hooks.
+
+Migration 013_slab_stock_letters.sql was written fresh this session - it
+did not actually exist on claude/live-catalog-reads as referenced; checked
+full repo history, no trace on any branch.
+
+Branched off claude/live-catalog-reads (PR #3, open/not yet merged) since
+this depends on the live-catalog fetch plumbing it added.
+
+Verified: tsc -b clean, npm test 60/60 (59 baseline + 1 addon test split
+for per-package limits), npm run lint 0 errors, npm run build (client + SSR
++ prerender) succeeds. Spot-checked prerendered HTML for dual-slab filtering
+and out-of-stock rendering.
+
+HANDOFF.md and GOLDEN_OVEN_BUILD_SPEC.md updated to match.
+---
+ GOLDEN_OVEN_BUILD_SPEC.md                     |  37 ++++++-
+ HANDOFF.md                                    |  91 ++++++++++++----
+ scripts/seed-data.ts                          |  41 +++++--
+ scripts/snapshot.ts                           |  30 +++++-
+ src/components/admin/ProductFormModal.tsx     |  18 +++-
+ src/components/storefront/AddonPanel.tsx      | 101 +++++++++---------
+ src/components/storefront/PackageSelector.tsx |  16 ++-
+ .../storefront/ProductConfigurator.tsx        |  49 +++++++--
+ src/components/storefront/ProductTile.tsx     |   8 +-
+ src/hooks/useAdminProducts.ts                 |  37 +++++++
+ src/lib/adminProducts.ts                      |  63 +++++++++++
+ src/lib/liveCatalog.ts                        |  25 ++++-
+ src/pages/ProductDetail.tsx                   |   7 +-
+ src/pages/admin/Products.tsx                  |  68 +++++++++++-
+ src/schemas/addon.test.ts                     |  36 ++++---
+ src/schemas/addon.ts                          |  47 ++++----
+ src/types/catalog.ts                          |  18 ++++
+ .../migrations/013_slab_stock_letters.sql     |  74 +++++++++++++
+ supabase/setup.sql                            |  39 +++++--
+ 19 files changed, 661 insertions(+), 144 deletions(-)
+ create mode 100644 supabase/migrations/013_slab_stock_letters.sql
+
+diff --git a/GOLDEN_OVEN_BUILD_SPEC.md b/GOLDEN_OVEN_BUILD_SPEC.md
+index 6d9ff5f..2dccbe4 100644
+--- a/GOLDEN_OVEN_BUILD_SPEC.md
++++ b/GOLDEN_OVEN_BUILD_SPEC.md
+@@ -490,4 +490,39 @@ ADMIN_DEPLOY_HOOK_URL=               # Vercel Deploy Hook that rebuilds the stor
+ 3. Add-on prices (topper / ribbon / gift message) in LKR.
+ 4. Whether cancelled orders should notify the customer via a templated WhatsApp message.
+ 5. **Availability model** — confirm whether `in_stock` (simple sold-out toggle) is enough for v1, or whether `stock_qty` (optional daily capacity) should be surfaced in the admin from day one. Bake-to-order means neither auto-decrements.
+-6. **Publish cadence** — confirm the ~1-minute publish-after-edit delay is acceptable (build-time snapshot). If instant updates are ever required for a specific field, that field can be moved to a live read as a targeted exception.
++## 13. PR #2 addendum — slab sizing, free topper, per-package stock (supersedes parts of §6.1/§6.2)
++
++The rules below were added after the rest of this document was written and locked
++(migration `013_slab_stock_letters.sql`). Where they conflict with §6.1/§6.2
++above, this section is authoritative.
++
++- **Packages are now five, not four**: 9 / 12 / 15 pcs boxes, **plus two slab
++  sizes** — Brownie Slab (12 pcs, `slab-12`) and Brownie Slab (15 pcs,
++  `slab-15`). A product's two slab flags (`is_slab_available` for 12pc,
++  `is_slab_15_available` for 15pc) are independent — a product can offer
++  either, both, or neither.
++- **Letter topper is free, not a paid add-on.** It's a built-in option on
++  qualifying packages, not gated by the `addons` table's price/enable toggle
++  (that row is kept, zeroed and disabled, only so historical order rows with a
++  `letter_topper` addon line keep rendering). Still exactly 3 line fields, but
++  the **per-line character limit now varies by package** —
++  `packages.letter_max_chars`:
++  | Package | Max chars/line |
++  |---|---|
++  | 15pc slab | 7 |
++  | 12pc slab | 7 |
++  | 15pc box | 5 |
++  | 12pc box | 4 |
++  | 9pc box | 0 (topper not offered) |
++
++  Shown only when the selected package's `letter_max_chars > 0` **and** the
++  product's `allows_letter_topper` is true.
++- **Per-product-per-package stock** (`product_package_stock`): a specific
++  product×package combo (e.g. 12pc Cashew Brownie) can be marked sold out
++  independent of the product-level `in_stock` flag and independent of other
++  packages for the same product (9pc Cashew can stay in stock while 12pc
++  Cashew is sold out). No row for a combo = in stock; a row with
++  `in_stock = false` is the sold-out override. Out-of-stock combos render
++  disabled/struck-through in the storefront package selector rather than
++  disappearing, so the customer sees the option exists but can't select it.
++
+diff --git a/HANDOFF.md b/HANDOFF.md
+index f6887f7..1a8496f 100644
+--- a/HANDOFF.md
++++ b/HANDOFF.md
+@@ -24,7 +24,7 @@ Abril Fatface headings + Nunito body.
+ | Layer | Tech |
+ |---|---|
+ | Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
+-| Catalogue | Build-time snapshot → `src/data/catalog.json` (storefront reads this, not the DB) |
++| Catalogue | Build-time snapshot (`src/data/catalog.json`) seeds first paint/SSR; browser then refetches **live** from Supabase (PR #3) and swaps it in |
+ | State / data | Zustand (cart, persisted to localStorage); React Query (runtime writes + admin CRUD) |
+ | Validation | Zod |
+ | Backend | Supabase — Postgres + RLS, Auth (admin only), Storage (`product-images`) |
+@@ -32,19 +32,37 @@ Abril Fatface headings + Nunito body.
+ | SEO | react-helmet-async + build-time **prerender** (static HTML per route) + sitemap/robots + JSON-LD |
+ | Hosting | GitHub → **Vercel** (primary). A Netlify preview also builds but is secondary. |
+ 
+-**Defining architecture — build-time snapshot (Shopify-style), NOT runtime fetch.**
+-`scripts/snapshot.ts` reads all catalogue data from Supabase at build time (with
+-the service key) and writes `src/data/catalog.json`, bundled into the site. The
+-storefront reads that JSON synchronously — **zero DB reads while browsing**.
+-Supabase is touched at runtime **only for writes**: order insert (via the
+-`create_order` RPC) and inquiry insert. Admin edits → click **Publish** →
+-Vercel Deploy Hook rebuilds with a fresh snapshot (~1 min).
++**Architecture, updated by PR #3 — snapshot seeds, live fetch overrides.**
++`scripts/snapshot.ts` still reads all catalogue data from Supabase at build time
++and writes `src/data/catalog.json`, bundled into the site — this is what SSR/
++prerender use and what powers instant first paint. But as of PR #3,
++`CatalogProvider` (`src/contexts/CatalogContext.tsx`) refetches the catalogue
++**live** from Supabase in the browser on mount via `src/lib/liveCatalog.ts`
++(same camelCase output shape as the snapshot) and swaps it in once loaded — so
++admin add/edit/delete now shows up on the **next page load**, not just after a
++Publish/rebuild. If the live fetch fails, the seed snapshot stays (fail-safe).
++The **Publish button / deploy hook still matters** for SEO (prerendered HTML)
++and as the fail-safe seed, so it isn't obsolete — just no longer the only path
++to freshness for logged-in browsing.
++**Two parallel mapping paths to keep in sync**: `scripts/snapshot.ts` (build)
++and `src/lib/liveCatalog.ts` (runtime) both transform the same DB rows into
++`Catalog` shape — any new catalogue column needs both updated, plus
++`scripts/seed-data.ts` (offline fallback) and `types/catalog.ts`.
+ 
+ ## 3. Repo & branches
+ 
+ - Repo: `yoosuf0806/go-website`
+-- Active branch: `claude/golden-oven-scaffold-pkpwqz`
+-- Production base: `main` (Phase 1 scaffold); open PR **#1** merges the branch → `main`.
++- `main` — production. PR #1 (scaffold) and PR #2 (multi-image/video gallery) are merged.
++- `claude/live-catalog-reads` — PR #3: live-catalog reads (storefront now
++  fetches Supabase directly in the browser after first paint, not just at
++  build time — see §2 note below), slab filter fix, scroll-to-top, an FK fix.
++  **Open, not yet merged into `main`** as of this handoff — merge/verify it
++  before continuing.
++- `claude/slab-stock-letters` — PR #4 (this session): 15pc slab, free
++  per-package letter topper, per-product-per-package stock. Branched off
++  `claude/live-catalog-reads` (since it depends on live-catalog reads and PR
++  #3 hadn't merged yet) — **rebase onto `main` once PR #3 lands**, or just
++  merge PR #3 first and this branch will already be equivalent.
+ 
+ ## 4. File map (the important bits)
+ 
+@@ -90,7 +108,7 @@ src/
+   App.tsx              Router; admin routes code-split + auth-gated
+ api/publish.ts         Vercel edge fn: validates admin token → fires Deploy Hook
+ supabase/
+-  migrations/          001–011 (numbered SQL)
++  migrations/          001–013 (numbered SQL)
+   setup.sql            One-shot: full schema + RLS + create_order RPC (+ optional demo data)
+   storage-setup.sql    Creates the public product-images bucket + policies
+   content.sql          Seeds the site_settings 'content' row (Content CMS)  [if present]
+@@ -99,14 +117,32 @@ vercel.json            SPA rewrite of non-/api routes → /app.html
+ 
+ ## 5. Core business rules (do not reinterpret)
+ 
+-- **Packages** are fixed: 9 / 12 / 15 pcs and Brownie Slab (12 pcs). Line price =
+-  `price_per_piece × piece_count × box_qty` + add-on prices (add-ons per box).
++- **Packages**: 9 / 12 / 15 pcs boxes, **plus two independent slab sizes** —
++  Brownie Slab 12pc (`slab-12`) and Brownie Slab 15pc (`slab-15`), each gated
++  by its own product flag (`is_slab_available` / `is_slab_15_available`). Line
++  price = `price_per_piece × piece_count × box_qty` + add-on prices (add-ons
++  per box).
+ - **Delivery is computed once per cart** from the combined piece count
+   (`Σ piece_count × box_qty`) matched against `delivery_tiers` — never per line.
+   Base tier confirmed at **Rs. 580**. All of this lives in `lib/pricing.ts`;
+   every total on screen and in WhatsApp comes from `cartTotals()`.
+-- **Add-ons**: letter topper (slab-only, product must allow it; 3 lines × 5 chars),
+-  gift message (100-char), gift ribbon (colour list). Config keys are snake_case
++- **Letter topper is FREE and built-in** (PR #2, migration 013) — no longer
++  the priced `letter_topper` addon. Still 3 lines, but the per-line character
++  limit is now **per-package** (`packages.letter_max_chars`): 7 for both slab
++  sizes, 5 for the 15pc box, 4 for the 12pc box, 0 (hidden) for the 9pc box.
++  Shown only when the selected package's limit > 0 **and**
++  `product.allows_letter_topper` is true. The old `letter_topper` addon row is
++  kept (price 0, disabled) only so historical orders still render correctly —
++  don't re-enable it.
++- **Per-product-per-package stock** (`product_package_stock`, migration 013):
++  a specific product×package combo can be marked sold out independent of the
++  product's overall `in_stock` flag and independent of its other packages
++  (e.g. 9pc Cashew in stock, 12pc Cashew sold out). No row = in stock. Checked
++  via `productPackageStock` on the `Catalog`/live-fetch shape and
++  `stockKey(productId, packageId)` (`types/catalog.ts`). Out-of-stock combos
++  are disabled/struck-through in `PackageSelector`, not hidden.
++- **Add-ons**: gift message (100-char), gift ribbon (colour list) remain
++  priced add-ons. Config keys are snake_case
+   in the DB JSON (`max_chars_per_line`, `slab_only`, `max_chars`).
+ - **Checkout**: Details (zod) → Review → Confirm. WhatsApp opens **only after a
+   successful order insert**; on failure show retry (never diverge DB vs message).
+@@ -156,11 +192,26 @@ in `lib/pricing.ts`, WhatsApp text in `lib/whatsapp.ts`, editable copy in
+ - **Sparkles** slab add-on (reference has it; needs an `addons` row + AddonPanel support).
+ - **Auto-open cart** on add-to-cart (lift cart-open state so ProductConfigurator can trigger it).
+ - **`netlify.toml`** with SPA fallback if keeping Netlify — otherwise standardise on Vercel.
+-- Confirm business details: real WhatsApp number, Google URL, add-on prices, any
+-  heavy-order delivery tiers (`site_settings` / `delivery_tiers`).
++- Confirm business details: real WhatsApp number, Google URL, any heavy-order
++  delivery tiers (`site_settings` / `delivery_tiers`). (Add-on prices for gift
++  message/ribbon are already seeded; letter topper is no longer priced — see §5.)
++- **PR #3 (`claude/live-catalog-reads`) must be merged into `main`** — it was
++  still open as of this handoff. PR #4 (slab-15/free topper/stock, this
++  session) was branched off it since it depends on the live-catalog plumbing;
++  rebase onto `main` after PR #3 lands if they haven't already been merged in
++  that order.
++- Migration `013_slab_stock_letters.sql` was **written fresh this session** —
++  it did not actually exist on `claude/live-catalog-reads` as the prior
++  handoff claimed (checked the full repo history; no trace of it on any
++  branch). If a version of it turns up elsewhere, diff before applying either
++  one to a real database — don't run both.
+ 
+ ## 11. Status
+ 
+-All build phases done; storefront rebuilt to the reference design (pink/navy),
+-product pages, Content CMS, and SEO/prerender are in. PR #1 open (branch → main),
+-CI green on Vercel + Netlify previews.
++All Phase 1 build phases done; storefront rebuilt to the reference design
++(pink/navy), product pages, Content CMS, and SEO/prerender are in. PR #1
++(scaffold) and PR #2 (media gallery) merged into `main`. PR #3 (live-catalog
++reads) open, not yet merged as of this handoff. PR #4 (15pc slab, free
++per-package letter topper, per-product-per-package stock) built this session
++on top of PR #3's branch — `tsc -b`, `npm test` (60/60, was 59 baseline + 1
++split), and `npm run build` (client + SSR + prerender) all pass.
+diff --git a/scripts/seed-data.ts b/scripts/seed-data.ts
+index 8cfb9d3..750bf1a 100644
+--- a/scripts/seed-data.ts
++++ b/scripts/seed-data.ts
+@@ -34,6 +34,7 @@ export interface RawProduct {
+   in_stock: boolean
+   stock_qty: number | null
+   is_slab_available: boolean
++  is_slab_15_available: boolean
+   allows_letter_topper: boolean
+   sort_order: number
+ }
+@@ -44,9 +45,18 @@ export interface RawPackage {
+   piece_count: number
+   is_slab: boolean
+   is_active: boolean
++  /** Max characters per topper line (3 lines) for this package. 0 = topper not offered. */
++  letter_max_chars: number
+   sort_order: number
+ }
+ 
++/** One row of `product_package_stock` — presence means an explicit override. */
++export interface RawProductPackageStock {
++  product_id: string
++  package_id: string
++  in_stock: boolean
++}
++
+ export interface RawAddon {
+   id: string
+   label: string
+@@ -89,6 +99,7 @@ export interface SeedData {
+   deliveryTiers: RawDeliveryTier[]
+   reviews: RawReview[]
+   settings: RawSettings
++  productPackageStock: RawProductPackageStock[]
+ }
+ 
+ const CAT_CLASSIC = '11111111-1111-4111-8111-111111111111'
+@@ -114,6 +125,7 @@ export const seedData: SeedData = {
+       in_stock: true,
+       stock_qty: null,
+       is_slab_available: true,
++      is_slab_15_available: true,
+       allows_letter_topper: true,
+       sort_order: 1,
+     },
+@@ -130,6 +142,7 @@ export const seedData: SeedData = {
+       in_stock: true,
+       stock_qty: null,
+       is_slab_available: false,
++      is_slab_15_available: false,
+       allows_letter_topper: false,
+       sort_order: 2,
+     },
+@@ -146,6 +159,7 @@ export const seedData: SeedData = {
+       in_stock: true,
+       stock_qty: 40,
+       is_slab_available: true,
++      is_slab_15_available: false,
+       allows_letter_topper: true,
+       sort_order: 3,
+     },
+@@ -162,6 +176,7 @@ export const seedData: SeedData = {
+       in_stock: true,
+       stock_qty: null,
+       is_slab_available: true,
++      is_slab_15_available: true,
+       allows_letter_topper: true,
+       sort_order: 4,
+     },
+@@ -178,24 +193,32 @@ export const seedData: SeedData = {
+       in_stock: false,
+       stock_qty: null,
+       is_slab_available: true,
++      is_slab_15_available: false,
+       allows_letter_topper: true,
+       sort_order: 5,
+     },
+   ],
+ 
++  // letter_max_chars: max chars/line for the free 3-line built-in topper.
++  // 0 = topper not offered for that package (box-9).
+   packages: [
+-    { id: 'box-9', label: '9 Pieces', piece_count: 9, is_slab: false, is_active: true, sort_order: 1 },
+-    { id: 'box-12', label: '12 Pieces', piece_count: 12, is_slab: false, is_active: true, sort_order: 2 },
+-    { id: 'box-15', label: '15 Pieces', piece_count: 15, is_slab: false, is_active: true, sort_order: 3 },
+-    { id: 'slab-12', label: 'Brownie Slab (12 pcs)', piece_count: 12, is_slab: true, is_active: true, sort_order: 4 },
++    { id: 'box-9', label: '9 Pieces', piece_count: 9, is_slab: false, is_active: true, letter_max_chars: 0, sort_order: 1 },
++    { id: 'box-12', label: '12 Pieces', piece_count: 12, is_slab: false, is_active: true, letter_max_chars: 4, sort_order: 2 },
++    { id: 'box-15', label: '15 Pieces', piece_count: 15, is_slab: false, is_active: true, letter_max_chars: 5, sort_order: 3 },
++    { id: 'slab-12', label: 'Brownie Slab (12 pcs)', piece_count: 12, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 4 },
++    { id: 'slab-15', label: 'Brownie Slab (15 pcs)', piece_count: 15, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 5 },
+   ],
+ 
+   addons: [
++    // Letter topper is now a free, built-in option with per-package limits
++    // (packages[].letter_max_chars), not a priced addon — kept here
++    // disabled/zeroed rather than removed so historical order rows that
++    // stored a letter_topper addon line still render correctly.
+     {
+       id: 'letter_topper',
+       label: 'Letter Topper',
+-      price: 350,
+-      is_enabled: true,
++      price: 0,
++      is_enabled: false,
+       config: { lines: 3, max_chars_per_line: 5, slab_only: true },
+     },
+     {
+@@ -253,4 +276,10 @@ export const seedData: SeedData = {
+     features: { corporate_section: true, wedding_section: true, reviews_section: true },
+     business: { whatsapp_number: '94771234567', google_business_url: 'https://g.page/golden-oven' },
+   },
++
++  // No row = in stock. Cashew Brownie (a3333333…) is in stock as 9pc but
++  // sold out as 12pc — demonstrates the per-product-per-package override.
++  productPackageStock: [
++    { product_id: 'a3333333-3333-4333-8333-333333333333', package_id: 'box-12', in_stock: false },
++  ],
+ }
+diff --git a/scripts/snapshot.ts b/scripts/snapshot.ts
+index 226cb75..bc7f467 100644
+--- a/scripts/snapshot.ts
++++ b/scripts/snapshot.ts
+@@ -27,6 +27,7 @@ import type {
+   RawDeliveryTier,
+   RawPackage,
+   RawProduct,
++  RawProductPackageStock,
+   RawReview,
+   SeedData,
+ } from './seed-data.ts'
+@@ -36,7 +37,9 @@ import type {
+   BannerSetting,
+   FeaturesSetting,
+   BusinessSetting,
++  ProductPackageStockMap,
+ } from '../src/types/catalog.ts'
++import { stockKey } from '../src/types/catalog.ts'
+ import { mergeContent, type SiteContent } from '../src/types/content.ts'
+ 
+ const __dirname = dirname(fileURLToPath(import.meta.url))
+@@ -70,6 +73,7 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
+       inStock: r.in_stock,
+       stockQty: r.stock_qty,
+       isSlabAvailable: r.is_slab_available,
++      isSlab15Available: r.is_slab_15_available,
+       allowsLetterTopper: r.allows_letter_topper,
+       sortOrder: r.sort_order,
+     }))
+@@ -84,10 +88,20 @@ function mapPackages(rows: RawPackage[]): Catalog['packages'] {
+       label: r.label,
+       pieceCount: r.piece_count,
+       isSlab: r.is_slab,
++      letterMaxChars: r.letter_max_chars,
+       sortOrder: r.sort_order,
+     }))
+ }
+ 
++/** No row = in stock; only out-of-stock overrides need to appear in the map. */
++function mapProductPackageStock(rows: RawProductPackageStock[]): ProductPackageStockMap {
++  const map: ProductPackageStockMap = {}
++  for (const r of rows) {
++    if (!r.in_stock) map[stockKey(r.product_id, r.package_id)] = false
++  }
++  return map
++}
++
+ function mapAddons(rows: RawAddon[]): Catalog['addons'] {
+   return rows
+     .filter((r) => r.is_enabled)
+@@ -144,6 +158,7 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
+     reviews: mapReviews(data.reviews),
+     settings: mapSettings(data.settings),
+     content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
++    productPackageStock: mapProductPackageStock(data.productPackageStock),
+   }
+ }
+ 
+@@ -153,7 +168,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
+     auth: { persistSession: false },
+   })
+ 
+-  const [categories, products, packages, addons, tiers, reviews, settings] =
++  const [categories, products, packages, addons, tiers, reviews, settings, productPackageStock] =
+     await Promise.all([
+       supabase.from('categories').select('*'),
+       supabase.from('products').select('*'),
+@@ -162,9 +177,19 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
+       supabase.from('delivery_tiers').select('*'),
+       supabase.from('reviews').select('*'),
+       supabase.from('site_settings').select('*'),
++      supabase.from('product_package_stock').select('*'),
+     ])
+ 
+-  for (const res of [categories, products, packages, addons, tiers, reviews, settings]) {
++  for (const res of [
++    categories,
++    products,
++    packages,
++    addons,
++    tiers,
++    reviews,
++    settings,
++    productPackageStock,
++  ]) {
+     if (res.error) {
+       throw new Error(`Supabase read failed: ${res.error.message}`)
+     }
+@@ -187,6 +212,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
+       business: (settingsByKey.business ?? {}) as Record<string, unknown>,
+       content: (settingsByKey.content ?? undefined) as Record<string, unknown> | undefined,
+     },
++    productPackageStock: (productPackageStock.data ?? []) as RawProductPackageStock[],
+   }
+ }
+ 
+diff --git a/src/components/admin/ProductFormModal.tsx b/src/components/admin/ProductFormModal.tsx
+index 817ca0c..c163df3 100644
+--- a/src/components/admin/ProductFormModal.tsx
++++ b/src/components/admin/ProductFormModal.tsx
+@@ -35,6 +35,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
+     in_stock: true,
+     stock_qty: null,
+     is_slab_available: false,
++    is_slab_15_available: false,
+     allows_letter_topper: false,
+     sort_order: 0,
+   }
+@@ -99,10 +100,11 @@ export default function ProductFormModal({
+ 
+   function handleSubmit(e: React.FormEvent) {
+     e.preventDefault()
+-    // Letter topper only makes sense on slab-capable products (spec §6.2).
++    // Letter topper only makes sense on slab-capable products — either size (spec §6.2, PR #2).
++    const slabCapable = form.is_slab_available || form.is_slab_15_available
+     const cleaned: ProductInput = {
+       ...form,
+-      allows_letter_topper: form.is_slab_available ? form.allows_letter_topper : false,
++      allows_letter_topper: slabCapable ? form.allows_letter_topper : false,
+       // image_url is derived from the gallery cover so legacy readers
+       // (SEO/JSON-LD/ProductTile) that only look at image_url keep working.
+       image_url: form.media[0]?.url ?? null,
+@@ -292,9 +294,17 @@ export default function ProductFormModal({
+                 checked={form.is_slab_available}
+                 onChange={(e) => set('is_slab_available', e.target.checked)}
+               />
+-              Slab available
++              12pc Slab available
+             </label>
+-            {form.is_slab_available && (
++            <label className="flex items-center gap-2 text-sm">
++              <input
++                type="checkbox"
++                checked={form.is_slab_15_available}
++                onChange={(e) => set('is_slab_15_available', e.target.checked)}
++              />
++              15pc Slab available
++            </label>
++            {(form.is_slab_available || form.is_slab_15_available) && (
+               <label className="flex items-center gap-2 pl-6 text-sm">
+                 <input
+                   type="checkbox"
+diff --git a/src/components/storefront/AddonPanel.tsx b/src/components/storefront/AddonPanel.tsx
+index 4e1957a..57c8f40 100644
+--- a/src/components/storefront/AddonPanel.tsx
++++ b/src/components/storefront/AddonPanel.tsx
+@@ -1,35 +1,41 @@
+ import type { CatalogAddon, GiftRibbonConfig } from '../../types/catalog'
+ import type { CartAddon } from '../../lib/pricing'
+ import { formatLKR } from '../../lib/format'
+-import { TOPPER_LIMITS, GIFT_MESSAGE_MAX, isValidTopperLine } from '../../schemas/addon'
++import { TOPPER_LINES, GIFT_MESSAGE_MAX, isValidTopperLine } from '../../schemas/addon'
+ 
+ // Add-on selection state, independent of the catalogue shape so it can be
+-// driven by controlled inputs (spec §6.2: letter topper, gift message, gift
+-// ribbon — each with its own admin-editable price and constraints).
++// driven by controlled inputs. Letter topper is a free, built-in option (PR
++// #2) — no enabled/price toggle, just up to 3 lines the customer can fill in
++// or leave blank. Gift message / gift ribbon remain priced add-ons (spec §6.2).
+ export interface AddonSelection {
+-  letterTopper: { enabled: boolean; lines: string[] }
++  letterTopper: { lines: string[] }
+   giftMessage: { enabled: boolean; text: string }
+   giftRibbon: { enabled: boolean; color: string | null }
+ }
+ 
+ export function emptyAddonSelection(): AddonSelection {
+   return {
+-    letterTopper: { enabled: false, lines: Array(TOPPER_LIMITS.lines).fill('') },
++    letterTopper: { lines: Array(TOPPER_LINES).fill('') },
+     giftMessage: { enabled: false, text: '' },
+     giftRibbon: { enabled: false, color: null },
+   }
+ }
+ 
+-/** Convert the panel's selection state into priced CartAddon rows (lib/pricing). */
++/**
++ * Convert the panel's selection state into priced CartAddon rows (lib/pricing).
++ * The topper is always price: 0 (free, built-in) — still emitted as a
++ * CartAddon (not a separate field) so cart line-keying, the WhatsApp message
++ * builder, and the admin order slip all keep working unchanged; only the
++ * price differs from a normal addon.
++ */
+ export function toCartAddons(addons: CatalogAddon[], selection: AddonSelection): CartAddon[] {
+   const result: CartAddon[] = []
+ 
+-  const topper = addons.find((a) => a.id === 'letter_topper')
+-  if (topper && selection.letterTopper.enabled && selection.letterTopper.lines.some((l) => l.trim() !== '')) {
++  if (selection.letterTopper.lines.some((l) => l.trim() !== '')) {
+     result.push({
+-      id: topper.id,
+-      label: topper.label,
+-      price: topper.price,
++      id: 'letter_topper',
++      label: 'Letter Topper',
++      price: 0,
+       detail: { lines: selection.letterTopper.lines },
+     })
+   }
+@@ -59,9 +65,13 @@ export function toCartAddons(addons: CatalogAddon[], selection: AddonSelection):
+ 
+ interface AddonPanelProps {
+   addons: CatalogAddon[]
+-  /** Letter topper only ever applies to slab packages. */
+-  isSlabPackage: boolean
+-  /** Product-level gate — some products don't allow a letter topper even on a slab. */
++  /**
++   * Max characters per topper line for the currently-selected package
++   * (packages[].letter_max_chars). 0 means this package doesn't offer a
++   * topper at all (e.g. the 9pc box) — the section is hidden.
++   */
++  topperMaxChars: number
++  /** Product-level gate — some products don't allow a letter topper even on a qualifying package. */
+   productAllowsLetterTopper: boolean
+   value: AddonSelection
+   onChange: (next: AddonSelection) => void
+@@ -70,13 +80,12 @@ interface AddonPanelProps {
+ 
+ export default function AddonPanel({
+   addons,
+-  isSlabPackage,
++  topperMaxChars,
+   productAllowsLetterTopper,
+   value,
+   onChange,
+   disabled,
+ }: AddonPanelProps) {
+-  const topper = addons.find((a) => a.id === 'letter_topper')
+   const message = addons.find((a) => a.id === 'gift_message')
+   const ribbon = addons.find((a) => a.id === 'gift_ribbon')
+ 
+@@ -86,45 +95,37 @@ export default function AddonPanel({
+     ? (ribbon.config as GiftRibbonConfig).colors
+     : []
+ 
+-  const showTopper = topper && isSlabPackage && productAllowsLetterTopper
++  // Shown only when this package offers a topper (max chars > 0) AND the
++  // product allows it. Package qualification comes from letter_max_chars,
++  // set per package (7 for both slab sizes, 5 for the 15pc box, 4 for the
++  // 12pc box, 0 — hidden — for the 9pc box).
++  const showTopper = topperMaxChars > 0 && productAllowsLetterTopper
+ 
+   return (
+     <div className="flex flex-col gap-4">
+       {showTopper && (
+         <div className="rounded-md border border-neutral-200 p-3">
+-          <label className="flex items-center gap-2 text-sm font-medium">
+-            <input
+-              type="checkbox"
+-              checked={value.letterTopper.enabled}
+-              disabled={disabled}
+-              onChange={(e) =>
+-                onChange({ ...value, letterTopper: { ...value.letterTopper, enabled: e.target.checked } })
+-              }
+-            />
+-            {topper.label} (+{formatLKR(topper.price)})
+-          </label>
+-          {value.letterTopper.enabled && (
+-            <div className="mt-2 flex gap-2">
+-              {value.letterTopper.lines.map((line, i) => (
+-                <input
+-                  key={i}
+-                  type="text"
+-                  value={line}
+-                  disabled={disabled}
+-                  maxLength={TOPPER_LIMITS.maxCharsPerLine}
+-                  placeholder={`Line ${i + 1}`}
+-                  onChange={(e) => {
+-                    const upper = e.target.value.toUpperCase()
+-                    if (!isValidTopperLine(upper)) return
+-                    const lines = [...value.letterTopper.lines]
+-                    lines[i] = upper
+-                    onChange({ ...value, letterTopper: { ...value.letterTopper, lines } })
+-                  }}
+-                  className="w-20 rounded border border-neutral-300 px-2 py-1 text-center text-sm uppercase"
+-                />
+-              ))}
+-            </div>
+-          )}
++          <p className="text-sm font-medium text-navy">Letter Topper (free)</p>
++          <div className="mt-2 flex gap-2">
++            {value.letterTopper.lines.map((line, i) => (
++              <input
++                key={i}
++                type="text"
++                value={line}
++                disabled={disabled}
++                maxLength={topperMaxChars}
++                placeholder={`up to ${topperMaxChars} letters`}
++                onChange={(e) => {
++                  const upper = e.target.value.toUpperCase()
++                  if (!isValidTopperLine(upper, topperMaxChars)) return
++                  const lines = [...value.letterTopper.lines]
++                  lines[i] = upper
++                  onChange({ ...value, letterTopper: { lines } })
++                }}
++                className="w-24 rounded border border-neutral-300 px-2 py-1 text-center text-sm uppercase placeholder:text-[10px] placeholder:normal-case"
++              />
++            ))}
++          </div>
+         </div>
+       )}
+ 
+diff --git a/src/components/storefront/PackageSelector.tsx b/src/components/storefront/PackageSelector.tsx
+index 8ba9fbc..d673030 100644
+--- a/src/components/storefront/PackageSelector.tsx
++++ b/src/components/storefront/PackageSelector.tsx
+@@ -1,12 +1,17 @@
+ import type { CatalogPackage } from '../../types/catalog'
+ 
+ // Package picker keyed by package.id — never array index (spec §6.1). Reference
+-// "package card" style: label + piece sublabel, pink when active.
++// "package card" style: label + piece sublabel, pink when active. Packages
++// that are individually out of stock for this product (product_package_stock)
++// stay visible but are disabled/struck-through rather than hidden, so the
++// customer understands why that size isn't selectable.
+ interface PackageSelectorProps {
+   packages: CatalogPackage[]
+   selectedId: string
+   onSelect: (id: string) => void
+   disabled?: boolean
++  /** Per-package in-stock check; defaults to always in stock if omitted. */
++  isInStock?: (packageId: string) => boolean
+ }
+ 
+ export default function PackageSelector({
+@@ -14,11 +19,13 @@ export default function PackageSelector({
+   selectedId,
+   onSelect,
+   disabled,
++  isInStock = () => true,
+ }: PackageSelectorProps) {
+   return (
+     <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Package">
+       {packages.map((pkg) => {
+         const selected = pkg.id === selectedId
++        const inStock = isInStock(pkg.id)
+         return (
+           <button
+             key={pkg.id}
+@@ -26,7 +33,8 @@ export default function PackageSelector({
+             data-package-id={pkg.id}
+             role="radio"
+             aria-checked={selected}
+-            disabled={disabled}
++            aria-disabled={!inStock}
++            disabled={disabled || !inStock}
+             onClick={() => onSelect(pkg.id)}
+             className={`flex flex-col items-center gap-0.5 rounded-[10px] border-2 px-4 py-2.5 text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+               selected
+@@ -34,9 +42,9 @@ export default function PackageSelector({
+                 : 'border-neutral-200 bg-white text-navy hover:border-pink'
+             }`}
+           >
+-            {pkg.label}
++            <span className={!inStock ? 'line-through' : ''}>{pkg.label}</span>
+             <span className={`text-[11px] font-medium ${selected ? 'text-pink' : 'text-neutral-400'}`}>
+-              {pkg.pieceCount} pcs
++              {inStock ? `${pkg.pieceCount} pcs` : 'Sold out'}
+             </span>
+           </button>
+         )
+diff --git a/src/components/storefront/ProductConfigurator.tsx b/src/components/storefront/ProductConfigurator.tsx
+index 1ab97d9..b07aec7 100644
+--- a/src/components/storefront/ProductConfigurator.tsx
++++ b/src/components/storefront/ProductConfigurator.tsx
+@@ -1,5 +1,6 @@
+ import { useMemo, useState } from 'react'
+-import type { CatalogProduct, CatalogPackage, CatalogAddon } from '../../types/catalog'
++import type { CatalogProduct, CatalogPackage, CatalogAddon, ProductPackageStockMap } from '../../types/catalog'
++import { stockKey } from '../../types/catalog'
+ import { lineTotal, type CartItem } from '../../lib/pricing'
+ import { formatLKR } from '../../lib/format'
+ import { useCartStore } from '../../stores/cart'
+@@ -10,6 +11,8 @@ interface ProductConfiguratorProps {
+   product: CatalogProduct
+   packages: CatalogPackage[]
+   addons: CatalogAddon[]
++  /** Out-of-stock product×package overrides; no entry = in stock. */
++  productPackageStock?: ProductPackageStockMap
+   onAdded?: () => void
+ }
+ 
+@@ -20,19 +23,38 @@ export default function ProductConfigurator({
+   product,
+   packages,
+   addons,
++  productPackageStock = {},
+   onAdded,
+ }: ProductConfiguratorProps) {
+-  const availablePackages = useMemo(
+-    () => packages.filter((p) => !p.isSlab || product.isSlabAvailable),
+-    [packages, product.isSlabAvailable],
++  // Product-level slab gates: each slab size (12pc / 15pc) has its own
++  // independent admin toggle. Non-slab boxes are always offered.
++  const eligiblePackages = useMemo(
++    () =>
++      packages.filter((p) => {
++        if (p.id === 'slab-15') return product.isSlab15Available
++        if (p.isSlab) return product.isSlabAvailable
++        return true
++      }),
++    [packages, product.isSlabAvailable, product.isSlab15Available],
+   )
+ 
+-  const [packageId, setPackageId] = useState(availablePackages[0]?.id ?? '')
++  // Per-product-per-package stock: a package combo can be individually sold
++  // out (product_package_stock) even when the product itself is generally in
++  // stock. Out-of-stock combos stay visible but unselectable, rather than
++  // disappearing, so the customer understands why (spec: "unselectable").
++  const isPackageInStock = (packageId: string) =>
++    productPackageStock[stockKey(product.id, packageId)] !== false
++
++  const availablePackages = eligiblePackages
++  const firstInStock = availablePackages.find((p) => isPackageInStock(p.id)) ?? availablePackages[0]
++
++  const [packageId, setPackageId] = useState(firstInStock?.id ?? '')
+   const [addonSelection, setAddonSelection] = useState<AddonSelection>(emptyAddonSelection())
+   const [boxQty, setBoxQty] = useState(1)
+   const addItem = useCartStore((s) => s.addItem)
+ 
+-  const selectedPackage = availablePackages.find((p) => p.id === packageId) ?? availablePackages[0]
++  const selectedPackage = availablePackages.find((p) => p.id === packageId) ?? firstInStock
++  const selectedInStock = selectedPackage ? isPackageInStock(selectedPackage.id) : false
+ 
+   const previewItem: CartItem | null = selectedPackage
+     ? {
+@@ -58,7 +80,7 @@ export default function ProductConfigurator({
+   if (!selectedPackage) return null
+ 
+   function handleAddToCart() {
+-    if (!previewItem) return
++    if (!previewItem || !selectedInStock) return
+     addItem(previewItem)
+     setBoxQty(1)
+     onAdded?.()
+@@ -73,13 +95,19 @@ export default function ProductConfigurator({
+             packages={availablePackages}
+             selectedId={selectedPackage.id}
+             onSelect={setPackageId}
++            isInStock={isPackageInStock}
+           />
+         </div>
++        {!selectedInStock && (
++          <p className="mt-2 text-xs font-semibold text-pink">
++            {selectedPackage.label} is sold out for this flavour right now.
++          </p>
++        )}
+       </div>
+ 
+       <AddonPanel
+         addons={addons}
+-        isSlabPackage={selectedPackage.isSlab}
++        topperMaxChars={selectedPackage.letterMaxChars}
+         productAllowsLetterTopper={product.allowsLetterTopper}
+         value={addonSelection}
+         onChange={setAddonSelection}
+@@ -123,9 +151,10 @@ export default function ProductConfigurator({
+       <button
+         type="button"
+         onClick={handleAddToCart}
+-        className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark"
++        disabled={!selectedInStock}
++        className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:hover:bg-neutral-300"
+       >
+-        Add to Cart 🛒
++        {selectedInStock ? 'Add to Cart 🛒' : 'Sold Out'}
+       </button>
+     </div>
+   )
+diff --git a/src/components/storefront/ProductTile.tsx b/src/components/storefront/ProductTile.tsx
+index e629e5d..d4dd34c 100644
+--- a/src/components/storefront/ProductTile.tsx
++++ b/src/components/storefront/ProductTile.tsx
+@@ -11,7 +11,11 @@ interface ProductTileProps {
+ // Reference-style catalogue card: white card, image with hover zoom + "View
+ // Product" overlay, brand tag, name, and "From LKR X". Links to the product page.
+ export default function ProductTile({ product, packages }: ProductTileProps) {
+-  const available = packages.filter((p) => !p.isSlab || product.isSlabAvailable)
++  const available = packages.filter((p) => {
++    if (p.id === 'slab-15') return product.isSlab15Available
++    if (p.isSlab) return product.isSlabAvailable
++    return true
++  })
+   const minPieces = available.reduce((m, p) => Math.min(m, p.pieceCount), Infinity)
+   const fromPrice = Number.isFinite(minPieces) ? product.pricePerPiece * minPieces : product.pricePerPiece
+   const soldOut = !product.inStock
+@@ -32,7 +36,7 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
+             Sold out
+           </span>
+         ) : (
+-          product.isSlabAvailable && (
++          (product.isSlabAvailable || product.isSlab15Available) && (
+             <span className="absolute right-2.5 top-2.5 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-navy">
+               Customise
+             </span>
+diff --git a/src/hooks/useAdminProducts.ts b/src/hooks/useAdminProducts.ts
+index c286b55..ae82cc8 100644
+--- a/src/hooks/useAdminProducts.ts
++++ b/src/hooks/useAdminProducts.ts
+@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+ import {
+   fetchProducts,
+   fetchCategories,
++  fetchPackages,
++  fetchProductPackageStock,
++  setProductPackageStock,
+   createProduct,
+   updateProduct,
+   deleteProduct,
+@@ -48,3 +51,37 @@ export function useUpdateCategory() {
+     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'categories'] }),
+   })
+ }
++
++/** Active packages, for building the per-product-per-package stock grid (one column each). */
++export function useAdminPackages() {
++  return useQuery({
++    queryKey: ['admin', 'packages'],
++    queryFn: fetchPackages,
++    staleTime: 60_000,
++  })
++}
++
++/** All product_package_stock override rows. No row for a combo = in stock. */
++export function useAdminProductPackageStock() {
++  return useQuery({
++    queryKey: ['admin', 'productPackageStock'],
++    queryFn: fetchProductPackageStock,
++    staleTime: 15_000,
++  })
++}
++
++export function useSetProductPackageStock() {
++  const qc = useQueryClient()
++  return useMutation({
++    mutationFn: ({
++      productId,
++      packageId,
++      inStock,
++    }: {
++      productId: string
++      packageId: string
++      inStock: boolean
++    }) => setProductPackageStock(productId, packageId, inStock),
++    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'productPackageStock'] }),
++  })
++}
+diff --git a/src/lib/adminProducts.ts b/src/lib/adminProducts.ts
+index 101d93e..e4a0ea5 100644
+--- a/src/lib/adminProducts.ts
++++ b/src/lib/adminProducts.ts
+@@ -30,11 +30,31 @@ export interface AdminProduct {
+   is_visible: boolean
+   in_stock: boolean
+   stock_qty: number | null
++  /** Can be ordered as the 12pc Brownie Slab. Independent of is_slab_15_available. */
+   is_slab_available: boolean
++  /** Can be ordered as the 15pc Brownie Slab. Independent of is_slab_available. */
++  is_slab_15_available: boolean
+   allows_letter_topper: boolean
+   sort_order: number
+ }
+ 
++/** One row of `product_package_stock` — a per product×package sold-out override. No row = in stock. */
++export interface AdminProductPackageStock {
++  product_id: string
++  package_id: string
++  in_stock: boolean
++}
++
++export interface AdminPackage {
++  id: string
++  label: string
++  piece_count: number
++  is_slab: boolean
++  is_active: boolean
++  letter_max_chars: number
++  sort_order: number
++}
++
+ /** The editable fields of a product (everything except the generated id). */
+ export type ProductInput = Omit<AdminProduct, 'id'>
+ 
+@@ -79,6 +99,49 @@ export async function updateCategory(
+   if (error) throw new Error(error.message)
+ }
+ 
++/** All active packages (for building the stock-toggle grid: one column per package). */
++export async function fetchPackages(): Promise<AdminPackage[]> {
++  const { data, error } = await supabase
++    .from('packages')
++    .select('*')
++    .eq('is_active', true)
++    .order('sort_order', { ascending: true })
++  if (error) throw new Error(error.message)
++  return (data ?? []) as AdminPackage[]
++}
++
++/** All product_package_stock rows. No row for a product×package = in stock. */
++export async function fetchProductPackageStock(): Promise<AdminProductPackageStock[]> {
++  const { data, error } = await supabase.from('product_package_stock').select('*')
++  if (error) throw new Error(error.message)
++  return (data ?? []) as AdminProductPackageStock[]
++}
++
++/**
++ * Set a single product×package combo in/out of stock. Setting in_stock=true
++ * deletes the override row entirely (no row = in stock, keeping the table
++ * small); setting false upserts a row.
++ */
++export async function setProductPackageStock(
++  productId: string,
++  packageId: string,
++  inStock: boolean,
++): Promise<void> {
++  if (inStock) {
++    const { error } = await supabase
++      .from('product_package_stock')
++      .delete()
++      .eq('product_id', productId)
++      .eq('package_id', packageId)
++    if (error) throw new Error(error.message)
++    return
++  }
++  const { error } = await supabase
++    .from('product_package_stock')
++    .upsert({ product_id: productId, package_id: packageId, in_stock: false })
++  if (error) throw new Error(error.message)
++}
++
+ /**
+  * Upload a single image or video file to the public product-images bucket
+  * and return its gallery entry ({ url, type }). Used for the product gallery
+diff --git a/src/lib/liveCatalog.ts b/src/lib/liveCatalog.ts
+index 681cb04..bdf23c0 100644
+--- a/src/lib/liveCatalog.ts
++++ b/src/lib/liveCatalog.ts
+@@ -17,7 +17,9 @@ import type {
+   CatalogCategory,
+   CatalogDeliveryTier,
+   CatalogReview,
++  ProductPackageStockMap,
+ } from '../types/catalog'
++import { stockKey } from '../types/catalog'
+ import { mergeContent } from '../types/content'
+ 
+ interface RawMedia {
+@@ -43,19 +45,31 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
+         inStock: r.in_stock as boolean,
+         stockQty: (r.stock_qty as number | null) ?? null,
+         isSlabAvailable: r.is_slab_available as boolean,
++        isSlab15Available: r.is_slab_15_available as boolean,
+         allowsLetterTopper: r.allows_letter_topper as boolean,
+         sortOrder: r.sort_order as number,
+       }
+     })
+ }
+ 
++/** No row = in stock; only out-of-stock overrides need to appear in the map. */
++function mapProductPackageStock(rows: Record<string, unknown>[]): ProductPackageStockMap {
++  const map: ProductPackageStockMap = {}
++  for (const r of rows) {
++    if (r.in_stock === false) {
++      map[stockKey(r.product_id as string, r.package_id as string)] = false
++    }
++  }
++  return map
++}
++
+ /**
+  * Fetch the full catalogue from Supabase. Returns the same shape as the baked
+  * snapshot. On any error, the caller keeps the snapshot seed (fail-safe: the
+  * site still shows the last-built catalogue rather than going blank).
+  */
+ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
+-  const [products, packages, addons, categories, tiers, reviews, settingsRows] =
++  const [products, packages, addons, categories, tiers, reviews, settingsRows, stockRows] =
+     await Promise.all([
+       supabase.from('products').select('*'),
+       supabase.from('packages').select('*').eq('is_active', true).order('sort_order'),
+@@ -64,6 +78,7 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
+       supabase.from('delivery_tiers').select('*').order('sort_order'),
+       supabase.from('reviews').select('*').eq('is_featured', true),
+       supabase.from('site_settings').select('*'),
++      supabase.from('product_package_stock').select('*'),
+     ])
+ 
+   // If the core product read failed, keep the seed rather than blanking the site.
+@@ -77,6 +92,7 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
+     label: p.label,
+     pieceCount: p.piece_count,
+     isSlab: p.is_slab,
++    letterMaxChars: p.letter_max_chars ?? 0,
+     sortOrder: p.sort_order,
+   }))
+ 
+@@ -118,6 +134,12 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
+   }
+   const content = mergeContent(settingsMap.get('content') ?? seed.content)
+ 
++  // Fall back to the seed's stock map only if the table read itself failed
++  // (an empty result set is the normal "everything in stock" case).
++  const productPackageStock = stockRows.error
++    ? seed.productPackageStock
++    : mapProductPackageStock(stockRows.data ?? [])
++
+   return {
+     generatedAt: new Date().toISOString(),
+     source: 'supabase',
+@@ -129,5 +151,6 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
+     reviews: mappedReviews,
+     settings,
+     content,
++    productPackageStock,
+   }
+ }
+diff --git a/src/pages/ProductDetail.tsx b/src/pages/ProductDetail.tsx
+index acd406a..a733993 100644
+--- a/src/pages/ProductDetail.tsx
++++ b/src/pages/ProductDetail.tsx
+@@ -143,7 +143,12 @@ export default function ProductDetail() {
+ 
+           <hr className="my-6 border-neutral-200" />
+ 
+-          <ProductConfigurator product={product} packages={packages} addons={addons} />
++          <ProductConfigurator
++            product={product}
++            packages={packages}
++            addons={addons}
++            productPackageStock={catalog.productPackageStock}
++          />
+ 
+           <div className="mt-8">
+             <Accordion
+diff --git a/src/pages/admin/Products.tsx b/src/pages/admin/Products.tsx
+index 281dbad..615f988 100644
+--- a/src/pages/admin/Products.tsx
++++ b/src/pages/admin/Products.tsx
+@@ -2,6 +2,9 @@ import { useState } from 'react'
+ import {
+   useAdminProducts,
+   useAdminCategories,
++  useAdminPackages,
++  useAdminProductPackageStock,
++  useSetProductPackageStock,
+   useProductMutations,
+   useUpdateCategory,
+ } from '../../hooks/useAdminProducts'
+@@ -15,6 +18,9 @@ import ProductFormModal from '../../components/admin/ProductFormModal'
+ export default function Products() {
+   const { data: products, isLoading, isError, error } = useAdminProducts()
+   const { data: categories } = useAdminCategories()
++  const { data: packages } = useAdminPackages()
++  const { data: stockRows } = useAdminProductPackageStock()
++  const setStock = useSetProductPackageStock()
+   const { create, update, remove } = useProductMutations()
+   const updateCategory = useUpdateCategory()
+ 
+@@ -33,6 +39,13 @@ export default function Products() {
+   const saving = create.isPending || update.isPending
+   const saveError = create.error?.message ?? update.error?.message ?? null
+ 
++  // No row for a product×package combo = in stock; a row with in_stock=false
++  // is the only kind that should normally exist (spec: sold-out overrides).
++  function isInStock(productId: string, packageId: string): boolean {
++    const row = stockRows?.find((r) => r.product_id === productId && r.package_id === packageId)
++    return row ? row.in_stock : true
++  }
++
+   return (
+     <div>
+       <div className="flex items-center justify-between">
+@@ -97,7 +110,8 @@ export default function Products() {
+                     <div className="flex flex-wrap gap-1 text-xs text-neutral-500">
+                       {!product.is_visible && <span className="rounded bg-neutral-200 px-1.5">hidden</span>}
+                       {!product.in_stock && <span className="rounded bg-red-100 px-1.5 text-red-700">sold out</span>}
+-                      {product.is_slab_available && <span className="rounded bg-neutral-100 px-1.5">slab</span>}
++                      {product.is_slab_available && <span className="rounded bg-neutral-100 px-1.5">slab-12</span>}
++                      {product.is_slab_15_available && <span className="rounded bg-neutral-100 px-1.5">slab-15</span>}
+                       {product.allows_letter_topper && <span className="rounded bg-neutral-100 px-1.5">topper</span>}
+                     </div>
+                   </td>
+@@ -130,6 +144,58 @@ export default function Products() {
+         </div>
+       )}
+ 
++      {products && products.length > 0 && packages && packages.length > 0 && (
++        <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
++          <div className="border-b border-neutral-100 px-4 py-3">
++            <h2 className="text-sm font-semibold">Package stock</h2>
++            <p className="mt-0.5 text-xs text-neutral-500">
++              Per-product, per-package sold-out toggle — e.g. 9pc Cashew in stock, 12pc Cashew out.
++              Click a package to flip it.
++            </p>
++          </div>
++          <table className="w-full text-sm">
++            <thead className="bg-neutral-50 text-left text-neutral-500">
++              <tr>
++                <th className="px-3 py-2 font-medium">Product</th>
++                {packages.map((pkg) => (
++                  <th key={pkg.id} className="px-3 py-2 text-center font-medium">
++                    {pkg.label}
++                  </th>
++                ))}
++              </tr>
++            </thead>
++            <tbody>
++              {products.map((product) => (
++                <tr key={product.id} className="border-t border-neutral-100">
++                  <td className="px-3 py-2">{product.name}</td>
++                  {packages.map((pkg) => {
++                    const inStock = isInStock(product.id, pkg.id)
++                    return (
++                      <td key={pkg.id} className="px-3 py-2 text-center">
++                        <button
++                          type="button"
++                          disabled={setStock.isPending}
++                          onClick={() =>
++                            setStock.mutate({ productId: product.id, packageId: pkg.id, inStock: !inStock })
++                          }
++                          className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
++                            inStock
++                              ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
++                              : 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200'
++                          }`}
++                        >
++                          {inStock ? 'In stock' : 'Sold out'}
++                        </button>
++                      </td>
++                    )
++                  })}
++                </tr>
++              ))}
++            </tbody>
++          </table>
++        </div>
++      )}
++
+       {editing !== undefined && (
+         <ProductFormModal
+           product={editing}
+diff --git a/src/schemas/addon.test.ts b/src/schemas/addon.test.ts
+index 1606578..96146b9 100644
+--- a/src/schemas/addon.test.ts
++++ b/src/schemas/addon.test.ts
+@@ -4,26 +4,36 @@ import {
+   topperLinesSchema,
+   giftMessageSchema,
+   isValidTopperLine,
+-  TOPPER_LIMITS,
++  TOPPER_LINES,
+   GIFT_MESSAGE_MAX,
+ } from './addon'
+ 
+-describe('topper line limits (spec §6.2)', () => {
+-  it('uppercases and accepts ≤5 chars', () => {
+-    expect(topperLineSchema.parse('abc')).toBe('ABC')
+-    expect(topperLineSchema.parse('happy')).toBe('HAPPY') // exactly 5
++// PR #2: the topper is free/built-in and its per-line limit now varies by
++// package (packages[].letter_max_chars) — exercised here at 5 chars (15pc
++// box) and 4 chars (12pc box) to cover two different package limits.
++describe('topper line limits (per-package, PR #2)', () => {
++  it('uppercases and accepts up to the package limit', () => {
++    expect(topperLineSchema(5).parse('abc')).toBe('ABC')
++    expect(topperLineSchema(5).parse('happy')).toBe('HAPPY') // exactly 5
+   })
+ 
+-  it('rejects >5 chars', () => {
+-    expect(topperLineSchema.safeParse('sixchr').success).toBe(false)
+-    expect(isValidTopperLine('sixchr')).toBe(false)
+-    expect(isValidTopperLine('five5')).toBe(true)
++  it('rejects lines longer than the package limit', () => {
++    expect(topperLineSchema(5).safeParse('sixchr').success).toBe(false)
++    expect(isValidTopperLine('sixchr', 5)).toBe(false)
++    expect(isValidTopperLine('five5', 5)).toBe(true)
+   })
+ 
+-  it('rejects more than 3 lines', () => {
+-    expect(topperLinesSchema.safeParse(['A', 'B', 'C']).success).toBe(true)
+-    expect(topperLinesSchema.safeParse(['A', 'B', 'C', 'D']).success).toBe(false)
+-    expect(TOPPER_LIMITS.lines).toBe(3)
++  it('applies a different limit per package (4 chars for 12pc box)', () => {
++    expect(topperLineSchema(4).safeParse('four').success).toBe(true)
++    expect(topperLineSchema(4).safeParse('fives').success).toBe(false)
++    expect(isValidTopperLine('four', 4)).toBe(true)
++    expect(isValidTopperLine('fives', 4)).toBe(false)
++  })
++
++  it('rejects more than 3 lines regardless of package', () => {
++    expect(topperLinesSchema(7).safeParse(['A', 'B', 'C']).success).toBe(true)
++    expect(topperLinesSchema(7).safeParse(['A', 'B', 'C', 'D']).success).toBe(false)
++    expect(TOPPER_LINES).toBe(3)
+   })
+ })
+ 
+diff --git a/src/schemas/addon.ts b/src/schemas/addon.ts
+index cefa11d..b9dff89 100644
+--- a/src/schemas/addon.ts
++++ b/src/schemas/addon.ts
+@@ -1,36 +1,41 @@
+ import { z } from 'zod'
+ 
+ // Add-on input limits — the single source of truth (spec §8). The storefront
+-// UI, the checkout zod validation, and (ideally) a DB check all read these, so
+-// the 5-char topper line and 100-char gift message are defined once, here.
++// UI and the checkout zod validation read these, so the topper line limits and
++// 100-char gift message are defined once, here.
+ 
+-/** Letter topper: 3 lines, ≤5 chars each, uppercase, slab packages only (§6.2). */
+-export const TOPPER_LIMITS = {
+-  lines: 3,
+-  maxCharsPerLine: 5,
+-} as const
++/**
++ * Letter topper: always 3 lines, free and built-in (PR #2 — no longer the
++ * paid `letter_topper` addon). The per-line character limit now varies by
++ * PACKAGE (packages[].letter_max_chars), not a single global constant:
++ *   15pc slab → 7  |  12pc slab → 7  |  15pc box → 5  |  12pc box → 4  |  9pc box → 0 (none)
++ * TOPPER_LINES is the one constant that's still fixed across every package.
++ */
++export const TOPPER_LINES = 3
+ 
+ /** Gift message: free text, 100-char hard limit (§6.2). */
+ export const GIFT_MESSAGE_MAX = 100
+ 
+-/** One topper line: ≤5 chars, uppercased. Empty is allowed (a blank line). */
+-export const topperLineSchema = z
+-  .string()
+-  .transform((s) => s.toUpperCase())
+-  .refine((s) => s.length <= TOPPER_LIMITS.maxCharsPerLine, {
+-    message: `Max ${TOPPER_LIMITS.maxCharsPerLine} characters per line`,
+-  })
++/** One topper line schema for a given per-package char limit, uppercased. Empty is allowed (a blank line). */
++export function topperLineSchema(maxCharsPerLine: number) {
++  return z
++    .string()
++    .transform((s) => s.toUpperCase())
++    .refine((s) => s.length <= maxCharsPerLine, {
++      message: `Max ${maxCharsPerLine} characters per line`,
++    })
++}
+ 
+-/** Up to 3 topper lines. */
+-export const topperLinesSchema = z
+-  .array(topperLineSchema)
+-  .max(TOPPER_LIMITS.lines, { message: `Max ${TOPPER_LIMITS.lines} lines` })
++/** Up to 3 topper lines, each within the given package's char limit. */
++export function topperLinesSchema(maxCharsPerLine: number) {
++  return z.array(topperLineSchema(maxCharsPerLine)).max(TOPPER_LINES, { message: `Max ${TOPPER_LINES} lines` })
++}
+ 
+ export const giftMessageSchema = z
+   .string()
+   .max(GIFT_MESSAGE_MAX, { message: `Max ${GIFT_MESSAGE_MAX} characters` })
+ 
+-/** True if a single topper line is within the character limit. */
+-export function isValidTopperLine(line: string): boolean {
+-  return line.length <= TOPPER_LIMITS.maxCharsPerLine
++/** True if a single topper line is within the given package's character limit. */
++export function isValidTopperLine(line: string, maxCharsPerLine: number): boolean {
++  return line.length <= maxCharsPerLine
+ }
+diff --git a/src/types/catalog.ts b/src/types/catalog.ts
+index 688f4de..7e9e964 100644
+--- a/src/types/catalog.ts
++++ b/src/types/catalog.ts
+@@ -36,6 +36,8 @@ export interface CatalogProduct {
+   inStock: boolean
+   stockQty: number | null
+   isSlabAvailable: boolean
++  /** Can be ordered as the 15pc Brownie Slab (slab-15); independent of isSlabAvailable (12pc). */
++  isSlab15Available: boolean
+   allowsLetterTopper: boolean
+   sortOrder: number
+ }
+@@ -45,9 +47,23 @@ export interface CatalogPackage {
+   label: string
+   pieceCount: number
+   isSlab: boolean
++  /** Max characters per topper line (3 lines) for this package. 0 = topper not offered. */
++  letterMaxChars: number
+   sortOrder: number
+ }
+ 
++/**
++ * Per product×package sold-out overrides (`product_package_stock`). No entry
++ * for a productId::packageId key means that combo is in stock — this map only
++ * ever needs to record the OUT-of-stock combos, so it's small in practice.
++ * Key format matches cartLineKey's productId/packageId pairing convention.
++ */
++export type ProductPackageStockMap = Record<string, boolean>
++
++export function stockKey(productId: string, packageId: string): string {
++  return `${productId}::${packageId}`
++}
++
+ // Add-on `config` blobs keep their snake_case DB keys (stored as a JSONB unit,
+ // not column-mapped by the snapshot). Match the shapes seeded in seed-data.ts.
+ export interface LetterTopperConfig {
+@@ -125,4 +141,6 @@ export interface Catalog {
+   settings: CatalogSettings
+   /** Editable storefront copy + SEO (admin Content module). */
+   content: SiteContent
++  /** Out-of-stock product×package overrides; see stockKey/ProductPackageStockMap. */
++  productPackageStock: ProductPackageStockMap
+ }
+diff --git a/supabase/migrations/013_slab_stock_letters.sql b/supabase/migrations/013_slab_stock_letters.sql
+new file mode 100644
+index 0000000..a4e56f2
+--- /dev/null
++++ b/supabase/migrations/013_slab_stock_letters.sql
+@@ -0,0 +1,74 @@
++-- 013_slab_stock_letters.sql
++-- Three additions (PR #2):
++--   1. A second slab size — 15pc slab (`slab-15`) alongside the existing 12pc
++--      slab (`slab-12`). Admin gets two independent per-size toggles on the
++--      product (is_slab_available for 12pc, is_slab_15_available for 15pc).
++--   2. Letter topper becomes a FREE built-in option (no longer the paid
++--      `letter_topper` addon) with a per-PACKAGE character limit, so a 9pc box
++--      has none, boxes get 4–5 chars/line, slabs get 7. Limits live on
++--      `packages.letter_max_chars` (0 = topper not offered for that package),
++--      not on the addon config, since the limit now varies by package size
++--      rather than being a single global constant.
++--   3. Per-product-per-package stock — `product_package_stock` lets the admin
++--      mark a specific product×package combo out of stock (e.g. 9pc Cashew in
++--      stock, 12pc Cashew out) independent of the product-level `in_stock`
++--      flag. No row = in stock (the common case); a row with in_stock=false =
++--      that combo is sold out.
++
++-- ── 1. Second slab size ──────────────────────────────────────────────────────
++insert into packages (id, label, piece_count, is_slab, is_active, sort_order)
++values ('slab-15', 'Brownie Slab (15 pcs)', 15, true, true, 5)
++on conflict (id) do nothing;
++
++alter table products
++  add column if not exists is_slab_15_available boolean not null default false;
++
++comment on column products.is_slab_available is
++  'Can be ordered as the 12pc Brownie Slab (slab-12). Independent of is_slab_15_available.';
++comment on column products.is_slab_15_available is
++  'Can be ordered as the 15pc Brownie Slab (slab-15). Independent of is_slab_available.';
++
++-- ── 2. Free, per-package letter topper ───────────────────────────────────────
++-- Replaces the old global `letter_topper` addon config (lines/max_chars_per_line
++-- fixed at 3/5 for every slab). The limit now depends on which package is
++-- selected: 0 means "no topper for this package" (box-9); non-zero is the max
++-- characters per line for that package's 3 topper lines.
++alter table packages
++  add column if not exists letter_max_chars int not null default 0;
++
++update packages set letter_max_chars = 0 where id = 'box-9';
++update packages set letter_max_chars = 4 where id = 'box-12';
++update packages set letter_max_chars = 5 where id = 'box-15';
++update packages set letter_max_chars = 7 where id = 'slab-12';
++update packages set letter_max_chars = 7 where id = 'slab-15';
++
++comment on column packages.letter_max_chars is
++  'Max characters per topper line (3 lines, spec unchanged) for this package. 0 = no topper offered.';
++
++-- The topper is now free and built-in rather than a priced addon: zero its
++-- price and disable the old addon row so nothing double-charges or shows a
++-- stale "+ Rs. 350" checkbox. Left in place (not dropped) so historical orders
++-- that stored a `letter_topper` addon line keep rendering correctly.
++update addons set price = 0, is_enabled = false where id = 'letter_topper';
++
++-- ── 3. Per-product-per-package stock ─────────────────────────────────────────
++create table if not exists product_package_stock (
++  product_id uuid not null references products(id) on delete cascade,
++  package_id text not null references packages(id) on delete cascade,
++  in_stock boolean not null default false,
++  primary key (product_id, package_id)
++);
++
++comment on table product_package_stock is
++  'Per product×package sold-out overrides. No row = in stock. A row exists only when admin has explicitly marked that combo (almost always to mark it OUT of stock — in_stock=false); the table is not meant to hold one row per combo.';
++
++alter table product_package_stock enable row level security;
++
++drop policy if exists "public read product package stock" on product_package_stock;
++create policy "public read product package stock" on product_package_stock
++  for select using (true);
++
++drop policy if exists "admin all product package stock" on product_package_stock;
++create policy "admin all product package stock" on product_package_stock
++  for all using (auth.role() = 'authenticated')
++  with check (auth.role() = 'authenticated');
+diff --git a/supabase/setup.sql b/supabase/setup.sql
+index 81808a3..657ecaf 100644
+--- a/supabase/setup.sql
++++ b/supabase/setup.sql
+@@ -50,6 +50,7 @@ create table if not exists products (
+   in_stock boolean not null default true,
+   stock_qty int,
+   is_slab_available boolean not null default false,
++  is_slab_15_available boolean not null default false,
+   allows_letter_topper boolean not null default false,
+   sort_order int not null default 0,
+   created_at timestamptz not null default now()
+@@ -61,9 +62,18 @@ create table if not exists packages (
+   piece_count int not null check (piece_count > 0),
+   is_slab boolean not null default false,
+   is_active boolean not null default true,
++  letter_max_chars int not null default 0, -- max chars/line for the free 3-line topper; 0 = not offered
+   sort_order int not null default 0
+ );
+ 
++-- Per product×package sold-out overrides. No row = in stock.
++create table if not exists product_package_stock (
++  product_id uuid not null references products(id) on delete cascade,
++  package_id text not null references packages(id) on delete cascade,
++  in_stock boolean not null default false,
++  primary key (product_id, package_id)
++);
++
+ create table if not exists addons (
+   id text primary key,
+   label text not null,
+@@ -161,15 +171,21 @@ create trigger orders_updated_at before update on orders
+   for each row execute function set_updated_at();
+ 
+ -- ── Config / locked rows (idempotent) ───────────────────────────────────────
+-insert into packages (id, label, piece_count, is_slab, sort_order) values
+-  ('box-9',  '9 Pieces',              9,  false, 1),
+-  ('box-12', '12 Pieces',             12, false, 2),
+-  ('box-15', '15 Pieces',             15, false, 3),
+-  ('slab-12','Brownie Slab (12 pcs)', 12, true,  4)
+-on conflict (id) do nothing;
+-
++-- letter_max_chars: max chars/line for the free 3-line built-in topper.
++-- 0 = topper not offered for that package (box-9).
++insert into packages (id, label, piece_count, is_slab, sort_order, letter_max_chars) values
++  ('box-9',  '9 Pieces',              9,  false, 1, 0),
++  ('box-12', '12 Pieces',             12, false, 2, 4),
++  ('box-15', '15 Pieces',             15, false, 3, 5),
++  ('slab-12','Brownie Slab (12 pcs)', 12, true,  4, 7),
++  ('slab-15','Brownie Slab (15 pcs)', 15, true,  5, 7)
++on conflict (id) do update set letter_max_chars = excluded.letter_max_chars;
++
++-- letter_topper is now free and built-in (per-package limits above), not a
++-- priced addon -- kept disabled/zeroed rather than dropped so historical order
++-- rows that stored a letter_topper addon line still render correctly.
+ insert into addons (id, label, price, is_enabled, config) values
+-  ('letter_topper', 'Letter Topper', 350, true, '{"lines": 3, "max_chars_per_line": 5, "slab_only": true}'::jsonb),
++  ('letter_topper', 'Letter Topper', 0, false, '{"lines": 3, "max_chars_per_line": 5, "slab_only": true}'::jsonb),
+   ('gift_message',  'Gift Message',  100, true, '{"max_chars": 100}'::jsonb),
+   ('gift_ribbon',   'Gift Ribbon',   150, true, '{"colors": ["Red", "Gold", "Pink", "White"]}'::jsonb)
+ on conflict (id) do nothing;
+@@ -220,6 +236,13 @@ drop policy if exists "admin all packages" on packages;
+ create policy "admin all packages" on packages for all
+   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+ 
++alter table product_package_stock enable row level security;
++drop policy if exists "public read product package stock" on product_package_stock;
++create policy "public read product package stock" on product_package_stock for select using (true);
++drop policy if exists "admin all product package stock" on product_package_stock;
++create policy "admin all product package stock" on product_package_stock for all
++  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
++
+ drop policy if exists "public read enabled addons" on addons;
+ create policy "public read enabled addons" on addons for select using (is_enabled = true);
+ drop policy if exists "admin all addons" on addons;
+-- 
+2.43.0
+
