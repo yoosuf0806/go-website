@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchDashboardStats } from '../lib/adminDashboard'
-import { deliveryTiers } from '../data/catalog'
+import { useCatalog } from '../contexts/CatalogContext'
 
 // Live dashboard stats (spec §8 admin uses React Query live). Delivery tiers
-// come from the build-time snapshot — they change rarely and only via a rebuild.
+// come from the live catalogue via CatalogProvider.
 export function useDashboard() {
+  const { catalog } = useCatalog()
+  const deliveryTiers = catalog.deliveryTiers
   return useQuery({
     queryKey: ['admin', 'dashboard'],
     queryFn: () => fetchDashboardStats(deliveryTiers),

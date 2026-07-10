@@ -1,23 +1,36 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { categories, products, packages, content } from '../data/catalog'
+import { useCatalog } from '../contexts/CatalogContext'
 import ProductTile from '../components/storefront/ProductTile'
 import Seo from '../components/Seo'
 
 type Sort = '' | 'low' | 'high'
+// null = All; 'slab' = slab-available filter; otherwise a category id.
+type Filter = null | 'slab' | string
 
 // Shop — reference-style catalogue: pink hero, breadcrumb, filter tabs by
-// category, sort, and a responsive product grid. Reads the build-time snapshot.
+// category (plus a Brownie Slab filter), sort, and a responsive product grid.
+// Reads the live catalogue (seeded from the snapshot for first paint).
 export default function Shop() {
-  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const { catalog, loading } = useCatalog()
+  const { categories, products, packages, content } = catalog
+  const [filter, setFilter] = useState<Filter>(null)
   const [sort, setSort] = useState<Sort>('')
 
+  // Is the Brownie Slab package offered at all? Only show the slab tab if so.
+  const hasSlab = useMemo(() => packages.some((p) => p.isSlab), [packages])
+
   const visible = useMemo(() => {
-    let list = categoryId ? products.filter((p) => p.categoryId === categoryId) : products.slice()
+    let list =
+      filter === 'slab'
+        ? products.filter((p) => p.isSlabAvailable)
+        : filter
+          ? products.filter((p) => p.categoryId === filter)
+          : products.slice()
     if (sort === 'low') list = list.slice().sort((a, b) => a.pricePerPiece - b.pricePerPiece)
     if (sort === 'high') list = list.slice().sort((a, b) => b.pricePerPiece - a.pricePerPiece)
     return list
-  }, [categoryId, sort])
+  }, [filter, sort, products])
 
   const tab = (active: boolean) =>
     `rounded-full border-2 px-5 py-2 text-[13px] font-bold transition-colors ${
@@ -45,19 +58,28 @@ export default function Shop() {
       <div className="mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-6">
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setCategoryId(null)} className={tab(categoryId === null)}>
+            <button type="button" onClick={() => setFilter(null)} className={tab(filter === null)}>
               All
             </button>
             {categories.map((c) => (
               <button
                 key={c.id}
                 type="button"
-                onClick={() => setCategoryId(c.id)}
-                className={tab(categoryId === c.id)}
+                onClick={() => setFilter(c.id)}
+                className={tab(filter === c.id)}
               >
                 {c.name}
               </button>
             ))}
+            {hasSlab && (
+              <button
+                type="button"
+                onClick={() => setFilter('slab')}
+                className={tab(filter === 'slab')}
+              >
+                Brownie Slab
+              </button>
+            )}
           </div>
           <select
             value={sort}
@@ -71,8 +93,14 @@ export default function Shop() {
           </select>
         </div>
 
-        {visible.length === 0 ? (
-          <p className="py-12 text-center text-sm text-neutral-500">No brownies in this category yet.</p>
+        {loading && products.length === 0 ? (
+          <p className="py-12 text-center text-sm text-neutral-500">Loading brownies…</p>
+        ) : visible.length === 0 ? (
+          <p className="py-12 text-center text-sm text-neutral-500">
+            {filter === 'slab'
+              ? 'No brownies are available as a slab yet.'
+              : 'No brownies in this category yet.'}
+          </p>
         ) : (
           <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {visible.map((product) => (

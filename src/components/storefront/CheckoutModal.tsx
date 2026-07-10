@@ -5,7 +5,7 @@ import { formatLKR } from '../../lib/format'
 import { addonSummary, orderWhatsAppLink } from '../../lib/whatsapp'
 import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
 import { useCreateOrder } from '../../hooks/useCreateOrder'
-import { deliveryTiers, settings } from '../../data/catalog'
+import { useCatalog } from '../../contexts/CatalogContext'
 
 type Step = 'details' | 'review'
 
@@ -19,6 +19,8 @@ interface CheckoutModalProps {
 // opens WhatsApp after a successful order insert, so admin records and the
 // customer message never diverge (spec §11).
 export default function CheckoutModal({ onClose }: CheckoutModalProps) {
+  const { catalog } = useCatalog()
+  const { deliveryTiers, settings } = catalog
   const items = useCartStore((s) => s.items)
   const clearCart = useCartStore((s) => s.clear)
   const totals = cartTotals(items, deliveryTiers)

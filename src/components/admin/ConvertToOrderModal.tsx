@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { products, packages, deliveryTiers } from '../../data/catalog'
+import { useCatalog } from '../../contexts/CatalogContext'
 import { cartTotals, type CartItem } from '../../lib/pricing'
 import { cartLineKey, type CartLine } from '../../stores/cart'
 import { formatLKR } from '../../lib/format'
 import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
 import { useConvertInquiry } from '../../hooks/useAdminInquiries'
 import type { AdminInquiry } from '../../lib/adminInquiries'
+import type { CatalogProduct, CatalogPackage } from '../../types/catalog'
 
 interface LineRow {
   productId: string
@@ -28,6 +29,8 @@ export default function ConvertToOrderModal({
   onClose,
   onConverted,
 }: ConvertToOrderModalProps) {
+  const { catalog } = useCatalog()
+  const { products, packages, deliveryTiers } = catalog
   const [details, setDetails] = useState<CheckoutDetails>({
     name: inquiry.name,
     phone: inquiry.phone,
@@ -41,7 +44,7 @@ export default function ConvertToOrderModal({
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutDetails, string>>>({})
   const convert = useConvertInquiry()
 
-  const lines = buildLines(rows)
+  const lines = buildLines(rows, products, packages)
   const totals = cartTotals(lines, deliveryTiers)
 
   async function handleSave() {
@@ -230,7 +233,11 @@ export default function ConvertToOrderModal({
   )
 }
 
-function buildLines(rows: LineRow[]): CartLine[] {
+function buildLines(
+  rows: LineRow[],
+  products: CatalogProduct[],
+  packages: CatalogPackage[],
+): CartLine[] {
   const lines: CartLine[] = []
   for (const row of rows) {
     const product = products.find((p) => p.id === row.productId)

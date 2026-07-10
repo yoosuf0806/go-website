@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { inquiryFormSchema, type InquiryCategory, type InquiryForm } from '../../schemas/inquiry'
 import { useCreateInquiry } from '../../hooks/useCreateInquiry'
 import { inquiryWhatsAppLink } from '../../lib/whatsapp'
-import { settings } from '../../data/catalog'
+import { useCatalog } from '../../contexts/CatalogContext'
 
 interface InquiryModalProps {
   category: InquiryCategory
@@ -14,6 +14,8 @@ interface InquiryModalProps {
 // into inquiries → open pre-filled WhatsApp message → success toast. WhatsApp
 // only opens after a successful insert, mirroring the checkout rule (spec §11).
 export default function InquiryModal({ category, onClose, onSuccess }: InquiryModalProps) {
+  const { catalog } = useCatalog()
+  const { settings } = catalog
   // Category is fixed by the CTA that opened this modal (set synchronously as a
   // prop before render — never hydrated after open, per the §7 modal warning).
   const [form, setForm] = useState<Omit<InquiryForm, 'category'>>({

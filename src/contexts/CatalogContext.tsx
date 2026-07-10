@@ -3,6 +3,7 @@ import catalogJson from '../data/catalog.json'
 import type { Catalog, CatalogProduct, CatalogAddon } from '../types/catalog'
 import { mergeContent } from '../types/content'
 import { fetchLiveCatalog } from '../lib/liveCatalog'
+import { useCartStore } from '../stores/cart'
 
 // The snapshot (catalog.json) is the SEED: it powers SSR/prerender and instant
 // first paint. In the browser, CatalogProvider refetches live from Supabase on
@@ -60,4 +61,16 @@ export function useCatalog(): CatalogContextValue {
   const ctx = useContext(CatalogContext)
   if (!ctx) throw new Error('useCatalog must be used within a CatalogProvider')
   return ctx
+}
+
+// Reprices/prunes the persisted cart against the live catalogue whenever it
+// changes. Dropping lines for deleted products here is also what prevents the
+// order_items foreign-key error at checkout. Render once inside CatalogProvider.
+export function CartSync() {
+  const { catalog, loading } = useCatalog()
+  const repriceAll = useCartStore((s) => s.repriceAll)
+  useEffect(() => {
+    if (!loading) repriceAll(catalog)
+  }, [catalog, loading, repriceAll])
+  return null
 }

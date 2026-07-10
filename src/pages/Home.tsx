@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
-import { featuredReviews, settings, content } from '../data/catalog'
+import { useCatalog } from '../contexts/CatalogContext'
 import Slideshow from '../components/storefront/Slideshow'
 import Seo, { organizationJsonLd } from '../components/Seo'
 
 // Home — reference-matched landing page. Every section's copy comes from the
 // editable content blob (admin Content module), with DEFAULT_CONTENT fallbacks.
 export default function Home() {
+  const { catalog } = useCatalog()
+  const { reviews: featuredReviews, settings, content } = catalog
   const { reviews_section } = settings.features
   const { hero, trust, categories, ctaBanner, howItWorks, badges, testimonialsHeading } = content
 
