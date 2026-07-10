@@ -2,6 +2,9 @@ import { useState } from 'react'
 import {
   useAdminProducts,
   useAdminCategories,
+  useAdminPackages,
+  useAdminProductPackageStock,
+  useSetProductPackageStock,
   useProductMutations,
   useUpdateCategory,
 } from '../../hooks/useAdminProducts'
@@ -15,6 +18,9 @@ import ProductFormModal from '../../components/admin/ProductFormModal'
 export default function Products() {
   const { data: products, isLoading, isError, error } = useAdminProducts()
   const { data: categories } = useAdminCategories()
+  const { data: packages } = useAdminPackages()
+  const { data: stockRows } = useAdminProductPackageStock()
+  const setStock = useSetProductPackageStock()
   const { create, update, remove } = useProductMutations()
   const updateCategory = useUpdateCategory()
 
@@ -32,6 +38,13 @@ export default function Products() {
 
   const saving = create.isPending || update.isPending
   const saveError = create.error?.message ?? update.error?.message ?? null
+
+  // No row for a product×package combo = in stock; a row with in_stock=false
+  // is the only kind that should normally exist (spec: sold-out overrides).
+  function isInStock(productId: string, packageId: string): boolean {
+    const row = stockRows?.find((r) => r.product_id === productId && r.package_id === packageId)
+    return row ? row.in_stock : true
+  }
 
   return (
     <div>
@@ -97,7 +110,8 @@ export default function Products() {
                     <div className="flex flex-wrap gap-1 text-xs text-neutral-500">
                       {!product.is_visible && <span className="rounded bg-neutral-200 px-1.5">hidden</span>}
                       {!product.in_stock && <span className="rounded bg-red-100 px-1.5 text-red-700">sold out</span>}
-                      {product.is_slab_available && <span className="rounded bg-neutral-100 px-1.5">slab</span>}
+                      {product.is_slab_available && <span className="rounded bg-neutral-100 px-1.5">slab-12</span>}
+                      {product.is_slab_15_available && <span className="rounded bg-neutral-100 px-1.5">slab-15</span>}
                       {product.allows_letter_topper && <span className="rounded bg-neutral-100 px-1.5">topper</span>}
                     </div>
                   </td>
@@ -123,6 +137,58 @@ export default function Products() {
                       </button>
                     </div>
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {products && products.length > 0 && packages && packages.length > 0 && (
+        <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+          <div className="border-b border-neutral-100 px-4 py-3">
+            <h2 className="text-sm font-semibold">Package stock</h2>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Per-product, per-package sold-out toggle — e.g. 9pc Cashew in stock, 12pc Cashew out.
+              Click a package to flip it.
+            </p>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-500">
+              <tr>
+                <th className="px-3 py-2 font-medium">Product</th>
+                {packages.map((pkg) => (
+                  <th key={pkg.id} className="px-3 py-2 text-center font-medium">
+                    {pkg.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id} className="border-t border-neutral-100">
+                  <td className="px-3 py-2">{product.name}</td>
+                  {packages.map((pkg) => {
+                    const inStock = isInStock(product.id, pkg.id)
+                    return (
+                      <td key={pkg.id} className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          disabled={setStock.isPending}
+                          onClick={() =>
+                            setStock.mutate({ productId: product.id, packageId: pkg.id, inStock: !inStock })
+                          }
+                          className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
+                            inStock
+                              ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                              : 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                        >
+                          {inStock ? 'In stock' : 'Sold out'}
+                        </button>
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
             </tbody>

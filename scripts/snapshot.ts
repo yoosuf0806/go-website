@@ -27,6 +27,7 @@ import type {
   RawDeliveryTier,
   RawPackage,
   RawProduct,
+  RawProductPackageStock,
   RawReview,
   SeedData,
 } from './seed-data.ts'
@@ -36,7 +37,9 @@ import type {
   BannerSetting,
   FeaturesSetting,
   BusinessSetting,
+  ProductPackageStockMap,
 } from '../src/types/catalog.ts'
+import { stockKey } from '../src/types/catalog.ts'
 import { mergeContent, type SiteContent } from '../src/types/content.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -70,6 +73,7 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
       inStock: r.in_stock,
       stockQty: r.stock_qty,
       isSlabAvailable: r.is_slab_available,
+      isSlab15Available: r.is_slab_15_available,
       allowsLetterTopper: r.allows_letter_topper,
       sortOrder: r.sort_order,
     }))
@@ -84,8 +88,18 @@ function mapPackages(rows: RawPackage[]): Catalog['packages'] {
       label: r.label,
       pieceCount: r.piece_count,
       isSlab: r.is_slab,
+      letterMaxChars: r.letter_max_chars,
       sortOrder: r.sort_order,
     }))
+}
+
+/** No row = in stock; only out-of-stock overrides need to appear in the map. */
+function mapProductPackageStock(rows: RawProductPackageStock[]): ProductPackageStockMap {
+  const map: ProductPackageStockMap = {}
+  for (const r of rows) {
+    if (!r.in_stock) map[stockKey(r.product_id, r.package_id)] = false
+  }
+  return map
 }
 
 function mapAddons(rows: RawAddon[]): Catalog['addons'] {
@@ -144,6 +158,7 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
     reviews: mapReviews(data.reviews),
     settings: mapSettings(data.settings),
     content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
+    productPackageStock: mapProductPackageStock(data.productPackageStock),
   }
 }
 
@@ -153,7 +168,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     auth: { persistSession: false },
   })
 
-  const [categories, products, packages, addons, tiers, reviews, settings] =
+  const [categories, products, packages, addons, tiers, reviews, settings, productPackageStock] =
     await Promise.all([
       supabase.from('categories').select('*'),
       supabase.from('products').select('*'),
@@ -162,9 +177,19 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       supabase.from('delivery_tiers').select('*'),
       supabase.from('reviews').select('*'),
       supabase.from('site_settings').select('*'),
+      supabase.from('product_package_stock').select('*'),
     ])
 
-  for (const res of [categories, products, packages, addons, tiers, reviews, settings]) {
+  for (const res of [
+    categories,
+    products,
+    packages,
+    addons,
+    tiers,
+    reviews,
+    settings,
+    productPackageStock,
+  ]) {
     if (res.error) {
       throw new Error(`Supabase read failed: ${res.error.message}`)
     }
@@ -187,6 +212,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       business: (settingsByKey.business ?? {}) as Record<string, unknown>,
       content: (settingsByKey.content ?? undefined) as Record<string, unknown> | undefined,
     },
+    productPackageStock: (productPackageStock.data ?? []) as RawProductPackageStock[],
   }
 }
 

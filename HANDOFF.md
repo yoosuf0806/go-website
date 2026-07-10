@@ -164,3 +164,19 @@ in `lib/pricing.ts`, WhatsApp text in `lib/whatsapp.ts`, editable copy in
 All build phases done; storefront rebuilt to the reference design (pink/navy),
 product pages, Content CMS, and SEO/prerender are in. PR #1 open (branch → main),
 CI green on Vercel + Netlify previews.
+
+---
+
+## PR #4 addendum — slab-15, free per-package letter topper, per-product-per-package stock
+
+Added on top of `main` (which already includes PR #3's live-catalog reads). Migration `013_slab_stock_letters.sql`.
+
+- **Two slab sizes:** 9/12/15pc boxes plus Brownie Slab 12pc (`slab-12`) and 15pc (`slab-15`), each gated by an independent product flag (`is_slab_available` / `is_slab_15_available`). Admin ProductFormModal has two separate slab toggles.
+- **Letter topper is free & built-in**, no longer the paid `letter_topper` addon. 3 lines, per-line char limit driven by `packages.letter_max_chars`: 7 for both slabs, 5 for 15pc box, 4 for 12pc box, 0 (hidden) for 9pc box. Shown only when the selected package's limit > 0 AND `product.allows_letter_topper`. Old addon row kept (price 0, disabled) so historical orders still render — do not re-enable.
+- **Per-product-per-package stock** (`product_package_stock`): mark any product×package combo sold out independent of the product's `in_stock` flag (e.g. 9pc Cashew in stock, 12pc Cashew out). No row = in stock. Admin Products page has a per-package stock grid. Out-of-stock combos render disabled/struck-through in the storefront selector.
+
+**Two data-mapping paths both updated:** `scripts/snapshot.ts` (build) and `src/lib/liveCatalog.ts` (runtime fetch). Plus `scripts/seed-data.ts`, `types/catalog.ts` (adds `letterMaxChars`, `isSlab15Available`, `productPackageStock` + `stockKey()`), and `supabase/setup.sql`.
+
+**After merging: run `supabase/migrations/013_slab_stock_letters.sql` in the Supabase SQL Editor** — the code expects those columns/tables to exist; merging the PR alone doesn't create them.
+
+Verified: `tsc -b` clean, `npm test` 61/61, `npm run lint` 0 errors, `npm run build` (client + SSR + prerender) succeeds.

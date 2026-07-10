@@ -143,7 +143,12 @@ export default function ProductDetail() {
 
           <hr className="my-6 border-neutral-200" />
 
-          <ProductConfigurator product={product} packages={packages} addons={addons} />
+          <ProductConfigurator
+            product={product}
+            packages={packages}
+            addons={addons}
+            productPackageStock={catalog.productPackageStock}
+          />
 
           <div className="mt-8">
             <Accordion

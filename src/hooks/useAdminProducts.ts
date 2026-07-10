@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchProducts,
   fetchCategories,
+  fetchPackages,
+  fetchProductPackageStock,
+  setProductPackageStock,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -46,5 +49,39 @@ export function useUpdateCategory() {
     mutationFn: ({ id, patch }: { id: string; patch: Partial<Pick<AdminCategory, 'is_visible'>> }) =>
       updateCategory(id, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'categories'] }),
+  })
+}
+
+/** Active packages, for building the per-product-per-package stock grid (one column each). */
+export function useAdminPackages() {
+  return useQuery({
+    queryKey: ['admin', 'packages'],
+    queryFn: fetchPackages,
+    staleTime: 60_000,
+  })
+}
+
+/** All product_package_stock override rows. No row for a combo = in stock. */
+export function useAdminProductPackageStock() {
+  return useQuery({
+    queryKey: ['admin', 'productPackageStock'],
+    queryFn: fetchProductPackageStock,
+    staleTime: 15_000,
+  })
+}
+
+export function useSetProductPackageStock() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      productId,
+      packageId,
+      inStock,
+    }: {
+      productId: string
+      packageId: string
+      inStock: boolean
+    }) => setProductPackageStock(productId, packageId, inStock),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'productPackageStock'] }),
   })
 }

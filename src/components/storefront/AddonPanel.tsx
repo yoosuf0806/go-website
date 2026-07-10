@@ -1,35 +1,41 @@
 import type { CatalogAddon, GiftRibbonConfig } from '../../types/catalog'
 import type { CartAddon } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
-import { TOPPER_LIMITS, GIFT_MESSAGE_MAX, isValidTopperLine } from '../../schemas/addon'
+import { TOPPER_LINES, GIFT_MESSAGE_MAX, isValidTopperLine } from '../../schemas/addon'
 
 // Add-on selection state, independent of the catalogue shape so it can be
-// driven by controlled inputs (spec §6.2: letter topper, gift message, gift
-// ribbon — each with its own admin-editable price and constraints).
+// driven by controlled inputs. Letter topper is a free, built-in option (PR
+// #2) — no enabled/price toggle, just up to 3 lines the customer can fill in
+// or leave blank. Gift message / gift ribbon remain priced add-ons (spec §6.2).
 export interface AddonSelection {
-  letterTopper: { enabled: boolean; lines: string[] }
+  letterTopper: { lines: string[] }
   giftMessage: { enabled: boolean; text: string }
   giftRibbon: { enabled: boolean; color: string | null }
 }
 
 export function emptyAddonSelection(): AddonSelection {
   return {
-    letterTopper: { enabled: false, lines: Array(TOPPER_LIMITS.lines).fill('') },
+    letterTopper: { lines: Array(TOPPER_LINES).fill('') },
     giftMessage: { enabled: false, text: '' },
     giftRibbon: { enabled: false, color: null },
   }
 }
 
-/** Convert the panel's selection state into priced CartAddon rows (lib/pricing). */
+/**
+ * Convert the panel's selection state into priced CartAddon rows (lib/pricing).
+ * The topper is always price: 0 (free, built-in) — still emitted as a
+ * CartAddon (not a separate field) so cart line-keying, the WhatsApp message
+ * builder, and the admin order slip all keep working unchanged; only the
+ * price differs from a normal addon.
+ */
 export function toCartAddons(addons: CatalogAddon[], selection: AddonSelection): CartAddon[] {
   const result: CartAddon[] = []
 
-  const topper = addons.find((a) => a.id === 'letter_topper')
-  if (topper && selection.letterTopper.enabled && selection.letterTopper.lines.some((l) => l.trim() !== '')) {
+  if (selection.letterTopper.lines.some((l) => l.trim() !== '')) {
     result.push({
-      id: topper.id,
-      label: topper.label,
-      price: topper.price,
+      id: 'letter_topper',
+      label: 'Letter Topper',
+      price: 0,
       detail: { lines: selection.letterTopper.lines },
     })
   }
@@ -59,9 +65,13 @@ export function toCartAddons(addons: CatalogAddon[], selection: AddonSelection):
 
 interface AddonPanelProps {
   addons: CatalogAddon[]
-  /** Letter topper only ever applies to slab packages. */
-  isSlabPackage: boolean
-  /** Product-level gate — some products don't allow a letter topper even on a slab. */
+  /**
+   * Max characters per topper line for the currently-selected package
+   * (packages[].letter_max_chars). 0 means this package doesn't offer a
+   * topper at all (e.g. the 9pc box) — the section is hidden.
+   */
+  topperMaxChars: number
+  /** Product-level gate — some products don't allow a letter topper even on a qualifying package. */
   productAllowsLetterTopper: boolean
   value: AddonSelection
   onChange: (next: AddonSelection) => void
@@ -70,13 +80,12 @@ interface AddonPanelProps {
 
 export default function AddonPanel({
   addons,
-  isSlabPackage,
+  topperMaxChars,
   productAllowsLetterTopper,
   value,
   onChange,
   disabled,
 }: AddonPanelProps) {
-  const topper = addons.find((a) => a.id === 'letter_topper')
   const message = addons.find((a) => a.id === 'gift_message')
   const ribbon = addons.find((a) => a.id === 'gift_ribbon')
 
@@ -86,45 +95,37 @@ export default function AddonPanel({
     ? (ribbon.config as GiftRibbonConfig).colors
     : []
 
-  const showTopper = topper && isSlabPackage && productAllowsLetterTopper
+  // Shown only when this package offers a topper (max chars > 0) AND the
+  // product allows it. Package qualification comes from letter_max_chars,
+  // set per package (7 for both slab sizes, 5 for the 15pc box, 4 for the
+  // 12pc box, 0 — hidden — for the 9pc box).
+  const showTopper = topperMaxChars > 0 && productAllowsLetterTopper
 
   return (
     <div className="flex flex-col gap-4">
       {showTopper && (
         <div className="rounded-md border border-neutral-200 p-3">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={value.letterTopper.enabled}
-              disabled={disabled}
-              onChange={(e) =>
-                onChange({ ...value, letterTopper: { ...value.letterTopper, enabled: e.target.checked } })
-              }
-            />
-            {topper.label} (+{formatLKR(topper.price)})
-          </label>
-          {value.letterTopper.enabled && (
-            <div className="mt-2 flex gap-2">
-              {value.letterTopper.lines.map((line, i) => (
-                <input
-                  key={i}
-                  type="text"
-                  value={line}
-                  disabled={disabled}
-                  maxLength={TOPPER_LIMITS.maxCharsPerLine}
-                  placeholder={`Line ${i + 1}`}
-                  onChange={(e) => {
-                    const upper = e.target.value.toUpperCase()
-                    if (!isValidTopperLine(upper)) return
-                    const lines = [...value.letterTopper.lines]
-                    lines[i] = upper
-                    onChange({ ...value, letterTopper: { ...value.letterTopper, lines } })
-                  }}
-                  className="w-20 rounded border border-neutral-300 px-2 py-1 text-center text-sm uppercase"
-                />
-              ))}
-            </div>
-          )}
+          <p className="text-sm font-medium text-navy">Letter Topper (free)</p>
+          <div className="mt-2 flex gap-2">
+            {value.letterTopper.lines.map((line, i) => (
+              <input
+                key={i}
+                type="text"
+                value={line}
+                disabled={disabled}
+                maxLength={topperMaxChars}
+                placeholder={`up to ${topperMaxChars} letters`}
+                onChange={(e) => {
+                  const upper = e.target.value.toUpperCase()
+                  if (!isValidTopperLine(upper, topperMaxChars)) return
+                  const lines = [...value.letterTopper.lines]
+                  lines[i] = upper
+                  onChange({ ...value, letterTopper: { lines } })
+                }}
+                className="w-24 rounded border border-neutral-300 px-2 py-1 text-center text-sm uppercase placeholder:text-[10px] placeholder:normal-case"
+              />
+            ))}
+          </div>
         </div>
       )}
 
