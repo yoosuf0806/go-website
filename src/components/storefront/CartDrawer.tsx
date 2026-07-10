@@ -2,7 +2,7 @@ import { useCartStore } from '../../stores/cart'
 import { cartTotals, lineTotal } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { addonSummary } from '../../lib/whatsapp'
-import { deliveryTiers } from '../../data/catalog'
+import { useCatalog } from '../../contexts/CatalogContext'
 
 interface CartDrawerProps {
   onClose: () => void
@@ -13,10 +13,11 @@ interface CartDrawerProps {
 // cartTotals()/lineTotal() — the same functions the checkout review step and
 // the WhatsApp message use, so nothing can drift (spec §11).
 export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
+  const { catalog } = useCatalog()
   const items = useCartStore((s) => s.items)
   const incrementBoxQty = useCartStore((s) => s.incrementBoxQty)
   const removeItem = useCartStore((s) => s.removeItem)
-  const totals = cartTotals(items, deliveryTiers)
+  const totals = cartTotals(items, catalog.deliveryTiers)
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { products, packages, addons, getProductBySlug, content } from '../data/catalog'
+import { useCatalog } from '../contexts/CatalogContext'
 import { formatLKR } from '../lib/format'
 import ProductGallery from '../components/storefront/ProductGallery'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
@@ -14,7 +14,18 @@ const RELATED_COUNT = 4
 // its own URL (indexable; SEO meta + prerender wired in later chunks).
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
+  const { catalog, loading, getProductBySlug } = useCatalog()
+  const { products, packages, addons, content } = catalog
   const product = slug ? getProductBySlug(slug) : undefined
+
+  // While the live catalogue is still loading, don't flash "not found".
+  if (!product && loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-20 text-center text-sm text-neutral-500">
+        Loading…
+      </div>
+    )
+  }
 
   if (!product) {
     return (

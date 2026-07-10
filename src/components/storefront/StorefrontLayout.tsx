@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, Link, NavLink } from 'react-router-dom'
-import { settings } from '../../data/catalog'
+import { useCatalog } from '../../contexts/CatalogContext'
 import { useCartStore } from '../../stores/cart'
 import { toWhatsAppNumber } from '../../lib/format'
 import BannerBar from './BannerBar'
@@ -18,6 +18,8 @@ const NAV = [
 // Shared storefront chrome (reference-matched): pink promo marquee, sticky white
 // header with occasion nav + mobile drawer, navy footer, and a WhatsApp float.
 export default function StorefrontLayout() {
+  const { catalog } = useCatalog()
+  const { settings } = catalog
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
@@ -160,7 +162,8 @@ function MobileNav({ onClose, onCartClick }: { onClose: () => void; onCartClick:
 }
 
 function Footer() {
-  const { business } = settings
+  const { catalog } = useCatalog()
+  const { business } = catalog.settings
   const wa = toWhatsAppNumber(business.whatsapp_number)
   return (
     <footer className="bg-navy px-6 pb-8 pt-16 text-white">

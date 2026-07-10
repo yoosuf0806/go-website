@@ -11,7 +11,7 @@ import {
 import { findTier } from '../../lib/pricing'
 import { formatLKR, formatDate, toWhatsAppNumber } from '../../lib/format'
 import { printOrderSlip } from '../../lib/orderSlip'
-import { deliveryTiers } from '../../data/catalog'
+import { useCatalog } from '../../contexts/CatalogContext'
 import { addonSummary } from '../../lib/whatsapp'
 import StatusBadge from '../../components/admin/StatusBadge'
 
@@ -128,7 +128,8 @@ function OrderRow({
   onAdvance: (to: OrderStatus) => void
   busy: boolean
 }) {
-  const tier = findTier(order.total_pieces, deliveryTiers)
+  const { catalog } = useCatalog()
+  const tier = findTier(order.total_pieces, catalog.deliveryTiers)
   const heavy = tier?.warnAdmin ?? false
   const next = nextStatus(order.status)
   const waNumber = toWhatsAppNumber(order.phone)

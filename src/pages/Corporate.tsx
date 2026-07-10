@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { settings, content } from '../data/catalog'
+import { useCatalog } from '../contexts/CatalogContext'
 import type { InquiryCategory } from '../schemas/inquiry'
 import InquiryModal from '../components/storefront/InquiryModal'
 import Toast from '../components/ui/Toast'
@@ -9,6 +9,8 @@ import Seo from '../components/Seo'
 // Each hero is feature-toggleable via site_settings.features; the "Get Your
 // Quotation" CTA opens the modal with its category set synchronously.
 export default function Corporate() {
+  const { catalog } = useCatalog()
+  const { settings, content } = catalog
   const { corporate_section, wedding_section } = settings.features
   const [modalCategory, setModalCategory] = useState<InquiryCategory | null>(null)
   const [toast, setToast] = useState<string | null>(null)
