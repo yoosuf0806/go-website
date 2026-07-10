@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import ScrollToTop from './components/ScrollToTop'
 import StorefrontLayout from './components/storefront/StorefrontLayout'
 import ProtectedRoute from './router/ProtectedRoute'
 import Home from './pages/Home'
@@ -33,7 +34,9 @@ function AdminFallback() {
 // Admin routes are gated by ProtectedRoute (Supabase session check).
 export default function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Storefront */}
       <Route element={<StorefrontLayout />}>
         <Route path="/" element={<Home />} />
@@ -86,6 +89,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }

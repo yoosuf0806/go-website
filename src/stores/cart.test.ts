@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useCartStore, cartLineKey, repriceLine, type CartLine } from './cart'
-import { products, packages } from '../data/catalog'
+import { catalog, products, packages } from '../data/catalog'
 import type { CartItem } from '../lib/pricing'
 
 function makeItem(overrides: Partial<CartItem> = {}): CartItem {
@@ -99,7 +99,7 @@ describe('repriceLine (stale-price guard, PR review)', () => {
   }
 
   it('refreshes price/label/pieces from the current catalog, keeping box qty', () => {
-    const repriced = repriceLine(persistedLine())
+    const repriced = repriceLine(persistedLine(), catalog)
     expect(repriced).not.toBeNull()
     expect(repriced!.unitPrice).toBe(product.pricePerPiece)
     expect(repriced!.productName).toBe(product.name)
@@ -108,6 +108,6 @@ describe('repriceLine (stale-price guard, PR review)', () => {
   })
 
   it('drops a line whose product no longer exists', () => {
-    expect(repriceLine(persistedLine({ productId: 'gone-forever' }))).toBeNull()
+    expect(repriceLine(persistedLine({ productId: 'gone-forever' }), catalog)).toBeNull()
   })
 })

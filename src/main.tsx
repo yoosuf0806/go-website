@@ -4,19 +4,24 @@ import { BrowserRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { CatalogProvider, CartSync } from './contexts/CatalogContext'
 import './index.css'
 
 // React Query is used ONLY for runtime writes (orders, inquiries) and admin CRUD.
-// The storefront catalogue is read synchronously from the build-time snapshot.
+// The storefront catalogue seeds from the build-time snapshot, then CatalogProvider
+// refetches it live from Supabase so admin changes appear without a rebuild.
 const queryClient = new QueryClient()
 
 const app = (
   <StrictMode>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <CatalogProvider>
+          <CartSync />
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </CatalogProvider>
       </QueryClientProvider>
     </HelmetProvider>
   </StrictMode>

@@ -4,6 +4,7 @@ import { StaticRouter } from 'react-router-dom/server'
 import { HelmetProvider, type HelmetServerState } from 'react-helmet-async'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { CatalogProvider } from './contexts/CatalogContext'
 
 // Server entry for the build-time prerender (scripts/prerender.ts). Renders a
 // given storefront URL to an HTML string and collects the <head> tags that
@@ -16,9 +17,11 @@ export function render(url: string): { html: string; head: string } {
     <StrictMode>
       <HelmetProvider context={helmetContext}>
         <QueryClientProvider client={queryClient}>
-          <StaticRouter location={url}>
-            <App />
-          </StaticRouter>
+          <CatalogProvider>
+            <StaticRouter location={url}>
+              <App />
+            </StaticRouter>
+          </CatalogProvider>
         </QueryClientProvider>
       </HelmetProvider>
     </StrictMode>,
