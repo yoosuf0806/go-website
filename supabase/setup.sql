@@ -50,6 +50,7 @@ create table if not exists products (
   in_stock boolean not null default true,
   stock_qty int,
   is_slab_available boolean not null default false,
+  is_slab_15_available boolean not null default false,
   allows_letter_topper boolean not null default false,
   sort_order int not null default 0,
   created_at timestamptz not null default now()
@@ -61,7 +62,16 @@ create table if not exists packages (
   piece_count int not null check (piece_count > 0),
   is_slab boolean not null default false,
   is_active boolean not null default true,
+  letter_max_chars int not null default 0, -- max chars/line for the free 3-line topper; 0 = not offered
   sort_order int not null default 0
+);
+
+-- Per product×package sold-out overrides. No row = in stock.
+create table if not exists product_package_stock (
+  product_id uuid not null references products(id) on delete cascade,
+  package_id text not null references packages(id) on delete cascade,
+  in_stock boolean not null default false,
+  primary key (product_id, package_id)
 );
 
 create table if not exists addons (
@@ -161,15 +171,21 @@ create trigger orders_updated_at before update on orders
   for each row execute function set_updated_at();
 
 -- ── Config / locked rows (idempotent) ───────────────────────────────────────
-insert into packages (id, label, piece_count, is_slab, sort_order) values
-  ('box-9',  '9 Pieces',              9,  false, 1),
-  ('box-12', '12 Pieces',             12, false, 2),
-  ('box-15', '15 Pieces',             15, false, 3),
-  ('slab-12','Brownie Slab (12 pcs)', 12, true,  4)
-on conflict (id) do nothing;
+-- letter_max_chars: max chars/line for the free 3-line built-in topper.
+-- 0 = topper not offered for that package (box-9).
+insert into packages (id, label, piece_count, is_slab, sort_order, letter_max_chars) values
+  ('box-9',  '9 Pieces',              9,  false, 1, 0),
+  ('box-12', '12 Pieces',             12, false, 2, 4),
+  ('box-15', '15 Pieces',             15, false, 3, 5),
+  ('slab-12','Brownie Slab (12 pcs)', 12, true,  4, 7),
+  ('slab-15','Brownie Slab (15 pcs)', 15, true,  5, 7)
+on conflict (id) do update set letter_max_chars = excluded.letter_max_chars;
 
+-- letter_topper is now free and built-in (per-package limits above), not a
+-- priced addon -- kept disabled/zeroed rather than dropped so historical order
+-- rows that stored a letter_topper addon line still render correctly.
 insert into addons (id, label, price, is_enabled, config) values
-  ('letter_topper', 'Letter Topper', 350, true, '{"lines": 3, "max_chars_per_line": 5, "slab_only": true}'::jsonb),
+  ('letter_topper', 'Letter Topper', 0, false, '{"lines": 3, "max_chars_per_line": 5, "slab_only": true}'::jsonb),
   ('gift_message',  'Gift Message',  100, true, '{"max_chars": 100}'::jsonb),
   ('gift_ribbon',   'Gift Ribbon',   150, true, '{"colors": ["Red", "Gold", "Pink", "White"]}'::jsonb)
 on conflict (id) do nothing;
@@ -218,6 +234,13 @@ drop policy if exists "public read active packages" on packages;
 create policy "public read active packages" on packages for select using (is_active = true);
 drop policy if exists "admin all packages" on packages;
 create policy "admin all packages" on packages for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+alter table product_package_stock enable row level security;
+drop policy if exists "public read product package stock" on product_package_stock;
+create policy "public read product package stock" on product_package_stock for select using (true);
+drop policy if exists "admin all product package stock" on product_package_stock;
+create policy "admin all product package stock" on product_package_stock for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 drop policy if exists "public read enabled addons" on addons;

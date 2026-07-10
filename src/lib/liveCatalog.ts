@@ -17,7 +17,9 @@ import type {
   CatalogCategory,
   CatalogDeliveryTier,
   CatalogReview,
+  ProductPackageStockMap,
 } from '../types/catalog'
+import { stockKey } from '../types/catalog'
 import { mergeContent } from '../types/content'
 
 interface RawMedia {
@@ -43,10 +45,22 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
         inStock: r.in_stock as boolean,
         stockQty: (r.stock_qty as number | null) ?? null,
         isSlabAvailable: r.is_slab_available as boolean,
+        isSlab15Available: r.is_slab_15_available as boolean,
         allowsLetterTopper: r.allows_letter_topper as boolean,
         sortOrder: r.sort_order as number,
       }
     })
+}
+
+/** No row = in stock; only out-of-stock overrides need to appear in the map. */
+function mapProductPackageStock(rows: Record<string, unknown>[]): ProductPackageStockMap {
+  const map: ProductPackageStockMap = {}
+  for (const r of rows) {
+    if (r.in_stock === false) {
+      map[stockKey(r.product_id as string, r.package_id as string)] = false
+    }
+  }
+  return map
 }
 
 /**
@@ -55,7 +69,7 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
  * site still shows the last-built catalogue rather than going blank).
  */
 export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
-  const [products, packages, addons, categories, tiers, reviews, settingsRows] =
+  const [products, packages, addons, categories, tiers, reviews, settingsRows, stockRows] =
     await Promise.all([
       supabase.from('products').select('*'),
       supabase.from('packages').select('*').eq('is_active', true).order('sort_order'),
@@ -64,6 +78,7 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
       supabase.from('delivery_tiers').select('*').order('sort_order'),
       supabase.from('reviews').select('*').eq('is_featured', true),
       supabase.from('site_settings').select('*'),
+      supabase.from('product_package_stock').select('*'),
     ])
 
   // If the core product read failed, keep the seed rather than blanking the site.
@@ -77,6 +92,7 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     label: p.label,
     pieceCount: p.piece_count,
     isSlab: p.is_slab,
+    letterMaxChars: p.letter_max_chars ?? 0,
     sortOrder: p.sort_order,
   }))
 
@@ -118,6 +134,12 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
   }
   const content = mergeContent(settingsMap.get('content') ?? seed.content)
 
+  // Fall back to the seed's stock map only if the table read itself failed
+  // (an empty result set is the normal "everything in stock" case).
+  const productPackageStock = stockRows.error
+    ? seed.productPackageStock
+    : mapProductPackageStock(stockRows.data ?? [])
+
   return {
     generatedAt: new Date().toISOString(),
     source: 'supabase',
@@ -129,5 +151,6 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     reviews: mappedReviews,
     settings,
     content,
+    productPackageStock,
   }
 }

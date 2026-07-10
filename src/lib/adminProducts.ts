@@ -30,8 +30,28 @@ export interface AdminProduct {
   is_visible: boolean
   in_stock: boolean
   stock_qty: number | null
+  /** Can be ordered as the 12pc Brownie Slab. Independent of is_slab_15_available. */
   is_slab_available: boolean
+  /** Can be ordered as the 15pc Brownie Slab. Independent of is_slab_available. */
+  is_slab_15_available: boolean
   allows_letter_topper: boolean
+  sort_order: number
+}
+
+/** One row of `product_package_stock` — a per product×package sold-out override. No row = in stock. */
+export interface AdminProductPackageStock {
+  product_id: string
+  package_id: string
+  in_stock: boolean
+}
+
+export interface AdminPackage {
+  id: string
+  label: string
+  piece_count: number
+  is_slab: boolean
+  is_active: boolean
+  letter_max_chars: number
   sort_order: number
 }
 
@@ -76,6 +96,49 @@ export async function updateCategory(
   patch: Partial<Pick<AdminCategory, 'is_visible'>>,
 ): Promise<void> {
   const { error } = await supabase.from('categories').update(patch).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+/** All active packages (for building the stock-toggle grid: one column per package). */
+export async function fetchPackages(): Promise<AdminPackage[]> {
+  const { data, error } = await supabase
+    .from('packages')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as AdminPackage[]
+}
+
+/** All product_package_stock rows. No row for a product×package = in stock. */
+export async function fetchProductPackageStock(): Promise<AdminProductPackageStock[]> {
+  const { data, error } = await supabase.from('product_package_stock').select('*')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as AdminProductPackageStock[]
+}
+
+/**
+ * Set a single product×package combo in/out of stock. Setting in_stock=true
+ * deletes the override row entirely (no row = in stock, keeping the table
+ * small); setting false upserts a row.
+ */
+export async function setProductPackageStock(
+  productId: string,
+  packageId: string,
+  inStock: boolean,
+): Promise<void> {
+  if (inStock) {
+    const { error } = await supabase
+      .from('product_package_stock')
+      .delete()
+      .eq('product_id', productId)
+      .eq('package_id', packageId)
+    if (error) throw new Error(error.message)
+    return
+  }
+  const { error } = await supabase
+    .from('product_package_stock')
+    .upsert({ product_id: productId, package_id: packageId, in_stock: false })
   if (error) throw new Error(error.message)
 }
 

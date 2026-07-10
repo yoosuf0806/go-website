@@ -35,6 +35,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     in_stock: true,
     stock_qty: null,
     is_slab_available: false,
+    is_slab_15_available: false,
     allows_letter_topper: false,
     sort_order: 0,
   }
@@ -99,10 +100,11 @@ export default function ProductFormModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // Letter topper only makes sense on slab-capable products (spec §6.2).
+    // Letter topper only makes sense on slab-capable products — either size (spec §6.2, PR #2).
+    const slabCapable = form.is_slab_available || form.is_slab_15_available
     const cleaned: ProductInput = {
       ...form,
-      allows_letter_topper: form.is_slab_available ? form.allows_letter_topper : false,
+      allows_letter_topper: slabCapable ? form.allows_letter_topper : false,
       // image_url is derived from the gallery cover so legacy readers
       // (SEO/JSON-LD/ProductTile) that only look at image_url keep working.
       image_url: form.media[0]?.url ?? null,
@@ -292,9 +294,17 @@ export default function ProductFormModal({
                 checked={form.is_slab_available}
                 onChange={(e) => set('is_slab_available', e.target.checked)}
               />
-              Slab available
+              12pc Slab available
             </label>
-            {form.is_slab_available && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_slab_15_available}
+                onChange={(e) => set('is_slab_15_available', e.target.checked)}
+              />
+              15pc Slab available
+            </label>
+            {(form.is_slab_available || form.is_slab_15_available) && (
               <label className="flex items-center gap-2 pl-6 text-sm">
                 <input
                   type="checkbox"

@@ -36,6 +36,8 @@ export interface CatalogProduct {
   inStock: boolean
   stockQty: number | null
   isSlabAvailable: boolean
+  /** Can be ordered as the 15pc Brownie Slab (slab-15); independent of isSlabAvailable (12pc). */
+  isSlab15Available: boolean
   allowsLetterTopper: boolean
   sortOrder: number
 }
@@ -45,7 +47,21 @@ export interface CatalogPackage {
   label: string
   pieceCount: number
   isSlab: boolean
+  /** Max characters per topper line (3 lines) for this package. 0 = topper not offered. */
+  letterMaxChars: number
   sortOrder: number
+}
+
+/**
+ * Per product×package sold-out overrides (`product_package_stock`). No entry
+ * for a productId::packageId key means that combo is in stock — this map only
+ * ever needs to record the OUT-of-stock combos, so it's small in practice.
+ * Key format matches cartLineKey's productId/packageId pairing convention.
+ */
+export type ProductPackageStockMap = Record<string, boolean>
+
+export function stockKey(productId: string, packageId: string): string {
+  return `${productId}::${packageId}`
 }
 
 // Add-on `config` blobs keep their snake_case DB keys (stored as a JSONB unit,
@@ -125,4 +141,6 @@ export interface Catalog {
   settings: CatalogSettings
   /** Editable storefront copy + SEO (admin Content module). */
   content: SiteContent
+  /** Out-of-stock product×package overrides; see stockKey/ProductPackageStockMap. */
+  productPackageStock: ProductPackageStockMap
 }
