@@ -39,11 +39,15 @@ export function orderItemsPayload(items: CartLine[]) {
 export async function createOrder({ items, totals, details }: CreateOrderInput): Promise<CreatedOrder> {
   const phone = normalizePhone(details.phone)
   if (!phone) throw new Error('Invalid phone number')
+  // Optional second number: normalise if given, otherwise omit.
+  const altPhone = details.altPhone ? normalizePhone(details.altPhone) : null
 
   const { data, error } = await supabase
     .rpc('create_order', {
       p_customer_name: details.name,
       p_phone: phone,
+      p_email: details.email,
+      p_alt_phone: altPhone,
       p_address: details.address,
       p_delivery_date: details.deliveryDate,
       p_note: details.note || null,
