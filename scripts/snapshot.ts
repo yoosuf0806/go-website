@@ -75,6 +75,7 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
       isSlabAvailable: r.is_slab_available,
       isSlab15Available: r.is_slab_15_available,
       allowsLetterTopper: r.allows_letter_topper,
+      isHotPick: r.is_hot_pick,
       sortOrder: r.sort_order,
     }))
 }
