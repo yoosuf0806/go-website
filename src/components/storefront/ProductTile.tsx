@@ -11,7 +11,11 @@ interface ProductTileProps {
 // Reference-style catalogue card: white card, image with hover zoom + "View
 // Product" overlay, brand tag, name, and "From LKR X". Links to the product page.
 export default function ProductTile({ product, packages }: ProductTileProps) {
-  const available = packages.filter((p) => !p.isSlab || product.isSlabAvailable)
+  const available = packages.filter((p) => {
+    if (p.id === 'slab-15') return product.isSlab15Available
+    if (p.isSlab) return product.isSlabAvailable
+    return true
+  })
   const minPieces = available.reduce((m, p) => Math.min(m, p.pieceCount), Infinity)
   const fromPrice = Number.isFinite(minPieces) ? product.pricePerPiece * minPieces : product.pricePerPiece
   const soldOut = !product.inStock
@@ -32,7 +36,7 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
             Sold out
           </span>
         ) : (
-          product.isSlabAvailable && (
+          (product.isSlabAvailable || product.isSlab15Available) && (
             <span className="absolute right-2.5 top-2.5 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-navy">
               Customise
             </span>

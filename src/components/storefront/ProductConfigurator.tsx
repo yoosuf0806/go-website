@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import type { CatalogProduct, CatalogPackage, CatalogAddon } from '../../types/catalog'
+import type { CatalogProduct, CatalogPackage, CatalogAddon, ProductPackageStockMap } from '../../types/catalog'
+import { stockKey } from '../../types/catalog'
 import { lineTotal, type CartItem } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { useCartStore } from '../../stores/cart'
@@ -10,6 +11,8 @@ interface ProductConfiguratorProps {
   product: CatalogProduct
   packages: CatalogPackage[]
   addons: CatalogAddon[]
+  /** Out-of-stock product×package overrides; no entry = in stock. */
+  productPackageStock?: ProductPackageStockMap
   onAdded?: () => void
 }
 
@@ -20,19 +23,38 @@ export default function ProductConfigurator({
   product,
   packages,
   addons,
+  productPackageStock = {},
   onAdded,
 }: ProductConfiguratorProps) {
-  const availablePackages = useMemo(
-    () => packages.filter((p) => !p.isSlab || product.isSlabAvailable),
-    [packages, product.isSlabAvailable],
+  // Product-level slab gates: each slab size (12pc / 15pc) has its own
+  // independent admin toggle. Non-slab boxes are always offered.
+  const eligiblePackages = useMemo(
+    () =>
+      packages.filter((p) => {
+        if (p.id === 'slab-15') return product.isSlab15Available
+        if (p.isSlab) return product.isSlabAvailable
+        return true
+      }),
+    [packages, product.isSlabAvailable, product.isSlab15Available],
   )
 
-  const [packageId, setPackageId] = useState(availablePackages[0]?.id ?? '')
+  // Per-product-per-package stock: a package combo can be individually sold
+  // out (product_package_stock) even when the product itself is generally in
+  // stock. Out-of-stock combos stay visible but unselectable, rather than
+  // disappearing, so the customer understands why (spec: "unselectable").
+  const isPackageInStock = (packageId: string) =>
+    productPackageStock[stockKey(product.id, packageId)] !== false
+
+  const availablePackages = eligiblePackages
+  const firstInStock = availablePackages.find((p) => isPackageInStock(p.id)) ?? availablePackages[0]
+
+  const [packageId, setPackageId] = useState(firstInStock?.id ?? '')
   const [addonSelection, setAddonSelection] = useState<AddonSelection>(emptyAddonSelection())
   const [boxQty, setBoxQty] = useState(1)
   const addItem = useCartStore((s) => s.addItem)
 
-  const selectedPackage = availablePackages.find((p) => p.id === packageId) ?? availablePackages[0]
+  const selectedPackage = availablePackages.find((p) => p.id === packageId) ?? firstInStock
+  const selectedInStock = selectedPackage ? isPackageInStock(selectedPackage.id) : false
 
   const previewItem: CartItem | null = selectedPackage
     ? {
@@ -58,7 +80,7 @@ export default function ProductConfigurator({
   if (!selectedPackage) return null
 
   function handleAddToCart() {
-    if (!previewItem) return
+    if (!previewItem || !selectedInStock) return
     addItem(previewItem)
     setBoxQty(1)
     onAdded?.()
@@ -73,13 +95,19 @@ export default function ProductConfigurator({
             packages={availablePackages}
             selectedId={selectedPackage.id}
             onSelect={setPackageId}
+            isInStock={isPackageInStock}
           />
         </div>
+        {!selectedInStock && (
+          <p className="mt-2 text-xs font-semibold text-pink">
+            {selectedPackage.label} is sold out for this flavour right now.
+          </p>
+        )}
       </div>
 
       <AddonPanel
         addons={addons}
-        isSlabPackage={selectedPackage.isSlab}
+        topperMaxChars={selectedPackage.letterMaxChars}
         productAllowsLetterTopper={product.allowsLetterTopper}
         value={addonSelection}
         onChange={setAddonSelection}
@@ -123,9 +151,10 @@ export default function ProductConfigurator({
       <button
         type="button"
         onClick={handleAddToCart}
-        className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark"
+        disabled={!selectedInStock}
+        className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:hover:bg-neutral-300"
       >
-        Add to Cart 🛒
+        {selectedInStock ? 'Add to Cart 🛒' : 'Sold Out'}
       </button>
     </div>
   )

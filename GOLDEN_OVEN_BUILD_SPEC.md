@@ -491,3 +491,31 @@ ADMIN_DEPLOY_HOOK_URL=               # Vercel Deploy Hook that rebuilds the stor
 4. Whether cancelled orders should notify the customer via a templated WhatsApp message.
 5. **Availability model** — confirm whether `in_stock` (simple sold-out toggle) is enough for v1, or whether `stock_qty` (optional daily capacity) should be surfaced in the admin from day one. Bake-to-order means neither auto-decrements.
 6. **Publish cadence** — confirm the ~1-minute publish-after-edit delay is acceptable (build-time snapshot). If instant updates are ever required for a specific field, that field can be moved to a live read as a targeted exception.
+
+
+## 13. PR #2 addendum — slab sizing, free topper, per-package stock (supersedes parts of §6.1/§6.2)
+
+The rules below were added after the rest of this document was written and locked
+(migration `013_slab_stock_letters.sql`). Where they conflict with §6.1/§6.2
+above, this section is authoritative.
+
+- **Packages are now five, not four**: 9 / 12 / 15 pcs boxes, **plus two slab
+  sizes** — Brownie Slab (12 pcs, `slab-12`) and Brownie Slab (15 pcs,
+  `slab-15`). A product's two slab flags (`is_slab_available` for 12pc,
+  `is_slab_15_available` for 15pc) are independent — a product can offer
+  either, both, or neither.
+- **Letter topper is free, not a paid add-on.** It's a built-in option on
+  qualifying packages, not gated by the `addons` table's price/enable toggle
+  (that row is kept, zeroed and disabled, only so historical order rows with a
+  `letter_topper` addon line keep rendering). Still exactly 3 line fields, but
+  the **per-line character limit now varies by package** —
+  `packages.letter_max_chars`: 15pc slab 7, 12pc slab 7, 15pc box 5, 12pc box
+  4, 9pc box 0 (topper not offered). Shown only when the selected package's
+  `letter_max_chars > 0` **and** the product's `allows_letter_topper` is true.
+- **Per-product-per-package stock** (`product_package_stock`): a specific
+  product×package combo (e.g. 12pc Cashew Brownie) can be marked sold out
+  independent of the product-level `in_stock` flag and independent of other
+  packages for the same product. No row = in stock; a row with
+  `in_stock = false` is the sold-out override. Out-of-stock combos render
+  disabled/struck-through in the storefront package selector rather than
+  disappearing.

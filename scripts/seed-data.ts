@@ -34,6 +34,7 @@ export interface RawProduct {
   in_stock: boolean
   stock_qty: number | null
   is_slab_available: boolean
+  is_slab_15_available: boolean
   allows_letter_topper: boolean
   sort_order: number
 }
@@ -44,7 +45,16 @@ export interface RawPackage {
   piece_count: number
   is_slab: boolean
   is_active: boolean
+  /** Max characters per topper line (3 lines) for this package. 0 = topper not offered. */
+  letter_max_chars: number
   sort_order: number
+}
+
+/** One row of `product_package_stock` — presence means an explicit override. */
+export interface RawProductPackageStock {
+  product_id: string
+  package_id: string
+  in_stock: boolean
 }
 
 export interface RawAddon {
@@ -89,6 +99,7 @@ export interface SeedData {
   deliveryTiers: RawDeliveryTier[]
   reviews: RawReview[]
   settings: RawSettings
+  productPackageStock: RawProductPackageStock[]
 }
 
 const CAT_CLASSIC = '11111111-1111-4111-8111-111111111111'
@@ -114,6 +125,7 @@ export const seedData: SeedData = {
       in_stock: true,
       stock_qty: null,
       is_slab_available: true,
+      is_slab_15_available: true,
       allows_letter_topper: true,
       sort_order: 1,
     },
@@ -130,6 +142,7 @@ export const seedData: SeedData = {
       in_stock: true,
       stock_qty: null,
       is_slab_available: false,
+      is_slab_15_available: false,
       allows_letter_topper: false,
       sort_order: 2,
     },
@@ -146,6 +159,7 @@ export const seedData: SeedData = {
       in_stock: true,
       stock_qty: 40,
       is_slab_available: true,
+      is_slab_15_available: false,
       allows_letter_topper: true,
       sort_order: 3,
     },
@@ -162,6 +176,7 @@ export const seedData: SeedData = {
       in_stock: true,
       stock_qty: null,
       is_slab_available: true,
+      is_slab_15_available: true,
       allows_letter_topper: true,
       sort_order: 4,
     },
@@ -178,24 +193,30 @@ export const seedData: SeedData = {
       in_stock: false,
       stock_qty: null,
       is_slab_available: true,
+      is_slab_15_available: false,
       allows_letter_topper: true,
       sort_order: 5,
     },
   ],
 
   packages: [
-    { id: 'box-9', label: '9 Pieces', piece_count: 9, is_slab: false, is_active: true, sort_order: 1 },
-    { id: 'box-12', label: '12 Pieces', piece_count: 12, is_slab: false, is_active: true, sort_order: 2 },
-    { id: 'box-15', label: '15 Pieces', piece_count: 15, is_slab: false, is_active: true, sort_order: 3 },
-    { id: 'slab-12', label: 'Brownie Slab (12 pcs)', piece_count: 12, is_slab: true, is_active: true, sort_order: 4 },
+    { id: 'box-9', label: '9 Pieces', piece_count: 9, is_slab: false, is_active: true, letter_max_chars: 0, sort_order: 1 },
+    { id: 'box-12', label: '12 Pieces', piece_count: 12, is_slab: false, is_active: true, letter_max_chars: 4, sort_order: 2 },
+    { id: 'box-15', label: '15 Pieces', piece_count: 15, is_slab: false, is_active: true, letter_max_chars: 5, sort_order: 3 },
+    { id: 'slab-12', label: 'Brownie Slab (12 pcs)', piece_count: 12, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 4 },
+    { id: 'slab-15', label: 'Brownie Slab (15 pcs)', piece_count: 15, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 5 },
   ],
 
   addons: [
+    // Letter topper is now a free, built-in option with per-package limits
+    // (packages[].letter_max_chars), not a priced addon — kept here
+    // disabled/zeroed rather than removed so historical order rows that
+    // stored a letter_topper addon line still render correctly.
     {
       id: 'letter_topper',
       label: 'Letter Topper',
-      price: 350,
-      is_enabled: true,
+      price: 0,
+      is_enabled: false,
       config: { lines: 3, max_chars_per_line: 5, slab_only: true },
     },
     {
@@ -253,4 +274,10 @@ export const seedData: SeedData = {
     features: { corporate_section: true, wedding_section: true, reviews_section: true },
     business: { whatsapp_number: '94771234567', google_business_url: 'https://g.page/golden-oven' },
   },
+
+  // No row = in stock. Cashew Brownie (a3333333…) is in stock as 9pc but
+  // sold out as 12pc — demonstrates the per-product-per-package override.
+  productPackageStock: [
+    { product_id: 'a3333333-3333-4333-8333-333333333333', package_id: 'box-12', in_stock: false },
+  ],
 }
