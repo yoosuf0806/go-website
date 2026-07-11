@@ -35,6 +35,8 @@ export interface AdminProduct {
   /** Can be ordered as the 15pc Brownie Slab. Independent of is_slab_available. */
   is_slab_15_available: boolean
   allows_letter_topper: boolean
+  /** Featured on the homepage Hot Picks section. */
+  is_hot_pick: boolean
   sort_order: number
 }
 

@@ -36,6 +36,7 @@ export interface RawProduct {
   is_slab_available: boolean
   is_slab_15_available: boolean
   allows_letter_topper: boolean
+  is_hot_pick: boolean
   sort_order: number
 }
 
@@ -127,6 +128,7 @@ export const seedData: SeedData = {
       is_slab_available: true,
       is_slab_15_available: true,
       allows_letter_topper: true,
+      is_hot_pick: true,
       sort_order: 1,
     },
     {
@@ -144,6 +146,7 @@ export const seedData: SeedData = {
       is_slab_available: false,
       is_slab_15_available: false,
       allows_letter_topper: false,
+      is_hot_pick: false,
       sort_order: 2,
     },
     {
@@ -161,6 +164,7 @@ export const seedData: SeedData = {
       is_slab_available: true,
       is_slab_15_available: false,
       allows_letter_topper: true,
+      is_hot_pick: false,
       sort_order: 3,
     },
     {
@@ -178,6 +182,7 @@ export const seedData: SeedData = {
       is_slab_available: true,
       is_slab_15_available: true,
       allows_letter_topper: true,
+      is_hot_pick: true,
       sort_order: 4,
     },
     {
@@ -195,6 +200,7 @@ export const seedData: SeedData = {
       is_slab_available: true,
       is_slab_15_available: false,
       allows_letter_topper: true,
+      is_hot_pick: false,
       sort_order: 5,
     },
   ],
