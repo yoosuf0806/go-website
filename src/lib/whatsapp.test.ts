@@ -40,6 +40,19 @@ describe('buildOrderMessage', () => {
     },
   }
 
+  it('includes email and alternative phone when present', () => {
+    const msg = buildOrderMessage({
+      ...input,
+      customer: {
+        ...input.customer,
+        email: 'nadeesha@example.com',
+        altPhone: '+94712223344',
+      },
+    })
+    expect(msg).toContain('nadeesha@example.com')
+    expect(msg).toContain('Alt: +94712223344')
+  })
+
   it('includes the order number, line, addon summary, and line total', () => {
     const msg = buildOrderMessage(input)
     expect(msg).toContain('New Order #42')

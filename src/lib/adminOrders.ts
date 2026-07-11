@@ -22,6 +22,8 @@ export interface AdminOrder {
   status: OrderStatus
   customer_name: string
   phone: string
+  email: string | null
+  alt_phone: string | null
   address: string | null
   delivery_date: string | null
   note: string | null
@@ -44,7 +46,7 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<AdminOrde
   let query = supabase
     .from('orders')
     .select(
-      'id, order_no, status, customer_name, phone, address, delivery_date, note, subtotal, delivery_fee, total, total_pieces, source, created_at, order_items(id, product_name, package_label, piece_count, box_qty, unit_price, addons, line_total)',
+      'id, order_no, status, customer_name, phone, email, alt_phone, address, delivery_date, note, subtotal, delivery_fee, total, total_pieces, source, created_at, order_items(id, product_name, package_label, piece_count, box_qty, unit_price, addons, line_total)',
     )
     .order('created_at', { ascending: false })
 

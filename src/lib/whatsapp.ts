@@ -9,6 +9,8 @@ import { lineTotal, type CartAddon, type CartItem, type CartTotals } from './pri
 export interface OrderCustomer {
   name: string
   phone: string
+  email?: string
+  altPhone?: string | null
   address?: string
   deliveryDate?: string | null
   note?: string
@@ -79,6 +81,8 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   lines.push(`*Total: ${formatLKR(totals.total)}*`)
   lines.push('')
   lines.push(`👤 ${customer.name} | 📞 ${customer.phone}`)
+  if (customer.altPhone) lines.push(`📞 Alt: ${customer.altPhone}`)
+  if (customer.email) lines.push(`✉️ ${customer.email}`)
   if (customer.address) lines.push(`📍 ${customer.address}`)
   if (customer.deliveryDate) lines.push(`🗓 Delivery: ${formatDate(customer.deliveryDate)}`)
   if (customer.note) lines.push(`📝 ${customer.note}`)
