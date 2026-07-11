@@ -12,6 +12,16 @@ export function useAdminOrders(filters: OrderFilters) {
   })
 }
 
+// All orders, unfiltered — the 3-tab Orders view buckets them client-side and
+// needs the full history to compute the repeat-customer flag.
+export function useAllAdminOrders() {
+  return useQuery({
+    queryKey: ['admin', 'orders', 'all'],
+    queryFn: () => fetchOrders({}),
+    staleTime: 15_000,
+  })
+}
+
 export function useUpdateOrderStatus() {
   const qc = useQueryClient()
   return useMutation({
