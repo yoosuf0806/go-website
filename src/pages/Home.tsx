@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useCatalog } from '../contexts/CatalogContext'
 import Slideshow from '../components/storefront/Slideshow'
+import HeroCarousel from '../components/storefront/HeroCarousel'
 import ProductTile from '../components/storefront/ProductTile'
 import Seo, { organizationJsonLd } from '../components/Seo'
 
@@ -11,6 +12,7 @@ export default function Home() {
   const { reviews: featuredReviews, settings, content, products, packages } = catalog
   const { reviews_section } = settings.features
   const { hero, trust, categories, ctaBanner, howItWorks, badges, testimonialsHeading } = content
+  const vis = content.sectionVisibility
 
   // Hot picks: admin-flagged products, shown below the hero. The catalog only
   // contains visible products already, so we just require in-stock so the
@@ -25,58 +27,66 @@ export default function Home() {
         path="/"
         jsonLd={[organizationJsonLd()]}
       />
-      {/* HERO */}
-      <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-6 py-16 md:grid-cols-2">
-        <div>
-          <h1 className="text-[clamp(2.8rem,5vw,4.2rem)] leading-[1.1] text-navy">
-            {hero.title} <em className="not-italic text-pink">{hero.highlight}</em> {hero.titleAfter}
-          </h1>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-500">{hero.subtitle}</p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
-              to="/shop"
-              className="rounded-full bg-pink px-8 py-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-pink-dark"
-            >
-              {hero.primaryCta}
-            </Link>
-            <Link
-              to="/corporate"
-              className="rounded-full border-2 border-navy px-7 py-3 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
-            >
-              {hero.secondaryCta}
-            </Link>
-          </div>
-        </div>
-        <div className="relative flex items-center justify-center">
-          <div className="grid max-w-[480px] grid-cols-2 gap-4">
-            {['🍫', '🍫', '🤍', '✨'].map((e, i) => (
-              <div
-                key={i}
-                className={`flex aspect-square items-center justify-center rounded-[20px] text-6xl ${
-                  i === 0
-                    ? 'mt-8 bg-gradient-to-br from-[#fce4ec] to-[#fff3e0]'
-                    : i === 1
-                      ? '-mt-8 bg-gradient-to-br from-[#f8bbd0] to-[#fce4ec]'
-                      : i === 2
-                        ? 'bg-gradient-to-br from-[#fff3e0] to-[#ffecb3]'
-                        : 'bg-gradient-to-br from-[#fce4ec] to-[#f8bbd0]'
-                }`}
+      {/* HERO — admin image carousel if slides exist, else the emoji-tile hero */}
+      {content.heroSlides.length > 0 ? (
+        <HeroCarousel
+          slides={content.heroSlides}
+          primaryCta={hero.primaryCta}
+          secondaryCta={hero.secondaryCta}
+        />
+      ) : (
+        <section className="mx-auto grid max-w-[1400px] items-center gap-12 px-6 py-16 md:grid-cols-2">
+          <div>
+            <h1 className="text-[clamp(2.1rem,7vw,4.2rem)] leading-[1.15] text-navy">
+              {hero.title} <em className="not-italic text-pink">{hero.highlight}</em> {hero.titleAfter}
+            </h1>
+            <p className="mt-5 max-w-md text-lg leading-relaxed text-neutral-500">{hero.subtitle}</p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                to="/shop"
+                className="rounded-full bg-pink px-8 py-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-pink-dark"
               >
-                {e}
-              </div>
-            ))}
+                {hero.primaryCta}
+              </Link>
+              <Link
+                to="/corporate"
+                className="rounded-full border-2 border-navy px-7 py-3 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
+              >
+                {hero.secondaryCta}
+              </Link>
+            </div>
           </div>
-          <div className="absolute -right-3 -top-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
-            🎁 Gift-ready boxes
+          <div className="relative flex items-center justify-center">
+            <div className="grid max-w-[480px] grid-cols-2 gap-4">
+              {['🍫', '🍫', '🤍', '✨'].map((e, i) => (
+                <div
+                  key={i}
+                  className={`flex aspect-square items-center justify-center rounded-[20px] text-6xl ${
+                    i === 0
+                      ? 'mt-8 bg-gradient-to-br from-[#fce4ec] to-[#fff3e0]'
+                      : i === 1
+                        ? '-mt-8 bg-gradient-to-br from-[#f8bbd0] to-[#fce4ec]'
+                        : i === 2
+                          ? 'bg-gradient-to-br from-[#fff3e0] to-[#ffecb3]'
+                          : 'bg-gradient-to-br from-[#fce4ec] to-[#f8bbd0]'
+                  }`}
+                >
+                  {e}
+                </div>
+              ))}
+            </div>
+            <div className="absolute -right-3 -top-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
+              🎁 Gift-ready boxes
+            </div>
+            <div className="absolute -bottom-2 -left-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
+              ⭐ 100+ happy customers
+            </div>
           </div>
-          <div className="absolute -bottom-2 -left-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-navy shadow-lg">
-            ⭐ 100+ happy customers
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* HOT PICKS — admin-flagged featured products, directly below the hero */}
-      {hotPicks.length > 0 && (
+      {vis.hotPicks !== false && hotPicks.length > 0 && (
         <section className="px-6 pb-6 pt-4">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-end justify-between gap-4">
@@ -101,6 +111,7 @@ export default function Home() {
       )}
 
       {/* TRUST BAR */}
+      {vis.trust !== false && (
       <div className="bg-navy py-8 text-white">
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
           {trust.map((t) => (
@@ -108,11 +119,13 @@ export default function Home() {
           ))}
         </div>
       </div>
+      )}
 
       {/* SLIDESHOW */}
-      <Slideshow />
+      {vis.slideshow !== false && <Slideshow />}
 
       {/* CATEGORY GRID */}
+      {vis.categories !== false && (
       <section className="px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <SectionHeader
@@ -134,8 +147,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* CTA BANNER */}
+      {vis.ctaBanner !== false && (
       <section className="bg-pink px-6 py-20 text-center text-white">
         <h2 className="text-[clamp(2rem,4vw,3.5rem)]">{ctaBanner.title}</h2>
         <p className="mx-auto mt-4 max-w-md text-lg opacity-90">{ctaBanner.body}</p>
@@ -146,8 +161,10 @@ export default function Home() {
           {ctaBanner.cta}
         </Link>
       </section>
+      )}
 
       {/* HOW IT WORKS */}
+      {vis.howItWorks !== false && (
       <section className="bg-warmgray px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <SectionHeader title="How It Works" sub="From box to door in 4 simple steps." />
@@ -158,9 +175,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* TESTIMONIALS */}
-      {reviews_section && featuredReviews.length > 0 && (
+      {vis.testimonials !== false && reviews_section && featuredReviews.length > 0 && (
         <section className="bg-pink-light px-6 py-20">
           <div className="mx-auto max-w-6xl">
             <SectionHeader title={testimonialsHeading.title} sub={testimonialsHeading.sub} />

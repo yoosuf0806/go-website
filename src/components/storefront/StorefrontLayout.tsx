@@ -53,7 +53,7 @@ export default function StorefrontLayout() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on WhatsApp"
-          className="fixed bottom-7 right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-2xl shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
+          className="fixed bottom-safe right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-2xl shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
         >
           💬
         </a>
@@ -144,7 +144,7 @@ function MobileNav({ onClose, onCartClick }: { onClose: () => void; onCartClick:
             </Link>
           ))}
         </nav>
-        <div className="border-t border-neutral-100 p-4">
+        <div className="border-t border-neutral-100 p-4 pb-safe">
           <button
             type="button"
             onClick={() => {

@@ -58,27 +58,27 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
                         type="button"
                         onClick={() => removeItem(item.key)}
                         aria-label={`Remove ${item.productName}`}
-                        className="text-xs text-neutral-400 hover:text-red-600"
+                        className="-m-2 rounded p-2 text-xs text-neutral-400 hover:text-red-600"
                       >
                         Remove
                       </button>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => incrementBoxQty(item.key, -1)}
                           aria-label="Decrease box quantity"
-                          className="h-7 w-7 rounded border border-neutral-300 text-sm"
+                          className="flex h-11 w-11 items-center justify-center rounded border border-neutral-300 text-base"
                         >
                           −
                         </button>
-                        <span className="w-6 text-center text-sm">{item.boxQty}</span>
+                        <span className="w-8 text-center text-sm">{item.boxQty}</span>
                         <button
                           type="button"
                           onClick={() => incrementBoxQty(item.key, 1)}
                           aria-label="Increase box quantity"
-                          className="h-7 w-7 rounded border border-neutral-300 text-sm"
+                          className="flex h-11 w-11 items-center justify-center rounded border border-neutral-300 text-base"
                         >
                           +
                         </button>
@@ -93,7 +93,7 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
         </div>
 
         {items.length > 0 && (
-          <div className="border-t border-neutral-200 px-4 py-4">
+          <div className="border-t border-neutral-200 px-4 pb-safe pt-4">
             <div className="flex justify-between text-sm text-neutral-600">
               <span>Subtotal</span>
               <span>{formatLKR(totals.subtotal)}</span>
@@ -109,7 +109,7 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
             <button
               type="button"
               onClick={onCheckout}
-              className="mt-4 w-full rounded-full bg-pink py-2.5 text-sm font-bold text-white hover:bg-pink-dark"
+              className="mt-4 w-full rounded-full bg-pink py-3.5 text-sm font-bold text-white hover:bg-pink-dark"
             >
               Checkout
             </button>

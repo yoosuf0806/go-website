@@ -61,7 +61,7 @@ export default function Slideshow() {
   const move = (dir: number) => setIndex((i) => (i + dir + SLIDES.length) % SLIDES.length)
 
   return (
-    <section className="relative h-[420px] overflow-hidden bg-navy">
+    <section className="relative h-[480px] overflow-hidden bg-navy sm:h-[420px]">
       <div
         className="flex h-full transition-transform duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
         style={{ transform: `translateX(-${index * 100}%)` }}

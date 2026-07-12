@@ -12,6 +12,18 @@ export interface HeroContent {
   secondaryCta: string
 }
 
+// Admin-managed hero banner slide: a background image with its own text
+// overlaid. When SiteContent.heroSlides is non-empty the hero renders as an
+// image carousel (text over image); when empty it falls back to the built-in
+// emoji-tile hero, so the site still renders before any slides are added.
+export interface HeroSlide {
+  imageUrl: string
+  title: string
+  highlight: string
+  titleAfter: string
+  subtitle: string
+}
+
 export interface IconCard {
   icon: string
   title: string
@@ -40,6 +52,18 @@ export interface SeoMeta {
 export interface SiteContent {
   promoMessages: string[]
   hero: HeroContent
+  /** Admin-managed hero image carousel. Empty = fall back to the emoji-tile hero. */
+  heroSlides: HeroSlide[]
+  /** Per-homepage-section on/off. Missing key defaults to visible (true). */
+  sectionVisibility: {
+    hotPicks?: boolean
+    trust?: boolean
+    slideshow?: boolean
+    categories?: boolean
+    ctaBanner?: boolean
+    howItWorks?: boolean
+    testimonials?: boolean
+  }
   trust: IconCard[]
   categories: OccasionCard[]
   ctaBanner: CtaBanner
@@ -71,6 +95,16 @@ export const DEFAULT_CONTENT: SiteContent = {
       'Freshly baked brownies. Islandwide delivery. Made to order — for every little celebration worth sharing.',
     primaryCta: 'Shop All Brownies',
     secondaryCta: 'Corporate Gifting',
+  },
+  heroSlides: [],
+  sectionVisibility: {
+    hotPicks: true,
+    trust: true,
+    slideshow: true,
+    categories: true,
+    ctaBanner: true,
+    howItWorks: true,
+    testimonials: true,
   },
   trust: [
     { icon: '🍫', title: 'Freshly Baked', body: 'Baked to order, never pre-made' },
@@ -147,5 +181,9 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     categories: partial.categories?.length ? partial.categories : DEFAULT_CONTENT.categories,
     howItWorks: partial.howItWorks?.length ? partial.howItWorks : DEFAULT_CONTENT.howItWorks,
     badges: partial.badges?.length ? partial.badges : DEFAULT_CONTENT.badges,
+    // heroSlides: an empty array is a valid, meaningful state (fall back to the
+    // emoji hero), so keep whatever the DB has rather than substituting defaults.
+    heroSlides: partial.heroSlides ?? DEFAULT_CONTENT.heroSlides,
+    sectionVisibility: { ...DEFAULT_CONTENT.sectionVisibility, ...partial.sectionVisibility },
   }
 }

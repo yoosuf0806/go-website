@@ -161,3 +161,20 @@ export async function uploadProductMedia(file: File): Promise<ProductMedia> {
   const { data } = supabase.storage.from('product-images').getPublicUrl(path)
   return { url: data.publicUrl, type: isVideo ? 'video' : 'image' }
 }
+
+/**
+ * Upload a single image to the shared public bucket and return its URL. Used by
+ * content sections (hero slides, trust bar, occasion cards) that only need an
+ * image URL, reusing the same bucket and public-URL flow as product media.
+ */
+export async function uploadImage(file: File): Promise<string> {
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const path = `content/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from('product-images').upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+  })
+  if (error) throw new Error(error.message)
+  const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+  return data.publicUrl
+}
