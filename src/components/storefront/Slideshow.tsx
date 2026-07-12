@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { PromoSlide } from '../../types/content'
 
 interface Slide {
   eyebrow: string
@@ -9,9 +10,10 @@ interface Slide {
   to: string
   emoji: string
   className: string
+  imageUrl?: string
 }
 
-const SLIDES: Slide[] = [
+const DEFAULT_SLIDES: Slide[] = [
   {
     eyebrow: 'Now Available',
     title: 'Classic Brownies',
@@ -50,15 +52,34 @@ const SLIDES: Slide[] = [
   },
 ]
 
-export default function Slideshow() {
+const GRADIENTS = [
+  'from-[#3e2723] to-[#6d4c41]',
+  'from-[#1a1a2e] to-[#2d2d6e]',
+  'from-[#4a0e1e] to-pink',
+  'from-[#1b2838] to-[#2a4a6e]',
+]
+
+// The promo slideshow below the trust bar. Uses admin-managed slides
+// (content.promoSlides) when present — each may have an uploaded background
+// image — and otherwise falls back to the built-in default slides.
+export default function Slideshow({ promoSlides = [] }: { promoSlides?: PromoSlide[] }) {
+  const slides: Slide[] =
+    promoSlides.length > 0
+      ? promoSlides.map((s, i) => ({
+          ...s,
+          emoji: '🍫',
+          className: GRADIENTS[i % GRADIENTS.length],
+        }))
+      : DEFAULT_SLIDES
+
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
-    const id = setInterval(() => setIndex((i) => (i + 1) % SLIDES.length), 5000)
+    const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 5000)
     return () => clearInterval(id)
-  }, [])
+  }, [slides.length])
 
-  const move = (dir: number) => setIndex((i) => (i + dir + SLIDES.length) % SLIDES.length)
+  const move = (dir: number) => setIndex((i) => (i + dir + slides.length) % slides.length)
 
   return (
     <section className="relative h-[480px] overflow-hidden bg-navy sm:h-[420px]">
@@ -66,12 +87,19 @@ export default function Slideshow() {
         className="flex h-full transition-transform duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
         style={{ transform: `translateX(-${index * 100}%)` }}
       >
-        {SLIDES.map((slide) => (
+        {slides.map((slide, i) => (
           <div
-            key={slide.title}
+            key={i}
             className={`relative flex h-full min-w-full items-center justify-center bg-gradient-to-br ${slide.className}`}
           >
-            <div className="pointer-events-none absolute text-[10rem] opacity-20">{slide.emoji}</div>
+            {slide.imageUrl ? (
+              <>
+                <img src={slide.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-black/45" />
+              </>
+            ) : (
+              <div className="pointer-events-none absolute text-[10rem] opacity-20">{slide.emoji}</div>
+            )}
             <div className="relative z-10 max-w-lg px-8 text-center text-white">
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] opacity-70">
                 {slide.eyebrow}
@@ -89,36 +117,39 @@ export default function Slideshow() {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={() => move(-1)}
-        aria-label="Previous slide"
-        className="absolute left-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-xl text-white hover:bg-white/30"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        onClick={() => move(1)}
-        aria-label="Next slide"
-        className="absolute right-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-xl text-white hover:bg-white/30"
-      >
-        ›
-      </button>
-
-      <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
-        {SLIDES.map((slide, i) => (
+      {slides.length > 1 && (
+        <>
           <button
-            key={slide.title}
             type="button"
-            onClick={() => setIndex(i)}
-            aria-label={`Go to slide ${i + 1}`}
-            className={`h-2 rounded-full transition-all ${
-              i === index ? 'w-6 bg-white' : 'w-2 bg-white/40'
-            }`}
-          />
-        ))}
-      </div>
+            onClick={() => move(-1)}
+            aria-label="Previous slide"
+            className="absolute left-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-xl text-white hover:bg-white/30"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => move(1)}
+            aria-label="Next slide"
+            className="absolute right-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-xl text-white hover:bg-white/30"
+          >
+            ›
+          </button>
+          <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIndex(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`h-2 rounded-full transition-all ${
+                  i === index ? 'w-6 bg-white' : 'w-2 bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   )
 }
