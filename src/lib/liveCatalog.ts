@@ -47,6 +47,7 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
         isSlabAvailable: r.is_slab_available as boolean,
         isSlab15Available: r.is_slab_15_available as boolean,
         allowsLetterTopper: r.allows_letter_topper as boolean,
+        isHotPick: (r.is_hot_pick as boolean) ?? false,
         sortOrder: r.sort_order as number,
       }
     })

@@ -52,6 +52,7 @@ create table if not exists products (
   is_slab_available boolean not null default false,
   is_slab_15_available boolean not null default false,
   allows_letter_topper boolean not null default false,
+  is_hot_pick boolean not null default false,
   sort_order int not null default 0,
   created_at timestamptz not null default now()
 );

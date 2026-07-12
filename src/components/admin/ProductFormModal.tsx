@@ -37,6 +37,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     is_slab_available: false,
     is_slab_15_available: false,
     allows_letter_topper: false,
+    is_hot_pick: false,
     sort_order: 0,
   }
 }
@@ -287,6 +288,14 @@ export default function ProductFormModal({
                 onChange={(e) => set('in_stock', e.target.checked)}
               />
               In stock
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_hot_pick}
+                onChange={(e) => set('is_hot_pick', e.target.checked)}
+              />
+              Hot pick (feature on homepage)
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input

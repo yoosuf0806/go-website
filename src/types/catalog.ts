@@ -39,6 +39,8 @@ export interface CatalogProduct {
   /** Can be ordered as the 15pc Brownie Slab (slab-15); independent of isSlabAvailable (12pc). */
   isSlab15Available: boolean
   allowsLetterTopper: boolean
+  /** Featured in the homepage Hot Picks section. */
+  isHotPick: boolean
   sortOrder: number
 }
 

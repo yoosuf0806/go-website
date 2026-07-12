@@ -1,15 +1,21 @@
 import { Link } from 'react-router-dom'
 import { useCatalog } from '../contexts/CatalogContext'
 import Slideshow from '../components/storefront/Slideshow'
+import ProductTile from '../components/storefront/ProductTile'
 import Seo, { organizationJsonLd } from '../components/Seo'
 
 // Home — reference-matched landing page. Every section's copy comes from the
 // editable content blob (admin Content module), with DEFAULT_CONTENT fallbacks.
 export default function Home() {
   const { catalog } = useCatalog()
-  const { reviews: featuredReviews, settings, content } = catalog
+  const { reviews: featuredReviews, settings, content, products, packages } = catalog
   const { reviews_section } = settings.features
   const { hero, trust, categories, ctaBanner, howItWorks, badges, testimonialsHeading } = content
+
+  // Hot picks: admin-flagged products, shown below the hero. The catalog only
+  // contains visible products already, so we just require in-stock so the
+  // section never points at a sold-out product.
+  const hotPicks = products.filter((p) => p.isHotPick && p.inStock)
 
   return (
     <div>
@@ -68,6 +74,31 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* HOT PICKS — admin-flagged featured products, directly below the hero */}
+      {hotPicks.length > 0 && (
+        <section className="px-6 pb-6 pt-4">
+          <div className="mx-auto max-w-6xl">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-[clamp(1.6rem,3vw,2.4rem)] text-navy">Hot Picks 🔥</h2>
+                <p className="mt-1 text-neutral-500">Our most-loved brownies right now.</p>
+              </div>
+              <Link
+                to="/shop"
+                className="hidden whitespace-nowrap rounded-full border-2 border-navy px-5 py-2 text-sm font-bold text-navy transition-colors hover:bg-navy hover:text-white sm:inline-block"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-5 lg:grid-cols-4">
+              {hotPicks.map((product) => (
+                <ProductTile key={product.id} product={product} packages={packages} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* TRUST BAR */}
       <div className="bg-navy py-8 text-white">
