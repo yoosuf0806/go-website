@@ -106,7 +106,7 @@ export default function AddonPanel({
       {showTopper && (
         <div className="rounded-md border border-neutral-200 p-3">
           <p className="text-sm font-medium text-navy">Letter Topper (free)</p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {value.letterTopper.lines.map((line, i) => (
               <input
                 key={i}
@@ -122,7 +122,7 @@ export default function AddonPanel({
                   lines[i] = upper
                   onChange({ ...value, letterTopper: { lines } })
                 }}
-                className="w-24 rounded border border-neutral-300 px-2 py-1 text-center text-sm uppercase placeholder:text-[10px] placeholder:normal-case"
+                className="h-11 w-24 rounded border border-neutral-300 px-2 text-center text-sm uppercase placeholder:text-[10px] placeholder:normal-case"
               />
             ))}
           </div>
@@ -183,7 +183,7 @@ export default function AddonPanel({
                   type="button"
                   disabled={disabled}
                   onClick={() => onChange({ ...value, giftRibbon: { ...value.giftRibbon, color } })}
-                  className={`rounded-full border px-3 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+                  className={`min-h-[40px] rounded-full border px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
                     value.giftRibbon.color === color
                       ? 'border-pink bg-pink-light text-pink'
                       : 'border-neutral-200 bg-white text-navy hover:border-pink'

@@ -19,3 +19,16 @@
     animation: none;
   }
 }
+
+/* Mobile: keep fixed bottom UI (WhatsApp float, mobile-nav cart button, cart
+   drawer checkout button, checkout modal footer) clear of the iOS home
+   indicator / gesture bar. Falls back to the existing padding on devices
+   without a safe-area inset (env() resolves to 0 there). */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: max(theme('spacing.4'), env(safe-area-inset-bottom));
+  }
+  .bottom-safe {
+    bottom: max(theme('spacing.7'), calc(env(safe-area-inset-bottom) + theme('spacing.4')));
+  }
+}

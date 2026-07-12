@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAdminContent, useUpdateContent } from '../../hooks/useAdminContent'
-import type { IconCard, OccasionCard, SeoMeta, SiteContent } from '../../types/content'
+import type { HeroSlide, IconCard, OccasionCard, SeoMeta, SiteContent } from '../../types/content'
+import { uploadImage } from '../../lib/adminProducts'
 import Toast from '../../components/ui/Toast'
 
 // Admin Content & SEO — edit every storefront section's copy + per-page SEO.
@@ -40,6 +41,34 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-6">
+      <Section title="Homepage sections (show / hide)">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          Turn any homepage section off for visitors without deleting its content.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {([
+            ['hotPicks', 'Hot Picks'],
+            ['trust', 'Trust bar'],
+            ['slideshow', 'Slideshow'],
+            ['categories', 'Occasion cards'],
+            ['ctaBanner', 'CTA banner'],
+            ['howItWorks', 'How it works'],
+            ['testimonials', 'Testimonials'],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.sectionVisibility[key] !== false}
+                onChange={(e) =>
+                  set('sectionVisibility', { ...form.sectionVisibility, [key]: e.target.checked })
+                }
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </Section>
+
       <Section title="Announcement ticker">
         <label className="text-sm">
           <span className="block text-neutral-600">Messages (one per line)</span>
@@ -63,6 +92,14 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
           <Text label="Primary button" value={form.hero.primaryCta} onChange={(v) => set('hero', { ...form.hero, primaryCta: v })} />
           <Text label="Secondary button" value={form.hero.secondaryCta} onChange={(v) => set('hero', { ...form.hero, secondaryCta: v })} />
         </Row>
+      </Section>
+
+      <Section title="Hero banner slides">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          Add image slides with their own text overlaid. When at least one slide exists, the homepage
+          shows this image carousel instead of the default hero. Leave empty to keep the default hero.
+        </p>
+        <HeroSlidesEditor slides={form.heroSlides} onChange={(v) => set('heroSlides', v)} />
       </Section>
 
       <Section title="Trust bar">
@@ -200,6 +237,98 @@ function SeoEditor({ label, meta, onChange }: { label: string; meta: SeoMeta; on
       <div className="mt-2 flex flex-col gap-2">
         <Text label="SEO title" value={meta.title} onChange={(v) => onChange({ ...meta, title: v })} />
         <Area label="Meta description" value={meta.description} onChange={(v) => onChange({ ...meta, description: v })} />
+      </div>
+    </div>
+  )
+}
+
+// Manage the hero image carousel: upload an image per slide, edit its overlaid
+// text, reorder, and remove. An empty list means the storefront falls back to
+// the default (emoji) hero.
+function HeroSlidesEditor({
+  slides,
+  onChange,
+}: {
+  slides: HeroSlide[]
+  onChange: (v: HeroSlide[]) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function update(i: number, patch: Partial<HeroSlide>) {
+    onChange(slides.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+  }
+  function remove(i: number) {
+    onChange(slides.filter((_, idx) => idx !== i))
+  }
+  function move(i: number, dir: number) {
+    const j = i + dir
+    if (j < 0 || j >= slides.length) return
+    const next = slides.slice()
+    ;[next[i], next[j]] = [next[j], next[i]]
+    onChange(next)
+  }
+
+  async function addSlide(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError(null)
+    setUploading(true)
+    try {
+      const url = await uploadImage(file)
+      onChange([
+        ...slides,
+        { imageUrl: url, title: 'Gift something they', highlight: 'actually', titleAfter: 'love.', subtitle: '' },
+      ])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+    }
+    setUploading(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {slides.map((slide, i) => (
+        <div key={i} className="rounded-lg border border-neutral-200 p-3">
+          <div className="flex gap-3">
+            <img
+              src={slide.imageUrl}
+              alt=""
+              className="h-24 w-32 flex-shrink-0 rounded object-cover"
+            />
+            <div className="flex-1">
+              <Row>
+                <Text label="Title (before)" value={slide.title} onChange={(v) => update(i, { title: v })} />
+                <Text label="Highlight" value={slide.highlight} onChange={(v) => update(i, { highlight: v })} />
+                <Text label="Title (after)" value={slide.titleAfter} onChange={(v) => update(i, { titleAfter: v })} />
+              </Row>
+              <div className="mt-2">
+                <Area label="Subtitle" value={slide.subtitle} onChange={(v) => update(i, { subtitle: v })} />
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">
+              ↑ Up
+            </button>
+            <button type="button" onClick={() => move(i, 1)} disabled={i === slides.length - 1} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">
+              ↓ Down
+            </button>
+            <button type="button" onClick={() => remove(i)} className="rounded border border-neutral-300 px-2 py-1 text-red-600 hover:bg-red-50">
+              Remove
+            </button>
+            <span className="text-neutral-400">Slide {i + 1} of {slides.length}</span>
+          </div>
+        </div>
+      ))}
+
+      <div>
+        <label className="inline-block cursor-pointer rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
+          {uploading ? 'Uploading…' : '+ Add slide (upload image)'}
+          <input type="file" accept="image/*" onChange={addSlide} disabled={uploading} className="hidden" />
+        </label>
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
     </div>
   )

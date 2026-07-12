@@ -107,7 +107,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
           </button>
         </div>
 
-        <div className="px-5 py-5 sm:px-6">
+        <div className="px-5 py-5 pb-safe sm:px-6">
           {successOrderNo != null ? (
             <div className="py-6 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl">
