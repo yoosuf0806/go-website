@@ -122,7 +122,7 @@ export default function Home() {
       )}
 
       {/* SLIDESHOW */}
-      {vis.slideshow !== false && <Slideshow />}
+      {vis.slideshow !== false && <Slideshow promoSlides={content.promoSlides} />}
 
       {/* CATEGORY GRID */}
       {vis.categories !== false && (
@@ -139,6 +139,7 @@ export default function Home() {
                 to={c.to}
                 gradient={CATEGORY_GRADIENTS[i % CATEGORY_GRADIENTS.length]}
                 emoji={c.emoji}
+                imageUrl={c.imageUrl}
                 title={c.title}
                 body={c.body}
                 cta={c.cta}
@@ -244,6 +245,7 @@ function CategoryCard({
   to,
   gradient,
   emoji,
+  imageUrl,
   title,
   body,
   cta,
@@ -251,17 +253,26 @@ function CategoryCard({
   to: string
   gradient: string
   emoji: string
+  imageUrl?: string
   title: string
   body: string
   cta: string
 }) {
   return (
     <Link to={to} className="group relative block aspect-[3/4] overflow-hidden rounded-[20px]">
-      <div
-        className={`flex h-full w-full items-center justify-center bg-gradient-to-b ${gradient} text-6xl transition-transform duration-500 group-hover:scale-105`}
-      >
-        {emoji}
-      </div>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={title}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      ) : (
+        <div
+          className={`flex h-full w-full items-center justify-center bg-gradient-to-b ${gradient} text-6xl transition-transform duration-500 group-hover:scale-105`}
+        >
+          {emoji}
+        </div>
+      )}
       <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-navy/85 to-transparent p-6 text-white">
         <h3 className="text-xl">{title}</h3>
         <p className="mt-1.5 text-xs leading-relaxed opacity-85">{body}</p>

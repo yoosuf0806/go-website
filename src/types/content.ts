@@ -32,10 +32,24 @@ export interface IconCard {
 
 export interface OccasionCard {
   emoji: string
+  /** Optional uploaded image; when set, shown instead of the emoji. */
+  imageUrl?: string
   title: string
   body: string
   cta: string
   to: string
+}
+
+// Admin-managed slide for the promotional slideshow (the dark carousel below
+// the trust bar). Optional background image; falls back to a gradient + emoji
+// when no image is set. Empty promoSlides list => the built-in default slides.
+export interface PromoSlide {
+  eyebrow: string
+  title: string
+  body: string
+  cta: string
+  to: string
+  imageUrl?: string
 }
 
 export interface CtaBanner {
@@ -54,6 +68,8 @@ export interface SiteContent {
   hero: HeroContent
   /** Admin-managed hero image carousel. Empty = fall back to the emoji-tile hero. */
   heroSlides: HeroSlide[]
+  /** Admin-managed promo slideshow slides. Empty = built-in default slides. */
+  promoSlides: PromoSlide[]
   /** Per-homepage-section on/off. Missing key defaults to visible (true). */
   sectionVisibility: {
     hotPicks?: boolean
@@ -97,6 +113,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     secondaryCta: 'Corporate Gifting',
   },
   heroSlides: [],
+  promoSlides: [],
   sectionVisibility: {
     hotPicks: true,
     trust: true,
@@ -184,6 +201,7 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     // heroSlides: an empty array is a valid, meaningful state (fall back to the
     // emoji hero), so keep whatever the DB has rather than substituting defaults.
     heroSlides: partial.heroSlides ?? DEFAULT_CONTENT.heroSlides,
+    promoSlides: partial.promoSlides ?? DEFAULT_CONTENT.promoSlides,
     sectionVisibility: { ...DEFAULT_CONTENT.sectionVisibility, ...partial.sectionVisibility },
   }
 }

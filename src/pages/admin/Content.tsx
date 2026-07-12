@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAdminContent, useUpdateContent } from '../../hooks/useAdminContent'
-import type { HeroSlide, IconCard, OccasionCard, SeoMeta, SiteContent } from '../../types/content'
+import type { HeroSlide, IconCard, OccasionCard, PromoSlide, SeoMeta, SiteContent } from '../../types/content'
 import { uploadImage } from '../../lib/adminProducts'
 import Toast from '../../components/ui/Toast'
 
@@ -104,6 +104,14 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
 
       <Section title="Trust bar">
         <IconCards items={form.trust} onChange={(v) => set('trust', v)} />
+      </Section>
+
+      <Section title="Promo slideshow">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          The rotating banner below the trust bar. Add slides with their own text + optional background
+          image. Leave empty to use the built-in default slides.
+        </p>
+        <PromoSlidesEditor slides={form.promoSlides} onChange={(v) => set('promoSlides', v)} />
       </Section>
 
       <Section title="Occasion cards">
@@ -220,12 +228,73 @@ function IconCards({
 
 function OccasionEditor({ card, onChange }: { card: OccasionCard; onChange: (c: OccasionCard) => void }) {
   return (
-    <div className="grid grid-cols-1 gap-2 rounded border border-neutral-100 p-3 sm:grid-cols-2">
-      <Text label="Emoji" value={card.emoji} onChange={(v) => onChange({ ...card, emoji: v })} />
-      <Text label="Title" value={card.title} onChange={(v) => onChange({ ...card, title: v })} />
-      <Text label="Body" value={card.body} onChange={(v) => onChange({ ...card, body: v })} />
-      <Text label="Button text" value={card.cta} onChange={(v) => onChange({ ...card, cta: v })} />
-      <Text label="Links to (/shop or /corporate)" value={card.to} onChange={(v) => onChange({ ...card, to: v })} />
+    <div className="rounded border border-neutral-100 p-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Text label="Emoji (used if no image)" value={card.emoji} onChange={(v) => onChange({ ...card, emoji: v })} />
+        <Text label="Title" value={card.title} onChange={(v) => onChange({ ...card, title: v })} />
+        <Text label="Body" value={card.body} onChange={(v) => onChange({ ...card, body: v })} />
+        <Text label="Button text" value={card.cta} onChange={(v) => onChange({ ...card, cta: v })} />
+        <Text label="Links to (/shop or /corporate)" value={card.to} onChange={(v) => onChange({ ...card, to: v })} />
+      </div>
+      <div className="mt-2">
+        <ImageField
+          label="Card image (optional — replaces the emoji)"
+          value={card.imageUrl}
+          onChange={(url) => onChange({ ...card, imageUrl: url })}
+        />
+      </div>
+    </div>
+  )
+}
+
+// Reusable image upload + preview + clear, for content sections. Uploads to the
+// shared public bucket and stores the resulting URL.
+function ImageField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value?: string
+  onChange: (url: string | undefined) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError(null)
+    setUploading(true)
+    try {
+      onChange(await uploadImage(file))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+    }
+    setUploading(false)
+  }
+
+  return (
+    <div>
+      <span className="block text-sm text-neutral-600">{label}</span>
+      <div className="mt-1 flex items-center gap-3">
+        {value && <img src={value} alt="" className="h-14 w-20 rounded object-cover" />}
+        <label className="cursor-pointer rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:bg-neutral-100">
+          {uploading ? 'Uploading…' : value ? 'Replace image' : 'Upload image'}
+          <input type="file" accept="image/*" onChange={pick} disabled={uploading} className="hidden" />
+        </label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="text-xs text-red-600 hover:underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   )
 }
@@ -330,6 +399,69 @@ function HeroSlidesEditor({
         </label>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
+    </div>
+  )
+}
+
+// Manage the promo slideshow slides (eyebrow/title/body/CTA + optional image).
+function PromoSlidesEditor({
+  slides,
+  onChange,
+}: {
+  slides: PromoSlide[]
+  onChange: (v: PromoSlide[]) => void
+}) {
+  function update(i: number, patch: Partial<PromoSlide>) {
+    onChange(slides.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+  }
+  function remove(i: number) {
+    onChange(slides.filter((_, idx) => idx !== i))
+  }
+  function move(i: number, dir: number) {
+    const j = i + dir
+    if (j < 0 || j >= slides.length) return
+    const next = slides.slice()
+    ;[next[i], next[j]] = [next[j], next[i]]
+    onChange(next)
+  }
+  function add() {
+    onChange([
+      ...slides,
+      { eyebrow: 'Now Available', title: 'New collection', body: '', cta: 'Shop Now', to: '/shop' },
+    ])
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {slides.map((slide, i) => (
+        <div key={i} className="rounded-lg border border-neutral-200 p-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Text label="Eyebrow (small label)" value={slide.eyebrow} onChange={(v) => update(i, { eyebrow: v })} />
+            <Text label="Title" value={slide.title} onChange={(v) => update(i, { title: v })} />
+            <Text label="Button text" value={slide.cta} onChange={(v) => update(i, { cta: v })} />
+            <Text label="Links to (/shop or /corporate)" value={slide.to} onChange={(v) => update(i, { to: v })} />
+          </div>
+          <div className="mt-2">
+            <Area label="Body" value={slide.body} onChange={(v) => update(i, { body: v })} />
+          </div>
+          <div className="mt-2">
+            <ImageField
+              label="Background image (optional)"
+              value={slide.imageUrl}
+              onChange={(url) => update(i, { imageUrl: url })}
+            />
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↑ Up</button>
+            <button type="button" onClick={() => move(i, 1)} disabled={i === slides.length - 1} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↓ Down</button>
+            <button type="button" onClick={() => remove(i)} className="rounded border border-neutral-300 px-2 py-1 text-red-600 hover:bg-red-50">Remove</button>
+            <span className="text-neutral-400">Slide {i + 1} of {slides.length}</span>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
+        + Add promo slide
+      </button>
     </div>
   )
 }
