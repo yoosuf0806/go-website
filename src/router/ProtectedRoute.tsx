@@ -1,11 +1,22 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useSession } from '../hooks/useSession'
+import { useRole, type UserRole } from '../hooks/useRole'
 
-// Gates admin routes behind a Supabase Auth session. Redirects to /admin/login
-// when there is no session (spec §7). Any authenticated user is an admin in v1.
-export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, loading } = useSession()
+interface Props {
+  children: ReactNode
+  requireRole?: UserRole
+}
+
+// Gates routes behind a Supabase Auth session (spec §7). When requireRole is
+// set, also checks the profiles.role column; a mismatch redirects to the
+// appropriate login page. Any authenticated user with no profile row is
+// treated as admin (useRole fallback).
+export default function ProtectedRoute({ children, requireRole }: Props) {
+  const { session, loading: sessionLoading } = useSession()
+  const { role, loading: roleLoading } = useRole()
+
+  const loading = sessionLoading || (!!session && requireRole !== undefined && roleLoading)
 
   if (loading) {
     return (
@@ -16,7 +27,13 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
-    return <Navigate to="/admin/login" replace />
+    const loginPath = requireRole === 'kitchen' ? '/kitchen/login' : '/admin/login'
+    return <Navigate to={loginPath} replace />
+  }
+
+  if (requireRole && role !== requireRole) {
+    const redirectPath = role === 'kitchen' ? '/kitchen' : '/admin'
+    return <Navigate to={redirectPath} replace />
   }
 
   return <>{children}</>
