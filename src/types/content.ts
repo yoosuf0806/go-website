@@ -63,6 +63,22 @@ export interface SeoMeta {
   description: string
 }
 
+export interface FaqItem {
+  q: string
+  a: string
+}
+
+export interface CorporateQuoteContent {
+  heading: string
+  intro: string
+  productInfo: string[]
+  faq: FaqItem[]
+  preOrderNote: string
+  preOrderThreshold: number
+  preOrderLeadDays: number
+  discountThreshold: number
+}
+
 export interface SiteContent {
   promoMessages: string[]
   hero: HeroContent
@@ -93,6 +109,7 @@ export interface SiteContent {
     shop: SeoMeta
     corporate: SeoMeta
   }
+  corporate: CorporateQuoteContent
 }
 
 export const DEFAULT_CONTENT: SiteContent = {
@@ -173,6 +190,34 @@ export const DEFAULT_CONTENT: SiteContent = {
       description: 'Premium brownie boxes for teams, events, and weddings. Bulk pricing and custom packaging. Get a tailored quotation.',
     },
   },
+  corporate: {
+    heading: 'Corporate & Bulk Gifting',
+    intro: 'Freshly baked brownie boxes for teams, events, and client gifting. Tell us what you need and we\'ll get back to you with a tailored quote.',
+    productInfo: [
+      'Freshly baked to order — never pre-made or stored',
+      'Beautiful gift-ready packaging included',
+      'Islandwide delivery across Sri Lanka',
+      '100% Halal certified ingredients',
+    ],
+    faq: [
+      {
+        q: 'How far in advance should I order?',
+        a: 'We recommend at least 4 days for orders over 50 pieces. Smaller orders can often be turned around in 2 days — tell us your date and we\'ll confirm.',
+      },
+      {
+        q: 'Can I mix flavours in one order?',
+        a: 'Yes! Let us know your preferred flavour split in the message field and we\'ll accommodate where possible.',
+      },
+      {
+        q: 'Do you offer custom packaging or branding?',
+        a: 'We offer custom ribbon and gift message options. For branded packaging, contact us directly to discuss.',
+      },
+    ],
+    preOrderNote: 'Orders over 50 pieces require at least 4 days\' notice. Orders over 100 pieces qualify for a bulk discount — we\'ll confirm the rate in your quote.',
+    preOrderThreshold: 50,
+    preOrderLeadDays: 4,
+    discountThreshold: 100,
+  },
 }
 
 /** Deep-merge a partial (DB) content object over the defaults so missing keys
@@ -203,5 +248,15 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     heroSlides: partial.heroSlides ?? DEFAULT_CONTENT.heroSlides,
     promoSlides: partial.promoSlides ?? DEFAULT_CONTENT.promoSlides,
     sectionVisibility: { ...DEFAULT_CONTENT.sectionVisibility, ...partial.sectionVisibility },
+    corporate: {
+      ...DEFAULT_CONTENT.corporate,
+      ...partial.corporate,
+      productInfo: partial.corporate?.productInfo?.length
+        ? partial.corporate.productInfo
+        : DEFAULT_CONTENT.corporate.productInfo,
+      faq: partial.corporate?.faq?.length
+        ? partial.corporate.faq
+        : DEFAULT_CONTENT.corporate.faq,
+    },
   }
 }

@@ -129,6 +129,15 @@ export interface CatalogSettings {
   business: BusinessSetting
 }
 
+export interface CatalogQuoteFlavor {
+  id: string
+  name: string
+  imageUrl: string | null
+  description: string | null
+  isActive: boolean
+  sortOrder: number
+}
+
 export interface Catalog {
   /** ISO timestamp of when the snapshot was generated. */
   generatedAt: string
@@ -145,4 +154,6 @@ export interface Catalog {
   content: SiteContent
   /** Out-of-stock product×package overrides; see stockKey/ProductPackageStockMap. */
   productPackageStock: ProductPackageStockMap
+  /** Corporate quote flavours (active only, sorted). */
+  quoteFlavors: CatalogQuoteFlavor[]
 }

@@ -3,7 +3,7 @@
 // not use .select()/RETURNING here (it would be blocked). The caller only needs
 // the normalised phone for the WhatsApp deep link, not the new row's id.
 import { supabase } from './supabase'
-import type { InquiryForm } from '../schemas/inquiry'
+import type { InquiryForm, QuoteForm } from '../schemas/inquiry'
 import { normalizePhone } from './format'
 
 export interface CreatedInquiry {
@@ -24,6 +24,29 @@ export async function createInquiry(form: InquiryForm): Promise<CreatedInquiry> 
     email: form.email || null,
     event_date: form.eventDate || null,
     guest_count: guestCount,
+    message: form.message || null,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return { phone }
+}
+
+export async function createQuote(form: QuoteForm): Promise<CreatedInquiry> {
+  const phone = normalizePhone(form.phone)
+  if (!phone) throw new Error('Invalid phone number')
+
+  const { error } = await supabase.from('inquiries').insert({
+    category: form.category,
+    name: form.name,
+    phone,
+    email: form.email || null,
+    event_date: form.deliveryDate,
+    piece_count: form.pieceCount,
+    flavor_id: form.flavorId || null,
+    flavor_name: form.flavorName || null,
     message: form.message || null,
   })
 
