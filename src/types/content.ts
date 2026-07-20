@@ -68,6 +68,16 @@ export interface FaqItem {
   a: string
 }
 
+// One slide in the short bulk-order banner slideshow at the top of the
+// corporate page. Optional background image; falls back to a pink strip.
+export interface CorporateBanner {
+  title: string
+  body: string
+  cta?: string
+  to?: string
+  imageUrl?: string
+}
+
 export interface CorporateQuoteContent {
   heading: string
   intro: string
@@ -77,6 +87,8 @@ export interface CorporateQuoteContent {
   preOrderThreshold: number
   preOrderLeadDays: number
   discountThreshold: number
+  /** Short ad slideshow at the top of the corporate page. Empty = hidden. */
+  banners: CorporateBanner[]
 }
 
 export interface SiteContent {
@@ -217,6 +229,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     preOrderThreshold: 50,
     preOrderLeadDays: 4,
     discountThreshold: 100,
+    banners: [],
   },
 }
 
@@ -257,6 +270,9 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
       faq: partial.corporate?.faq?.length
         ? partial.corporate.faq
         : DEFAULT_CONTENT.corporate.faq,
+      // banners: an empty array is meaningful (slideshow hidden), so keep the
+      // DB value rather than substituting defaults.
+      banners: partial.corporate?.banners ?? DEFAULT_CONTENT.corporate.banners,
     },
   }
 }
