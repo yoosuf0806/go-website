@@ -11,7 +11,6 @@ const navItems = [
   { to: '/admin/inquiries', label: 'Inquiries' },
   { to: '/admin/content', label: 'Content & SEO' },
   { to: '/admin/products', label: 'Products' },
-  { to: '/admin/quote-flavors', label: 'Quote Flavours' },
   { to: '/admin/addon-pricing', label: 'Add-on Pricing' },
   { to: '/admin/reviews', label: 'Reviews' },
   { to: '/admin/settings', label: 'Settings' },

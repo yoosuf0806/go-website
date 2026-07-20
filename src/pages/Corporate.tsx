@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useCatalog } from '../contexts/CatalogContext'
 import { useCreateQuote } from '../hooks/useCreateInquiry'
 import { quoteFormSchema, type QuoteFormRaw } from '../schemas/inquiry'
-import type { CatalogQuoteFlavor } from '../types/catalog'
+import type { CatalogProduct } from '../types/catalog'
 import CorporateBanner from '../components/storefront/CorporateBanner'
 import Toast from '../components/ui/Toast'
 import Seo from '../components/Seo'
@@ -13,8 +13,10 @@ const PILLS = ['🌱 Vegetarian', '🍫 Freshly Baked', '✅ Halal']
 
 export default function Corporate() {
   const { catalog } = useCatalog()
-  const { quoteFlavors, content } = catalog
+  const { content } = catalog
   const corp = content.corporate
+  // Flavours are products flagged "corporate" in the admin product form.
+  const flavors = catalog.products.filter((p) => p.isCorporate)
 
   const [toast, setToast] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
@@ -30,11 +32,11 @@ export default function Corporate() {
     formState: { errors, isSubmitting },
   } = useForm<QuoteFormRaw>({ resolver: zodResolver(quoteFormSchema) })
 
-  const selected = quoteFlavors.find((f) => f.id === selectedId) ?? null
-  const heroImage = selected?.imageUrl ?? quoteFlavors.find((f) => f.imageUrl)?.imageUrl ?? null
+  const selected = flavors.find((f) => f.id === selectedId) ?? null
+  const heroImage = selected?.imageUrl ?? flavors.find((f) => f.imageUrl)?.imageUrl ?? null
   const pieceCount = watch('pieceCount')
 
-  function pickFlavor(f: CatalogQuoteFlavor) {
+  function pickFlavor(f: CatalogProduct) {
     const next = selectedId === f.id ? null : f
     setSelectedId(next?.id ?? null)
     setValue('flavorId', next?.id)
@@ -113,14 +115,14 @@ export default function Corporate() {
           )}
 
           {/* Flavour picker */}
-          {quoteFlavors.length > 0 && (
+          {flavors.length > 0 && (
             <div className="mt-6">
               <div className="flex items-baseline justify-between">
                 <p className="text-sm font-semibold text-neutral-700">Choose your flavour</p>
                 <span className="text-xs text-neutral-400">Mix flavours in notes</span>
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {quoteFlavors.map((f) => {
+                {flavors.map((f) => {
                   const active = selectedId === f.id
                   return (
                     <button

@@ -38,6 +38,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     is_slab_15_available: false,
     allows_letter_topper: false,
     is_hot_pick: false,
+    is_corporate: false,
     sort_order: 0,
   }
 }
@@ -296,6 +297,14 @@ export default function ProductFormModal({
                 onChange={(e) => set('is_hot_pick', e.target.checked)}
               />
               Hot pick (feature on homepage)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_corporate}
+                onChange={(e) => set('is_corporate', e.target.checked)}
+              />
+              Corporate / wedding flavour (show on quote page)
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input
