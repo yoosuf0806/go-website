@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchKitchenOrders,
   advanceKitchenStatus,
+  describeAddon,
+  kitchenBadge,
   KITCHEN_NEXT,
-  KITCHEN_STATUS_LABEL,
   offsetDate,
+  type KitchenButtonVariant,
   type KitchenOrder,
 } from '../../lib/kitchenOrders'
 import KitchenLayout from '../../components/kitchen/KitchenLayout'
@@ -17,11 +19,37 @@ const DATE_CHIPS = [
   { label: 'Day after', offset: 2 },
 ]
 
+const BUTTON_VARIANT: Record<KitchenButtonVariant, string> = {
+  pink: 'bg-pink text-white hover:bg-pink-dark',
+  green: 'bg-green-600 text-white hover:bg-green-500',
+  navy: 'bg-white/10 text-white hover:bg-white/20',
+}
+
+function formatLongDate(iso: string): string {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatShortDate(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
 export default function KitchenBoard() {
   const [selectedDate, setSelectedDate] = useState(offsetDate(0))
 
   const qc = useQueryClient()
-  const { data: orders = [], isLoading, error } = useQuery({
+  const {
+    data: orders = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['kitchen-orders', selectedDate],
     queryFn: () => fetchKitchenOrders(selectedDate),
   })
@@ -31,30 +59,24 @@ export default function KitchenBoard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kitchen-orders', selectedDate] }),
   })
 
-  const toBake = orders.filter((o) => o.status === 'pending' || o.status === 'confirmed').length
+  // Two-bucket summary: everything not yet ready ("to bake") vs ready to go out.
+  const toBake = orders.filter(
+    (o) => o.status === 'pending' || o.status === 'confirmed' || o.status === 'baking',
+  ).length
   const ready = orders.filter((o) => o.status === 'ready').length
-  const baking = orders.filter((o) => o.status === 'baking').length
 
   return (
     <KitchenLayout>
-      <div className="mx-auto max-w-xl px-4 py-6">
+      <div className="mx-auto max-w-md px-4 py-5">
+        <p className="text-sm text-white/50">{formatLongDate(selectedDate)}</p>
+
         {/* Summary card */}
-        <div className="rounded-2xl bg-navy p-5 text-white">
-          <p className="text-xs uppercase tracking-widest text-white/50">
-            {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-LK', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
-          </p>
-          <div className="mt-3 flex gap-6">
-            <Stat label="To bake" value={toBake} />
-            <Stat label="Baking" value={baking} />
-            <Stat label="Ready" value={ready} />
-          </div>
+        <div className="mt-3 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/5 p-5">
+          <SummaryStat label="To bake" value={toBake} />
+          <SummaryStat label="Ready" value={ready} className="pl-6" />
         </div>
 
-        {/* Date picker: chips + custom date */}
+        {/* Date picker: chips + native input */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {DATE_CHIPS.map(({ label, offset }) => {
             const date = offsetDate(offset)
@@ -64,10 +86,10 @@ export default function KitchenBoard() {
                 key={label}
                 type="button"
                 onClick={() => setSelectedDate(date)}
-                className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-colors ${
+                className={`min-h-[44px] rounded-full px-5 text-sm font-medium transition-colors ${
                   active
                     ? 'bg-pink text-white'
-                    : 'bg-white text-neutral-700 shadow-sm hover:bg-pink-light'
+                    : 'border border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
                 }`}
               >
                 {label}
@@ -78,24 +100,20 @@ export default function KitchenBoard() {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="min-h-[44px] rounded-full border border-neutral-200 bg-white px-3 text-sm text-neutral-700 shadow-sm"
+            className="min-h-[44px] rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white [color-scheme:dark]"
           />
         </div>
 
-        {/* Order cards */}
+        {/* Job cards */}
         <div className="mt-5 space-y-3">
-          {isLoading && (
-            <p className="text-center text-sm text-neutral-400">Loading orders…</p>
-          )}
+          {isLoading && <p className="py-10 text-center text-sm text-white/40">Loading orders…</p>}
           {error && (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p className="rounded-xl bg-red-500/20 px-4 py-3 text-sm text-red-300">
               {error instanceof Error ? error.message : 'Failed to load orders'}
             </p>
           )}
           {!isLoading && !error && orders.length === 0 && (
-            <p className="py-10 text-center text-sm text-neutral-400">
-              No orders for this date.
-            </p>
+            <p className="py-12 text-center text-sm text-white/40">No orders for this date.</p>
           )}
           {orders.map((order) => (
             <OrderCard
@@ -111,11 +129,19 @@ export default function KitchenBoard() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function SummaryStat({
+  label,
+  value,
+  className = '',
+}: {
+  label: string
+  value: number
+  className?: string
+}) {
   return (
-    <div>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-white/50">{label}</p>
+    <div className={className}>
+      <p className="text-xs uppercase tracking-widest text-white/40">{label}</p>
+      <p className="mt-1 text-3xl font-bold">{value}</p>
     </div>
   )
 }
@@ -129,47 +155,37 @@ function OrderCard({
   onAdvance: (to: OrderStatus) => void
   advancing: boolean
 }) {
+  const badge = kitchenBadge(order.status)
   const next = KITCHEN_NEXT[order.status]
 
-  const statusColor: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    baking: 'bg-orange-100 text-orange-800',
-    ready: 'bg-green-100 text-green-800',
-    completed: 'bg-neutral-100 text-neutral-500',
-  }
+  // Extra notes: free-text order note + a short line per addon on any item.
+  const extras = [
+    order.note ?? '',
+    ...order.order_items.flatMap((i) => (i.addons ?? []).map(describeAddon)),
+  ].filter(Boolean)
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-semibold text-navy">#{order.order_no}</p>
-          <p className="text-sm text-neutral-500">{order.customer_name}</p>
-        </div>
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusColor[order.status] ?? 'bg-neutral-100 text-neutral-500'}`}
-        >
-          {KITCHEN_STATUS_LABEL[order.status]}
-        </span>
+        <p className="text-xs text-white/40">#{order.order_no}</p>
+        <span className={`text-xs font-semibold ${badge.className}`}>{badge.label}</span>
       </div>
 
-      {/* Items */}
-      <ul className="mt-3 space-y-1">
+      {/* qty × brownie type — one line per item */}
+      <div className="mt-1 space-y-0.5">
         {order.order_items.map((item) => (
-          <li key={item.id} className="flex gap-2 text-sm">
-            <span className="font-medium text-neutral-900">
-              {item.box_qty > 1 ? `${item.box_qty}×` : ''}{item.piece_count}pc
-            </span>
-            <span className="text-neutral-600">{item.product_name}</span>
-            <span className="text-neutral-400">({item.package_label})</span>
-          </li>
+          <p key={item.id} className="text-base font-semibold text-white">
+            {item.piece_count} × {item.product_name}
+            {item.box_qty > 1 && <span className="text-white/50"> ({item.box_qty} boxes)</span>}
+          </p>
         ))}
-      </ul>
+      </div>
 
-      {/* Meta */}
-      <div className="mt-3 space-y-0.5 text-xs text-neutral-500">
+      {/* Details */}
+      <div className="mt-3 space-y-1 text-sm text-white/60">
+        {extras.length > 0 && <p>📝 {extras.join(', ')}</p>}
+        <p>📅 Deliver {formatShortDate(order.delivery_date)}</p>
         {order.address && <p>📍 {order.address}</p>}
-        {order.note && <p>📝 {order.note}</p>}
       </div>
 
       {/* Advance button */}
@@ -178,7 +194,7 @@ function OrderCard({
           type="button"
           disabled={advancing}
           onClick={() => onAdvance(next.to)}
-          className="mt-4 min-h-[44px] w-full rounded-full bg-pink py-2.5 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
+          className={`mt-4 min-h-[44px] w-full rounded-full text-sm font-bold transition-colors disabled:opacity-50 ${BUTTON_VARIANT[next.variant]}`}
         >
           {next.label}
         </button>

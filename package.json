@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "snapshot": "tsx scripts/snapshot.ts",
+    "create-kitchen-user": "tsx scripts/create-kitchen-user.ts",
     "predev": "npm run snapshot",
     "dev": "vite",
     "prebuild": "npm run snapshot",
