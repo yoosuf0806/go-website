@@ -24,8 +24,14 @@ export function useRole(): { role: UserRole; loading: boolean } {
       .from('profiles')
       .select('role')
       .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => {
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          // Surface RLS/config issues in the console instead of silently
+          // treating every unreadable row as "admin" — that masked the
+          // kitchen-redirect bug (missing self-read policy on profiles).
+          console.error('[useRole] failed to read profile role:', error.message)
+        }
         setRole((data?.role as UserRole | null) ?? 'admin')
         setLoading(false)
       })

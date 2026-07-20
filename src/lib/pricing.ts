@@ -96,3 +96,8 @@ export function cartTotals(items: CartItem[], tiers: DeliveryTier[]): CartTotals
     warnAdmin: tier?.warnAdmin ?? false,
   }
 }
+
+/** Order total after a flat gift-voucher discount, clamped so it never goes below zero. */
+export function totalAfterVoucher(total: number, discount: number): number {
+  return Math.max(0, total - discount)
+}

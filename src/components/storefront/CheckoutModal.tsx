@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useCartStore } from '../../stores/cart'
-import { cartTotals, lineTotal } from '../../lib/pricing'
+import { cartTotals, lineTotal, totalAfterVoucher } from '../../lib/pricing'
 import { formatLKR, normalizePhone } from '../../lib/format'
 import { addonSummary, orderWhatsAppLink } from '../../lib/whatsapp'
 import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
 import { useCreateOrder } from '../../hooks/useCreateOrder'
 import { useCatalog } from '../../contexts/CatalogContext'
+import { validateGiftVoucher, type VoucherValidation } from '../../lib/giftVouchers'
 
 type Step = 'details' | 'review'
 
@@ -42,8 +43,36 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const [details, setDetails] = useState<CheckoutDetails | null>(null)
   const [successOrderNo, setSuccessOrderNo] = useState<number | null>(null)
 
+  const [voucherInput, setVoucherInput] = useState('')
+  const [voucherChecking, setVoucherChecking] = useState(false)
+  const [voucherResult, setVoucherResult] = useState<VoucherValidation | null>(null)
+  const [voucherError, setVoucherError] = useState<string | null>(null)
+
+  const appliedDiscount = voucherResult?.status === 'ok' ? (voucherResult.amount ?? 0) : 0
+  const finalTotal = totalAfterVoucher(totals.total, appliedDiscount)
+
   const today = new Date().toISOString().slice(0, 10)
   const set = (patch: Partial<CheckoutDetails>) => setForm((f) => ({ ...f, ...patch }))
+
+  async function handleApplyVoucher() {
+    const code = voucherInput.trim()
+    if (!code) return
+    setVoucherChecking(true)
+    setVoucherError(null)
+    try {
+      setVoucherResult(await validateGiftVoucher(code))
+    } catch (err) {
+      setVoucherResult(null)
+      setVoucherError(err instanceof Error ? err.message : 'Could not check that voucher, please retry.')
+    }
+    setVoucherChecking(false)
+  }
+
+  function removeVoucher() {
+    setVoucherInput('')
+    setVoucherResult(null)
+    setVoucherError(null)
+  }
 
   function handleContinue() {
     const result = checkoutDetailsSchema.safeParse(form)
@@ -63,8 +92,12 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
 
   async function handleConfirm() {
     if (!details) return
+    const voucher =
+      voucherResult?.status === 'ok'
+        ? { code: voucherInput.trim(), discount: voucherResult.amount ?? 0 }
+        : null
     try {
-      const { orderNo, phone } = await mutation.mutateAsync({ items, totals, details })
+      const { orderNo, phone } = await mutation.mutateAsync({ items, totals, details, voucher })
       const link = orderWhatsAppLink(settings.business.whatsapp_number, {
         orderNo,
         items,
@@ -78,11 +111,17 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
           deliveryDate: details.deliveryDate,
           note: details.note,
         },
+        voucher,
       })
       window.open(link, '_blank', 'noopener,noreferrer')
       clearCart()
       setSuccessOrderNo(orderNo)
-    } catch {
+    } catch (err) {
+      // A voucher can lose a race between "Apply" and "Confirm" (redeemed by
+      // another checkout in between) — drop it so retrying doesn't repeat it.
+      if (voucher && err instanceof Error && /voucher/i.test(err.message)) {
+        removeVoucher()
+      }
       // mutation.error already holds the message; stay on the review step so
       // the customer can retry without losing their details or cart.
     }
@@ -237,6 +276,44 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                   </li>
                 ))}
               </ul>
+              {/* Gift voucher */}
+              <div className="mt-4 border-t border-neutral-200 pt-4">
+                <span className="text-sm font-medium text-navy">Gift voucher</span>
+                {voucherResult?.status === 'ok' ? (
+                  <div className="mt-1.5 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                    <span>Voucher accepted — {voucherInput.trim().toUpperCase()}</span>
+                    <button type="button" onClick={removeVoucher} className="font-medium underline hover:no-underline">
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      type="text"
+                      value={voucherInput}
+                      onChange={(e) => setVoucherInput(e.target.value)}
+                      placeholder="Enter voucher code"
+                      className={inputCls(false) + ' flex-1'}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyVoucher}
+                      disabled={voucherChecking || !voucherInput.trim()}
+                      className="shrink-0 rounded-lg border border-navy px-4 text-sm font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+                    >
+                      {voucherChecking ? 'Checking…' : 'Apply'}
+                    </button>
+                  </div>
+                )}
+                {voucherResult?.status === 'invalid' && (
+                  <p className="mt-1.5 text-xs text-red-600">No voucher available / wrong code.</p>
+                )}
+                {voucherResult?.status === 'used' && (
+                  <p className="mt-1.5 text-xs text-red-600">Voucher already used.</p>
+                )}
+                {voucherError && <p className="mt-1.5 text-xs text-red-600">{voucherError}</p>}
+              </div>
+
               <div className="mt-4 border-t border-neutral-200 pt-3">
                 <div className="flex justify-between text-sm text-neutral-600">
                   <span>Subtotal</span>
@@ -246,9 +323,15 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                   <span>Delivery ({totals.totalPieces} pcs)</span>
                   <span>{formatLKR(totals.deliveryFee)}</span>
                 </div>
+                {appliedDiscount > 0 && (
+                  <div className="mt-1 flex justify-between text-sm text-green-700">
+                    <span>Voucher discount</span>
+                    <span>−{formatLKR(appliedDiscount)}</span>
+                  </div>
+                )}
                 <div className="mt-2 flex justify-between text-base font-semibold text-navy">
                   <span>Total</span>
-                  <span>{formatLKR(totals.total)}</span>
+                  <span>{formatLKR(finalTotal)}</span>
                 </div>
               </div>
 

@@ -77,6 +77,17 @@ describe('buildOrderMessage', () => {
     expect(msg).not.toContain('🗓')
     expect(msg).not.toContain('📝')
   })
+
+  it('shows the voucher line and discounts the total when a voucher is applied', () => {
+    const msg = buildOrderMessage({ ...input, voucher: { code: 'GOLDEN500', discount: 500 } })
+    expect(msg).toContain('Voucher (GOLDEN500): −Rs. 500.00')
+    expect(msg).toContain('*Total: Rs. 2,860.00*') // 3360 - 500
+  })
+
+  it('omits the voucher line when no voucher is applied', () => {
+    const msg = buildOrderMessage(input)
+    expect(msg).not.toContain('Voucher')
+  })
 })
 
 describe('buildInquiryMessage', () => {

@@ -4,15 +4,22 @@
 // 011), which inserts the order + items atomically and returns the order number.
 // unit_cost is left NULL for a DB trigger to fill later (cross-system contract).
 import { supabase } from './supabase'
-import { lineTotal, type CartTotals } from './pricing'
+import { lineTotal, totalAfterVoucher, type CartTotals } from './pricing'
 import type { CartLine } from '../stores/cart'
 import type { CheckoutDetails } from '../schemas/checkout'
 import { normalizePhone } from './format'
+
+/** An applied (validated 'ok') voucher, carried from CheckoutModal into the order RPC. */
+export interface AppliedVoucher {
+  code: string
+  discount: number
+}
 
 export interface CreateOrderInput {
   items: CartLine[]
   totals: CartTotals
   details: CheckoutDetails
+  voucher?: AppliedVoucher | null
 }
 
 export interface CreatedOrder {
@@ -36,11 +43,12 @@ export function orderItemsPayload(items: CartLine[]) {
   }))
 }
 
-export async function createOrder({ items, totals, details }: CreateOrderInput): Promise<CreatedOrder> {
+export async function createOrder({ items, totals, details, voucher }: CreateOrderInput): Promise<CreatedOrder> {
   const phone = normalizePhone(details.phone)
   if (!phone) throw new Error('Invalid phone number')
   // Optional second number: normalise if given, otherwise omit.
   const altPhone = details.altPhone ? normalizePhone(details.altPhone) : null
+  const total = voucher ? totalAfterVoucher(totals.total, voucher.discount) : totals.total
 
   const { data, error } = await supabase
     .rpc('create_order', {
@@ -53,14 +61,24 @@ export async function createOrder({ items, totals, details }: CreateOrderInput):
       p_note: details.note || null,
       p_subtotal: totals.subtotal,
       p_delivery_fee: totals.deliveryFee,
-      p_total: totals.total,
+      p_total: total,
       p_total_pieces: totals.totalPieces,
       p_items: orderItemsPayload(items),
+      p_voucher_code: voucher?.code ?? null,
+      p_voucher_discount: voucher?.discount ?? 0,
     })
     .single()
 
   const row = data as { id: string; order_no: number } | null
   if (error || !row) {
+    // create_order() raises these two markers when the voucher lost its race
+    // (redeemed by another checkout between "Apply" and "Confirm order").
+    if (error?.message.includes('VOUCHER_USED')) {
+      throw new Error('This voucher was just used on another order. Remove it to continue.')
+    }
+    if (error?.message.includes('VOUCHER_INVALID')) {
+      throw new Error('This voucher is no longer valid. Remove it to continue.')
+    }
     throw new Error(error?.message ?? 'Failed to create order')
   }
 

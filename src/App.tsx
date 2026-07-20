@@ -19,6 +19,7 @@ const Inquiries = lazy(() => import('./pages/admin/Inquiries'))
 const Content = lazy(() => import('./pages/admin/Content'))
 const Products = lazy(() => import('./pages/admin/Products'))
 const AddonPricing = lazy(() => import('./pages/admin/AddonPricing'))
+const GiftVouchers = lazy(() => import('./pages/admin/GiftVouchers'))
 const Reviews = lazy(() => import('./pages/admin/Reviews'))
 const Settings = lazy(() => import('./pages/admin/Settings'))
 const BakeList = lazy(() => import('./pages/admin/BakeList'))
@@ -85,6 +86,7 @@ export default function App() {
         <Route path="content" element={<Content />} />
         <Route path="products" element={<Products />} />
         <Route path="addon-pricing" element={<AddonPricing />} />
+        <Route path="gift-vouchers" element={<GiftVouchers />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="settings" element={<Settings />} />
       </Route>

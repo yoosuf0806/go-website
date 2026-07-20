@@ -4,6 +4,7 @@ import {
   lineTotal,
   findTier,
   cartTotals,
+  totalAfterVoucher,
   type CartItem,
   type DeliveryTier,
 } from './pricing'
@@ -106,5 +107,19 @@ describe('cartTotals — combined delivery rule (spec §6.3)', () => {
       total: 0,
       warnAdmin: false,
     })
+  })
+})
+
+describe('totalAfterVoucher', () => {
+  it('subtracts a flat discount from the total', () => {
+    expect(totalAfterVoucher(5000, 500)).toBe(4500)
+  })
+
+  it('clamps at zero when the discount exceeds the total', () => {
+    expect(totalAfterVoucher(300, 500)).toBe(0)
+  })
+
+  it('is a no-op with a zero discount', () => {
+    expect(totalAfterVoucher(1200, 0)).toBe(1200)
   })
 })

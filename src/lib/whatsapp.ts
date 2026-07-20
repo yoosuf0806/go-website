@@ -4,7 +4,7 @@
 // cart/checkout UI (a real prototype bug class). Encoded with encodeURIComponent;
 // `\n` line breaks become %0A in the link.
 import { formatLKR, formatDate, toWhatsAppNumber } from './format'
-import { lineTotal, type CartAddon, type CartItem, type CartTotals } from './pricing'
+import { lineTotal, totalAfterVoucher, type CartAddon, type CartItem, type CartTotals } from './pricing'
 
 export interface OrderCustomer {
   name: string
@@ -22,6 +22,8 @@ export interface OrderMessageInput {
   /** The SAME totals shown in the cart/checkout — do not recompute here. */
   totals: CartTotals
   customer: OrderCustomer
+  /** An applied gift voucher, if any — mirrors what was sent to create_order(). */
+  voucher?: { code: string; discount: number } | null
 }
 
 export type InquiryCategory = 'corporate' | 'wedding'
@@ -62,7 +64,7 @@ export function addonSummary(item: { addons: CartAddon[] }): string {
 
 /** Build the order confirmation message body (spec §6.5 order template). */
 export function buildOrderMessage(input: OrderMessageInput): string {
-  const { orderNo, items, totals, customer } = input
+  const { orderNo, items, totals, customer, voucher } = input
   const lines: string[] = []
 
   lines.push(`🍫 *Golden Oven — New Order #${orderNo}*`)
@@ -78,7 +80,11 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   lines.push('')
   lines.push(`Subtotal: ${formatLKR(totals.subtotal)}`)
   lines.push(`Delivery (${totals.totalPieces} pcs): ${formatLKR(totals.deliveryFee)}`)
-  lines.push(`*Total: ${formatLKR(totals.total)}*`)
+  if (voucher && voucher.discount > 0) {
+    lines.push(`Voucher (${voucher.code}): −${formatLKR(voucher.discount)}`)
+  }
+  const finalTotal = voucher ? totalAfterVoucher(totals.total, voucher.discount) : totals.total
+  lines.push(`*Total: ${formatLKR(finalTotal)}*`)
   lines.push('')
   lines.push(`👤 ${customer.name} | 📞 ${customer.phone}`)
   if (customer.altPhone) lines.push(`📞 Alt: ${customer.altPhone}`)
