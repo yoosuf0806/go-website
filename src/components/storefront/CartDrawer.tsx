@@ -1,5 +1,6 @@
 import { useCartStore } from '../../stores/cart'
-import { cartTotals, lineTotal } from '../../lib/pricing'
+import { useVoucherStore } from '../../stores/voucher'
+import { cartTotals, lineTotal, totalAfterVoucher } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { addonSummary } from '../../lib/whatsapp'
 import { useCatalog } from '../../contexts/CatalogContext'
@@ -18,6 +19,8 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
   const incrementBoxQty = useCartStore((s) => s.incrementBoxQty)
   const removeItem = useCartStore((s) => s.removeItem)
   const totals = cartTotals(items, catalog.deliveryTiers)
+  const voucher = useVoucherStore()
+  const finalTotal = totalAfterVoucher(totals.total, voucher.status === 'ok' ? voucher.discount : 0)
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
@@ -94,17 +97,63 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
 
         {items.length > 0 && (
           <div className="border-t border-neutral-200 px-4 pb-safe pt-4">
-            <div className="flex justify-between text-sm text-neutral-600">
-              <span>Subtotal</span>
-              <span>{formatLKR(totals.subtotal)}</span>
+            {/* Gift voucher */}
+            <div className="pb-4">
+              <span className="text-sm font-medium text-navy">Gift voucher</span>
+              {voucher.status === 'ok' ? (
+                <div className="mt-1.5 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                  <span>Voucher accepted — {voucher.code.trim().toUpperCase()}</span>
+                  <button type="button" onClick={voucher.remove} className="font-medium underline hover:no-underline">
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-1.5 flex gap-2">
+                  <input
+                    type="text"
+                    value={voucher.code}
+                    onChange={(e) => voucher.setCode(e.target.value)}
+                    placeholder="Enter voucher code"
+                    className="w-full flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-navy placeholder:text-neutral-400 focus:border-pink focus:outline-none focus:ring-2 focus:ring-pink/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={voucher.apply}
+                    disabled={voucher.checking || !voucher.code.trim()}
+                    className="shrink-0 rounded-lg border border-navy px-4 text-sm font-medium text-navy hover:bg-navy hover:text-white disabled:opacity-50"
+                  >
+                    {voucher.checking ? 'Checking…' : 'Apply'}
+                  </button>
+                </div>
+              )}
+              {voucher.status === 'invalid' && (
+                <p className="mt-1.5 text-xs text-red-600">No voucher available / wrong code.</p>
+              )}
+              {voucher.status === 'used' && (
+                <p className="mt-1.5 text-xs text-red-600">Voucher already used.</p>
+              )}
+              {voucher.error && <p className="mt-1.5 text-xs text-red-600">{voucher.error}</p>}
             </div>
-            <div className="mt-1 flex justify-between text-sm text-neutral-600">
-              <span>Delivery ({totals.totalPieces} pcs)</span>
-              <span>{formatLKR(totals.deliveryFee)}</span>
-            </div>
-            <div className="mt-2 flex justify-between text-base font-semibold">
-              <span>Total</span>
-              <span>{formatLKR(totals.total)}</span>
+
+            <div className="border-t border-neutral-200 pt-3">
+              <div className="flex justify-between text-sm text-neutral-600">
+                <span>Subtotal</span>
+                <span>{formatLKR(totals.subtotal)}</span>
+              </div>
+              <div className="mt-1 flex justify-between text-sm text-neutral-600">
+                <span>Delivery ({totals.totalPieces} pcs)</span>
+                <span>{formatLKR(totals.deliveryFee)}</span>
+              </div>
+              {voucher.status === 'ok' && voucher.discount > 0 && (
+                <div className="mt-1 flex justify-between text-sm text-green-700">
+                  <span>Voucher discount</span>
+                  <span>−{formatLKR(voucher.discount)}</span>
+                </div>
+              )}
+              <div className="mt-2 flex justify-between text-base font-semibold">
+                <span>Total</span>
+                <span>{formatLKR(finalTotal)}</span>
+              </div>
             </div>
             <button
               type="button"
