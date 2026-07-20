@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { useAdminContent, useUpdateContent } from '../../hooks/useAdminContent'
-import type { HeroSlide, IconCard, OccasionCard, PromoSlide, SeoMeta, SiteContent } from '../../types/content'
+import type {
+  CorporateBanner,
+  FaqItem,
+  HeroSlide,
+  IconCard,
+  OccasionCard,
+  PromoSlide,
+  SeoMeta,
+  SiteContent,
+} from '../../types/content'
 import { uploadImage } from '../../lib/adminProducts'
 import Toast from '../../components/ui/Toast'
 
@@ -146,6 +155,33 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
       <Section title="Product page info">
         <Area label="Freshness & storage" value={form.productInfo.freshness} onChange={(v) => set('productInfo', { ...form.productInfo, freshness: v })} />
         <Area label="Allergens" value={form.productInfo.allergens} onChange={(v) => set('productInfo', { ...form.productInfo, allergens: v })} />
+      </Section>
+
+      <Section title="Corporate page">
+        <Text label="Heading" value={form.corporate.heading} onChange={(v) => set('corporate', { ...form.corporate, heading: v })} />
+        <Area label="Intro" value={form.corporate.intro} onChange={(v) => set('corporate', { ...form.corporate, intro: v })} />
+        <Area label="Heads-up note" value={form.corporate.preOrderNote} onChange={(v) => set('corporate', { ...form.corporate, preOrderNote: v })} />
+        <label className="block text-sm">
+          <span className="text-neutral-600">Product info points (one per line)</span>
+          <textarea
+            rows={4}
+            value={form.corporate.productInfo.join('\n')}
+            onChange={(e) => set('corporate', { ...form.corporate, productInfo: e.target.value.split('\n').filter((l) => l.trim()) })}
+            className={textareaCls}
+          />
+        </label>
+        <div>
+          <span className="block text-sm text-neutral-600">FAQ</span>
+          <FaqEditor items={form.corporate.faq} onChange={(v) => set('corporate', { ...form.corporate, faq: v })} />
+        </div>
+      </Section>
+
+      <Section title="Corporate banner slideshow">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          A short ad strip at the top of the corporate page. Add slides with a headline, sub-text, optional
+          button + link, and optional background image. Leave empty to hide the strip.
+        </p>
+        <CorporateBannersEditor banners={form.corporate.banners} onChange={(v) => set('corporate', { ...form.corporate, banners: v })} />
       </Section>
 
       <Section title="SEO">
@@ -461,6 +497,73 @@ function PromoSlidesEditor({
       ))}
       <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
         + Add promo slide
+      </button>
+    </div>
+  )
+}
+
+// Manage the corporate-page FAQ list (question + answer).
+function FaqEditor({ items, onChange }: { items: FaqItem[]; onChange: (v: FaqItem[]) => void }) {
+  const update = (i: number, patch: Partial<FaqItem>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const remove = (i: number) => onChange(items.filter((_, j) => j !== i))
+  const add = () => onChange([...items, { q: 'New question?', a: '' }])
+
+  return (
+    <div className="mt-1 flex flex-col gap-3">
+      {items.map((item, i) => (
+        <div key={i} className="rounded border border-neutral-100 p-3">
+          <Text label="Question" value={item.q} onChange={(v) => update(i, { q: v })} />
+          <div className="mt-2">
+            <Area label="Answer" value={item.a} onChange={(v) => update(i, { a: v })} />
+          </div>
+          <button type="button" onClick={() => remove(i)} className="mt-2 rounded border border-neutral-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50">
+            Remove
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
+        + Add FAQ
+      </button>
+    </div>
+  )
+}
+
+// Manage the short corporate banner slideshow (headline/body/CTA + optional image).
+function CorporateBannersEditor({ banners, onChange }: { banners: CorporateBanner[]; onChange: (v: CorporateBanner[]) => void }) {
+  const update = (i: number, patch: Partial<CorporateBanner>) => onChange(banners.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const remove = (i: number) => onChange(banners.filter((_, j) => j !== i))
+  function move(i: number, dir: number) {
+    const j = i + dir
+    if (j < 0 || j >= banners.length) return
+    const next = banners.slice()
+    ;[next[i], next[j]] = [next[j], next[i]]
+    onChange(next)
+  }
+  const add = () => onChange([...banners, { title: 'Bulk orders welcome', body: 'Exclusive pricing for 100+ pieces', cta: 'Get a quote', to: '/corporate' }])
+
+  return (
+    <div className="flex flex-col gap-4">
+      {banners.map((b, i) => (
+        <div key={i} className="rounded-lg border border-neutral-200 p-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Text label="Headline" value={b.title} onChange={(v) => update(i, { title: v })} />
+            <Text label="Sub-text" value={b.body} onChange={(v) => update(i, { body: v })} />
+            <Text label="Button text (optional)" value={b.cta ?? ''} onChange={(v) => update(i, { cta: v })} />
+            <Text label="Links to (optional, e.g. /corporate)" value={b.to ?? ''} onChange={(v) => update(i, { to: v })} />
+          </div>
+          <div className="mt-2">
+            <ImageField label="Background image (optional)" value={b.imageUrl} onChange={(url) => update(i, { imageUrl: url })} />
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↑ Up</button>
+            <button type="button" onClick={() => move(i, 1)} disabled={i === banners.length - 1} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↓ Down</button>
+            <button type="button" onClick={() => remove(i)} className="rounded border border-neutral-300 px-2 py-1 text-red-600 hover:bg-red-50">Remove</button>
+            <span className="text-neutral-400">Banner {i + 1} of {banners.length}</span>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
+        + Add banner
       </button>
     </div>
   )
