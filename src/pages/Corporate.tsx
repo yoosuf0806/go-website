@@ -87,17 +87,6 @@ export default function Corporate() {
               </span>
             )}
           </div>
-
-          {corp.productInfo.length > 0 && (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {corp.productInfo.map((info) => (
-                <div key={info} className="flex items-start gap-2 rounded-2xl bg-pink-light px-4 py-3 text-sm text-neutral-700">
-                  <span className="text-pink">◆</span>
-                  <span>{info}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Right: heading, flavour picker, quote form */}
