@@ -200,7 +200,7 @@ export default function Corporate() {
                 disabled={isSubmitting || mutation.isPending}
                 className="mt-5 w-full rounded-full bg-pink py-3 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
               >
-                {mutation.isPending ? 'Sending…' : 'Send Quote Request 🎁'}
+                {mutation.isPending ? 'Sending…' : 'Send Quote Request'}
               </button>
               <p className="mt-3 text-center text-xs text-neutral-400">
                 By submitting you agree to be contacted about your quote.

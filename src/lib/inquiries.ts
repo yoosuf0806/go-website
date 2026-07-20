@@ -45,7 +45,8 @@ export async function createQuote(form: QuoteForm): Promise<CreatedInquiry> {
     email: form.email || null,
     event_date: form.deliveryDate,
     piece_count: form.pieceCount,
-    flavor_id: form.flavorId || null,
+    // flavor_id is intentionally not written: it FKs to the legacy quote_flavors
+    // table, but flavours are now products. We record the chosen flavour by name.
     flavor_name: form.flavorName || null,
     message: form.message || null,
   })
