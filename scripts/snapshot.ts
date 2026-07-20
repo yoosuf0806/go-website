@@ -28,13 +28,11 @@ import type {
   RawPackage,
   RawProduct,
   RawProductPackageStock,
-  RawQuoteFlavor,
   RawReview,
   SeedData,
 } from './seed-data.ts'
 import type {
   Catalog,
-  CatalogQuoteFlavor,
   CatalogSettings,
   BannerSetting,
   FeaturesSetting,
@@ -78,6 +76,7 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
       isSlab15Available: r.is_slab_15_available,
       allowsLetterTopper: r.allows_letter_topper,
       isHotPick: r.is_hot_pick,
+      isCorporate: r.is_corporate ?? false,
       sortOrder: r.sort_order,
     }))
 }
@@ -141,20 +140,6 @@ function mapReviews(rows: RawReview[]): Catalog['reviews'] {
     }))
 }
 
-function mapQuoteFlavors(rows: RawQuoteFlavor[]): CatalogQuoteFlavor[] {
-  return rows
-    .filter((r) => r.is_active)
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((r) => ({
-      id: r.id,
-      name: r.name,
-      imageUrl: r.image_url,
-      description: r.description,
-      isActive: r.is_active,
-      sortOrder: r.sort_order,
-    }))
-}
-
 function mapSettings(raw: SeedData['settings']): CatalogSettings {
   return {
     banner: raw.banner as unknown as BannerSetting,
@@ -176,7 +161,6 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
     settings: mapSettings(data.settings),
     content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
     productPackageStock: mapProductPackageStock(data.productPackageStock),
-    quoteFlavors: mapQuoteFlavors(data.quote_flavors ?? []),
   }
 }
 
@@ -186,7 +170,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     auth: { persistSession: false },
   })
 
-  const [categories, products, packages, addons, tiers, reviews, settings, productPackageStock, quoteFlavors] =
+  const [categories, products, packages, addons, tiers, reviews, settings, productPackageStock] =
     await Promise.all([
       supabase.from('categories').select('*'),
       supabase.from('products').select('*'),
@@ -196,7 +180,6 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       supabase.from('reviews').select('*'),
       supabase.from('site_settings').select('*'),
       supabase.from('product_package_stock').select('*'),
-      supabase.from('quote_flavors').select('*'),
     ])
 
   for (const res of [
@@ -208,7 +191,6 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     reviews,
     settings,
     productPackageStock,
-    quoteFlavors,
   ]) {
     if (res.error) {
       throw new Error(`Supabase read failed: ${res.error.message}`)
@@ -233,7 +215,6 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       content: (settingsByKey.content ?? undefined) as Record<string, unknown> | undefined,
     },
     productPackageStock: (productPackageStock.data ?? []) as RawProductPackageStock[],
-    quote_flavors: (quoteFlavors.data ?? []) as RawQuoteFlavor[],
   }
 }
 

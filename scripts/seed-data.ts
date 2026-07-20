@@ -37,6 +37,7 @@ export interface RawProduct {
   is_slab_15_available: boolean
   allows_letter_topper: boolean
   is_hot_pick: boolean
+  is_corporate: boolean
   sort_order: number
 }
 
@@ -84,15 +85,6 @@ export interface RawReview {
   is_hidden: boolean
 }
 
-export interface RawQuoteFlavor {
-  id: string
-  name: string
-  image_url: string | null
-  description: string | null
-  is_active: boolean
-  sort_order: number
-}
-
 export interface RawSettings {
   banner: Record<string, unknown>
   features: Record<string, unknown>
@@ -110,7 +102,6 @@ export interface SeedData {
   reviews: RawReview[]
   settings: RawSettings
   productPackageStock: RawProductPackageStock[]
-  quote_flavors: RawQuoteFlavor[]
 }
 
 const CAT_CLASSIC = '11111111-1111-4111-8111-111111111111'
@@ -139,6 +130,7 @@ export const seedData: SeedData = {
       is_slab_15_available: true,
       allows_letter_topper: true,
       is_hot_pick: true,
+      is_corporate: true,
       sort_order: 1,
     },
     {
@@ -157,6 +149,7 @@ export const seedData: SeedData = {
       is_slab_15_available: false,
       allows_letter_topper: false,
       is_hot_pick: false,
+      is_corporate: false,
       sort_order: 2,
     },
     {
@@ -175,6 +168,7 @@ export const seedData: SeedData = {
       is_slab_15_available: false,
       allows_letter_topper: true,
       is_hot_pick: false,
+      is_corporate: true,
       sort_order: 3,
     },
     {
@@ -193,6 +187,7 @@ export const seedData: SeedData = {
       is_slab_15_available: true,
       allows_letter_topper: true,
       is_hot_pick: true,
+      is_corporate: false,
       sort_order: 4,
     },
     {
@@ -211,6 +206,7 @@ export const seedData: SeedData = {
       is_slab_15_available: false,
       allows_letter_topper: true,
       is_hot_pick: false,
+      is_corporate: true,
       sort_order: 5,
     },
   ],
@@ -295,33 +291,5 @@ export const seedData: SeedData = {
   // sold out as 12pc — demonstrates the per-product-per-package override.
   productPackageStock: [
     { product_id: 'a3333333-3333-4333-8333-333333333333', package_id: 'box-12', in_stock: false },
-  ],
-
-  // Seeded quote flavours (mirrors migration 016_quote_flavors.sql).
-  quote_flavors: [
-    {
-      id: 'f1111111-1111-4111-8111-111111111111',
-      name: 'Classic Chocolate Fudge',
-      image_url: null,
-      description: 'Our signature rich, dense, fudgy chocolate brownie.',
-      is_active: true,
-      sort_order: 1,
-    },
-    {
-      id: 'f2222222-2222-4222-8222-222222222222',
-      name: 'Salted Caramel',
-      image_url: null,
-      description: 'Molten salted-caramel swirl on a fudge brownie base.',
-      is_active: true,
-      sort_order: 2,
-    },
-    {
-      id: 'f3333333-3333-4333-8333-333333333333',
-      name: 'Walnut',
-      image_url: null,
-      description: 'Classic brownie loaded with toasted walnuts.',
-      is_active: true,
-      sort_order: 3,
-    },
   ],
 }

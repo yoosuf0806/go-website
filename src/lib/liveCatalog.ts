@@ -16,7 +16,6 @@ import type {
   CatalogAddon,
   CatalogCategory,
   CatalogDeliveryTier,
-  CatalogQuoteFlavor,
   CatalogReview,
   ProductPackageStockMap,
 } from '../types/catalog'
@@ -49,6 +48,7 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
         isSlab15Available: r.is_slab_15_available as boolean,
         allowsLetterTopper: r.allows_letter_topper as boolean,
         isHotPick: (r.is_hot_pick as boolean) ?? false,
+        isCorporate: (r.is_corporate as boolean) ?? false,
         sortOrder: r.sort_order as number,
       }
     })
@@ -71,7 +71,7 @@ function mapProductPackageStock(rows: Record<string, unknown>[]): ProductPackage
  * site still shows the last-built catalogue rather than going blank).
  */
 export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
-  const [products, packages, addons, categories, tiers, reviews, settingsRows, stockRows, flavorRows] =
+  const [products, packages, addons, categories, tiers, reviews, settingsRows, stockRows] =
     await Promise.all([
       supabase.from('products').select('*'),
       supabase.from('packages').select('*').eq('is_active', true).order('sort_order'),
@@ -81,7 +81,6 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
       supabase.from('reviews').select('*').eq('is_featured', true),
       supabase.from('site_settings').select('*'),
       supabase.from('product_package_stock').select('*'),
-      supabase.from('quote_flavors').select('*').eq('is_active', true).order('sort_order'),
     ])
 
   // If the core product read failed, keep the seed rather than blanking the site.
@@ -143,15 +142,6 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     ? seed.productPackageStock
     : mapProductPackageStock(stockRows.data ?? [])
 
-  const mappedFlavors: CatalogQuoteFlavor[] = (flavorRows.data ?? []).map((f) => ({
-    id: f.id as string,
-    name: f.name as string,
-    imageUrl: (f.image_url as string | null) ?? null,
-    description: (f.description as string | null) ?? null,
-    isActive: f.is_active as boolean,
-    sortOrder: f.sort_order as number,
-  }))
-
   return {
     generatedAt: new Date().toISOString(),
     source: 'supabase',
@@ -164,6 +154,5 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     settings,
     content,
     productPackageStock,
-    quoteFlavors: flavorRows.error ? seed.quoteFlavors : mappedFlavors,
   }
 }
