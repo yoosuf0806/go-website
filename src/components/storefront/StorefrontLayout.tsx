@@ -3,6 +3,7 @@ import { Outlet, Link, NavLink } from 'react-router-dom'
 import { useCatalog } from '../../contexts/CatalogContext'
 import { useCartStore } from '../../stores/cart'
 import { toWhatsAppNumber } from '../../lib/format'
+import WhatsAppIcon from '../ui/WhatsAppIcon'
 import BannerBar from './BannerBar'
 import PromoTicker from './PromoTicker'
 import CartDrawer from './CartDrawer'
@@ -53,9 +54,9 @@ export default function StorefrontLayout() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on WhatsApp"
-          className="fixed bottom-safe right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-2xl shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
+          className="fixed bottom-safe right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
         >
-          💬
+          <WhatsAppIcon className="h-7 w-7" />
         </a>
       )}
     </div>
@@ -183,10 +184,9 @@ function Footer() {
                   href={business.google_business_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-pink"
-                  aria-label="Reviews"
+                  className="flex h-10 items-center rounded-full bg-white/10 px-4 text-sm font-medium text-white hover:bg-pink"
                 >
-                  ⭐
+                  Google Reviews
                 </a>
               )}
               {wa && (
@@ -194,10 +194,10 @@ function Footer() {
                   href={`https://wa.me/${wa}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-pink"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-pink"
                   aria-label="WhatsApp"
                 >
-                  💬
+                  <WhatsAppIcon className="h-5 w-5" />
                 </a>
               )}
             </div>
