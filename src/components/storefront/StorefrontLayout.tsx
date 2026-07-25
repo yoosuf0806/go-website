@@ -11,8 +11,7 @@ import CheckoutModal from './CheckoutModal'
 
 const NAV = [
   { to: '/shop', label: 'Shop All' },
-  { to: '/corporate', label: 'Corporate Gifting' },
-  { to: '/corporate', label: 'Brownies for Wedding' },
+  { to: '/corporate', label: 'Bulk Orders' },
   { to: '/shop', label: 'Brownie Slab' },
 ]
 
@@ -207,8 +206,7 @@ function Footer() {
             title="Shop"
             links={[
               { to: '/shop', label: 'Shop All' },
-              { to: '/corporate', label: 'Corporate Gifting' },
-              { to: '/corporate', label: 'Wedding Orders' },
+              { to: '/corporate', label: 'Bulk Orders' },
               { to: '/shop', label: 'Brownie Slab' },
             ]}
           />
