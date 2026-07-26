@@ -95,11 +95,22 @@ export async function deleteProduct(id: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+export async function createCategory(input: Pick<AdminCategory, 'name' | 'slug' | 'sort_order'>): Promise<void> {
+  const { error } = await supabase.from('categories').insert({ ...input, is_visible: true })
+  if (error) throw new Error(error.message)
+}
+
 export async function updateCategory(
   id: string,
-  patch: Partial<Pick<AdminCategory, 'is_visible'>>,
+  patch: Partial<Pick<AdminCategory, 'name' | 'slug' | 'sort_order' | 'is_visible'>>,
 ): Promise<void> {
   const { error } = await supabase.from('categories').update(patch).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+/** Deleting a category never deletes products — category_id is ON DELETE SET NULL. */
+export async function deleteCategory(id: string): Promise<void> {
+  const { error } = await supabase.from('categories').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }
 

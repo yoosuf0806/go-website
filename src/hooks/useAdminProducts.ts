@@ -8,7 +8,9 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  createCategory,
   updateCategory,
+  deleteCategory,
   type ProductInput,
   type AdminCategory,
 } from '../lib/adminProducts'
@@ -43,14 +45,29 @@ export function useProductMutations() {
   return { create, update, remove }
 }
 
-export function useUpdateCategory() {
+export function useCategoryMutations() {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Partial<Pick<AdminCategory, 'is_visible'>> }) =>
-      updateCategory(id, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'categories'] }),
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin', 'categories'] })
+
+  const create = useMutation({
+    mutationFn: (input: Pick<AdminCategory, 'name' | 'slug' | 'sort_order'>) => createCategory(input),
+    onSuccess: invalidate,
   })
+  const update = useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string
+      patch: Partial<Pick<AdminCategory, 'name' | 'slug' | 'sort_order' | 'is_visible'>>
+    }) => updateCategory(id, patch),
+    onSuccess: invalidate,
+  })
+  const remove = useMutation({ mutationFn: (id: string) => deleteCategory(id), onSuccess: invalidate })
+
+  return { create, update, remove }
 }
+
 
 /** Active packages, for building the per-product-per-package stock grid (one column each). */
 export function useAdminPackages() {
