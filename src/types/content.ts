@@ -159,8 +159,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   ],
   categories: [
     { emoji: '🍫', title: 'Shop All', body: 'Browse our full collection of freshly baked brownies.', cta: 'Browse All →', to: '/shop' },
-    { emoji: '🏢', title: 'Corporate Gifting', body: 'Bulk pricing for teams, events and client gifting.', cta: 'View Range →', to: '/corporate' },
-    { emoji: '💍', title: 'For Weddings', body: 'Elegant wedding favours with bulk pricing.', cta: 'Explore →', to: '/corporate' },
+    { emoji: '🏢', title: 'Bulk Orders', body: 'Bulk pricing for teams, events, weddings, and client gifting.', cta: 'View Range →', to: '/corporate' },
     { emoji: '🍰', title: 'Brownie Slab', body: 'Personalise with letter toppers and sparkles.', cta: 'Customise →', to: '/shop' },
   ],
   ctaBanner: {
@@ -169,7 +168,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     cta: 'Browse All Brownies →',
   },
   howItWorks: [
-    { icon: '1', title: 'Choose a Category', body: 'Browse Shop All, Corporate, Wedding, or Brownie Slab.' },
+    { icon: '1', title: 'Choose a Category', body: 'Browse Shop All, Bulk Orders, or Brownie Slab.' },
     { icon: '2', title: 'Pick Your Package', body: 'Select a 9, 12, or 15-piece box, or a slab.' },
     { icon: '3', title: 'Personalise It', body: 'Letter toppers and sparkles on slab orders.' },
     { icon: '4', title: 'We Deliver Fresh', body: 'Baked fresh and delivered to your door, islandwide.' },
