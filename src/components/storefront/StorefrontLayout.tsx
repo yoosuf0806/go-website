@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet, Link, NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, Link, NavLink, useLocation } from 'react-router-dom'
 import { useCatalog } from '../../contexts/CatalogContext'
 import { useCartStore } from '../../stores/cart'
 import { toWhatsAppNumber } from '../../lib/format'
@@ -9,27 +9,36 @@ import PromoTicker from './PromoTicker'
 import CartDrawer from './CartDrawer'
 import CheckoutModal from './CheckoutModal'
 
+const HEADER_HEIGHT = 68
+
 const NAV = [
   { to: '/shop', label: 'Shop All' },
   { to: '/corporate', label: 'Bulk Orders' },
   { to: '/shop', label: 'Brownie Slab' },
 ]
 
-// Shared storefront chrome (reference-matched): pink promo marquee, sticky white
-// header with occasion nav + mobile drawer, navy footer, and a WhatsApp float.
+// Shared storefront chrome: pink promo marquee, fixed header (transparent over
+// the Home hero, solid everywhere else / once scrolled), navy footer, and a
+// WhatsApp float.
 export default function StorefrontLayout() {
   const { catalog } = useCatalog()
   const { settings } = catalog
+  const { pathname } = useLocation()
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const waNumber = toWhatsAppNumber(settings.business.whatsapp_number)
+  const isHome = pathname === '/'
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-navy">
       <PromoTicker />
       <BannerBar banner={settings.banner} />
-      <Header onCartClick={() => setCartOpen(true)} onMenuClick={() => setMobileNav(true)} />
+      <Header
+        transparentOverHero={isHome}
+        onCartClick={() => setCartOpen(true)}
+        onMenuClick={() => setMobileNav(true)}
+      />
       <main className="flex-1">
         <Outlet />
       </main>
@@ -62,14 +71,39 @@ export default function StorefrontLayout() {
   )
 }
 
-function Header({ onCartClick, onMenuClick }: { onCartClick: () => void; onMenuClick: () => void }) {
+function Header({
+  transparentOverHero,
+  onCartClick,
+  onMenuClick,
+}: {
+  transparentOverHero: boolean
+  onCartClick: () => void
+  onMenuClick: () => void
+}) {
   const itemCount = useCartStore((s) => s.items.reduce((n, item) => n + item.boxQty, 0))
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    if (!transparentOverHero) return
+    const onScroll = () => setScrolled(window.scrollY > 80)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [transparentOverHero])
+
+  const solid = !transparentOverHero || scrolled
+  const fg = solid ? 'text-navy' : 'text-white'
 
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-100 bg-white">
-      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-6">
-        <Link to="/" className="font-display text-2xl lowercase text-pink">
-          golden oven
+    <header
+      className={`sticky top-0 z-30 transition-colors duration-300 ${
+        solid ? 'border-b border-neutral-100 bg-white shadow-sm' : 'bg-white/10 backdrop-blur-md'
+      }`}
+      style={{ height: HEADER_HEIGHT }}
+    >
+      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
+        <Link to="/" className={`font-display text-2xl font-extrabold text-pink`}>
+          Golden Oven
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -78,7 +112,7 @@ function Header({ onCartClick, onMenuClick }: { onCartClick: () => void; onMenuC
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
-                `text-sm font-bold transition-colors hover:text-pink ${isActive ? 'text-pink' : 'text-navy'}`
+                `text-sm font-medium transition-colors hover:text-pink ${isActive ? 'text-pink' : fg}`
               }
             >
               {item.label}
@@ -87,12 +121,7 @@ function Header({ onCartClick, onMenuClick }: { onCartClick: () => void; onMenuC
         </nav>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onCartClick}
-            aria-label="Open cart"
-            className="relative text-2xl"
-          >
+          <button type="button" onClick={onCartClick} aria-label="Open cart" className={`relative text-2xl ${fg}`}>
             🛒
             {itemCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink px-1 text-[10px] font-bold text-white">
@@ -106,9 +135,9 @@ function Header({ onCartClick, onMenuClick }: { onCartClick: () => void; onMenuC
             aria-label="Open menu"
             className="flex flex-col gap-[5px] p-1 md:hidden"
           >
-            <span className="h-0.5 w-6 rounded bg-navy" />
-            <span className="h-0.5 w-6 rounded bg-navy" />
-            <span className="h-0.5 w-6 rounded bg-navy" />
+            <span className={`h-0.5 w-6 rounded ${solid ? 'bg-navy' : 'bg-white'}`} />
+            <span className={`h-0.5 w-6 rounded ${solid ? 'bg-navy' : 'bg-white'}`} />
+            <span className={`h-0.5 w-6 rounded ${solid ? 'bg-navy' : 'bg-white'}`} />
           </button>
         </div>
       </div>
@@ -118,45 +147,37 @@ function Header({ onCartClick, onMenuClick }: { onCartClick: () => void; onMenuC
 
 function MobileNav({ onClose, onCartClick }: { onClose: () => void; onCartClick: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
-      <button aria-label="Close menu" className="absolute inset-0 bg-black/45" onClick={onClose} />
-      <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
-          <span className="font-display text-xl lowercase text-pink">golden oven</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-warmgray"
-          >
-            ✕
-          </button>
-        </div>
-        <nav className="flex-1 py-2">
-          {NAV.map((item) => (
-            <Link
-              key={item.label}
-              to={item.to}
-              onClick={onClose}
-              className="block border-l-[3px] border-transparent px-6 py-3.5 text-[15px] font-bold text-navy hover:border-pink hover:bg-pink-light hover:text-pink"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="border-t border-neutral-100 p-4 pb-safe">
-          <button
-            type="button"
-            onClick={() => {
-              onClose()
-              onCartClick()
-            }}
-            className="w-full rounded-full bg-pink py-3 text-sm font-bold text-white"
-          >
-            View Cart 🛒
-          </button>
-        </div>
-      </div>
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-2 bg-navy md:hidden">
+      <button
+        aria-label="Close menu"
+        onClick={onClose}
+        className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full text-white"
+      >
+        ✕
+      </button>
+      <Link to="/" onClick={onClose} className="px-6 py-2.5 font-display text-3xl font-semibold text-white">
+        Home
+      </Link>
+      {NAV.map((item) => (
+        <Link
+          key={item.label}
+          to={item.to}
+          onClick={onClose}
+          className="px-6 py-2.5 font-display text-3xl font-semibold text-white"
+        >
+          {item.label}
+        </Link>
+      ))}
+      <button
+        type="button"
+        onClick={() => {
+          onClose()
+          onCartClick()
+        }}
+        className="mt-6 rounded-full bg-pink px-9 py-3.5 text-[15px] font-bold text-white"
+      >
+        View Cart 🛒
+      </button>
     </div>
   )
 }

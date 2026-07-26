@@ -1,32 +1,32 @@
 import type { Config } from 'tailwindcss'
 
-// Golden Oven storefront design system. Primary palette: bright pink + navy,
-// Abril Fatface headings + Nunito body (reference-matched). The blush/wine/ink
-// tokens remain temporarily while Shop/PDP/modals are migrated to the new look.
+// Golden Oven storefront design system. Primary palette: berry pink + near-black
+// espresso, Playfair Display headings + Inter body (2026 revamp). The blush/wine/ink
+// tokens remain temporarily while any remaining legacy surfaces are migrated.
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
         pink: {
-          DEFAULT: '#EE2F63',
-          light: '#fff0f4',
-          dark: '#c4194a',
+          DEFAULT: '#d92d56',
+          light: '#f2dee3',
+          dark: '#a03040',
         },
         navy: {
-          DEFAULT: '#1A1A2E',
-          light: '#2d2d4e',
+          DEFAULT: '#1a0a00',
+          light: '#3a1a0a',
         },
-        warmgray: '#F4F4F4',
+        warmgray: '#fdf6f0',
         // Legacy tokens (removed once every surface is migrated).
         blush: { 50: '#fdf2f4', 100: '#fbe7ec', 200: '#f7d0da', 300: '#f0aebf' },
         wine: { DEFAULT: '#5d1f2f', 700: '#4a1826', 900: '#3a121d' },
         ink: '#1a1512',
-        cream: '#faf6f0',
+        cream: '#fdf6f0',
       },
       fontFamily: {
-        display: ['"Abril Fatface"', 'Georgia', 'serif'],
-        sans: ['Nunito', 'system-ui', 'sans-serif'],
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         marquee: {
