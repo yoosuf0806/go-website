@@ -65,22 +65,15 @@ export default function Corporate() {
         <span className="text-neutral-600">{corp.heading}</span>
       </nav>
 
-      <div className="mt-4 grid gap-8 lg:grid-cols-2">
-        {/* Left: flavour image + info pills */}
-        <div>
+      <div className="mt-4 grid grid-cols-1 gap-12 lg:grid-cols-2">
+        {/* Left: flavour image — sticky like a product gallery */}
+        <div className="lg:sticky lg:top-28 lg:self-start">
           <div className="relative aspect-square overflow-hidden rounded-3xl bg-pink-light">
             {heroImage ? (
               <img src={heroImage} alt={selected?.name ?? 'Brownies'} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[8rem]">🍫</div>
             )}
-            <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-              {PILLS.map((p) => (
-                <span key={p} className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-neutral-700 shadow-sm">
-                  {p}
-                </span>
-              ))}
-            </div>
             {selected && (
               <span className="absolute bottom-4 left-4 rounded-full bg-navy/80 px-3 py-1 text-xs font-medium text-white">
                 {selected.name}
@@ -89,19 +82,27 @@ export default function Corporate() {
           </div>
         </div>
 
-        {/* Right: heading, flavour picker, quote form */}
+        {/* Right: badges, heading, intro, flavour picker, quote form */}
         <div>
-          <p className="text-sm text-neutral-500">
-            <span className="text-pink">★★★★★</span> Loved by 200+ teams across Colombo
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-semibold leading-tight text-navy">{corp.heading}</h1>
-          <p className="mt-3 text-neutral-500">{corp.intro}</p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {PILLS.map((p) => (
+              <span key={p} className="rounded-full bg-warmgray px-3 py-1.5 text-xs font-semibold text-neutral-500">
+                {p}
+              </span>
+            ))}
+          </div>
 
-          {corp.preOrderNote && (
-            <p className="mt-4 rounded-xl bg-pink-light px-4 py-3 text-sm text-neutral-700">
-              <span className="font-semibold text-pink">Heads up:</span> {corp.preOrderNote}
-            </p>
-          )}
+          <h1 className="font-display text-[clamp(1.8rem,3vw,2.5rem)] font-semibold leading-tight text-navy">
+            {corp.heading}
+          </h1>
+          <div className="mt-2 flex items-center gap-2 text-sm">
+            <span className="text-pink" aria-hidden>
+              ★★★★★
+            </span>
+            <span className="text-neutral-400">Loved by 200+ teams across Colombo</span>
+          </div>
+
+          <p className="mt-3 text-sm leading-relaxed text-neutral-500">{corp.intro}</p>
 
           {/* Flavour picker */}
           {flavors.length > 0 && (
@@ -191,6 +192,12 @@ export default function Corporate() {
               >
                 {mutation.isPending ? 'Sending…' : 'Send Quote Request'}
               </button>
+
+              {corp.preOrderNote && (
+                <p className="mt-4 rounded-xl bg-pink-light px-4 py-3 text-sm text-neutral-700">
+                  <span className="font-semibold text-pink">Heads up:</span> {corp.preOrderNote}
+                </p>
+              )}
               <p className="mt-3 text-center text-xs text-neutral-400">
                 By submitting you agree to be contacted about your quote.
               </p>

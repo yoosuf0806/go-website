@@ -177,11 +177,11 @@ create trigger orders_updated_at before update on orders
 -- letter_max_chars: max chars/line for the free 3-line built-in topper.
 -- 0 = topper not offered for that package (box-9).
 insert into packages (id, label, piece_count, is_slab, sort_order, letter_max_chars) values
-  ('box-9',  '9 Pieces',              9,  false, 1, 0),
-  ('box-12', '12 Pieces',             12, false, 2, 4),
-  ('box-15', '15 Pieces',             15, false, 3, 5),
-  ('slab-12','Brownie Slab (12 pcs)', 12, true,  4, 7),
-  ('slab-15','Brownie Slab (15 pcs)', 15, true,  5, 7)
+  ('slab-12','Brownie Slab (12 pcs)', 12, true,  1, 7),
+  ('slab-15','Brownie Slab (15 pcs)', 15, true,  2, 7),
+  ('box-9',  '9 Pieces',              9,  false, 3, 0),
+  ('box-12', '12 Pieces',             12, false, 4, 4),
+  ('box-15', '15 Pieces',             15, false, 5, 5)
 on conflict (id) do update set letter_max_chars = excluded.letter_max_chars;
 
 -- letter_topper is now free and built-in (per-package limits above), not a
