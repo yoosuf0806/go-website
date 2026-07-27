@@ -66,6 +66,9 @@ export async function createOrder({ items, totals, details, voucher }: CreateOrd
       p_items: orderItemsPayload(items),
       p_voucher_code: voucher?.code ?? null,
       p_voucher_discount: voucher?.discount ?? 0,
+      p_is_gift: details.isGift ?? false,
+      p_recipient_name: details.isGift ? details.recipientName || null : null,
+      p_recipient_phone: details.isGift && details.recipientPhone ? normalizePhone(details.recipientPhone) : null,
     })
     .single()
 

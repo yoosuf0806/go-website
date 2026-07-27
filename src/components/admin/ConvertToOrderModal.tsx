@@ -39,6 +39,7 @@ export default function ConvertToOrderModal({
     address: '',
     deliveryDate: inquiry.event_date ?? '',
     note: inquiry.message ?? '',
+    isGift: false,
   })
   const [rows, setRows] = useState<LineRow[]>([
     { productId: products[0]?.id ?? '', packageId: packages[0]?.id ?? '', boxQty: 1 },

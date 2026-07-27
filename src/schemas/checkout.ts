@@ -31,6 +31,24 @@ export const checkoutDetailsSchema = z.object({
   address: z.string().trim().min(1, 'Delivery address is required').max(500),
   deliveryDate: z.string().trim().min(1, 'Delivery date is required'),
   note: z.string().trim().max(300, 'Max 300 characters').optional(),
+  isGift: z.boolean().default(false),
+  recipientName: z.string().trim().max(100).optional(),
+  recipientPhone: z.string().trim().max(20).optional(),
 })
+  .superRefine((data, ctx) => {
+    if (!data.isGift) return
+    if (!data.recipientName?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['recipientName'], message: "Recipient's name is required" })
+    }
+    if (!data.recipientPhone?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['recipientPhone'], message: "Recipient's phone is required" })
+    } else if (!normalizePhone(data.recipientPhone)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['recipientPhone'],
+        message: 'Enter a valid Sri Lankan phone number',
+      })
+    }
+  })
 
 export type CheckoutDetails = z.infer<typeof checkoutDetailsSchema>
