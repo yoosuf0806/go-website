@@ -82,17 +82,28 @@ export default function Home() {
         </section>
       )}
 
+      {/* TRUST BAR */}
+      {vis.trust !== false && (
+      <div className="bg-warmgray py-7">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
+          {trust.map((t) => (
+            <Trust key={t.title} icon={t.icon} title={t.title} body={t.body} />
+          ))}
+        </div>
+      </div>
+      )}
+
       {/* HOT PICKS — admin-flagged featured products, directly below the hero */}
       {vis.hotPicks !== false && hotPicks.length > 0 && (
-        <section className="bg-white px-6 py-20">
+        <section className="bg-white px-6 py-14">
           <div className="mx-auto max-w-6xl">
             <SectionHeader title="Hot Picks 🔥" sub="Our most-loved brownies right now." />
-            <div className="mt-10 grid grid-cols-2 gap-6 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
               {hotPicks.map((product) => (
                 <ProductTile key={product.id} product={product} packages={packages} />
               ))}
             </div>
-            <div className="mt-10 text-center">
+            <div className="mt-8 text-center">
               <Link
                 to="/shop"
                 className="inline-block rounded-full border-2 border-navy px-7 py-3.5 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
@@ -104,22 +115,11 @@ export default function Home() {
         </section>
       )}
 
-      {/* TRUST BAR */}
-      {vis.trust !== false && (
-      <div className="bg-warmgray py-10">
-        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
-          {trust.map((t) => (
-            <Trust key={t.title} icon={t.icon} title={t.title} body={t.body} />
-          ))}
-        </div>
-      </div>
-      )}
-
       {/* SLIDESHOW */}
       {vis.slideshow !== false && <Slideshow promoSlides={content.promoSlides} />}
 
       {/* SLAB SPOTLIGHT — "Say It With a Brownie Slab" */}
-      <section className="bg-warmgray px-6 py-24">
+      <section className="bg-warmgray px-6 py-16">
         <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2">
           <div
             className="aspect-square rounded-[20px] bg-navy bg-cover bg-center shadow-[0_30px_60px_rgba(26,10,0,0.2)]"
@@ -159,7 +159,7 @@ export default function Home() {
 
       {/* FLAVOUR GRID — "Pick Your Flavour" */}
       {flavourGrid.length > 0 && (
-        <section className="bg-white px-6 py-24">
+        <section className="bg-white px-6 py-16">
           <div className="mx-auto max-w-6xl">
             <SectionHeader title="Pick Your Flavour 🍫" sub="Every brownie baked fresh. Never pre-made, never sitting." />
             <div className="mt-12 grid grid-cols-2 gap-6 lg:grid-cols-4">
@@ -181,7 +181,7 @@ export default function Home() {
 
       {/* CATEGORY GRID */}
       {vis.categories !== false && (
-      <section className="bg-warmgray px-6 py-24">
+      <section className="bg-warmgray px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <SectionHeader
             title="Find Your Perfect Box"
@@ -206,7 +206,7 @@ export default function Home() {
       )}
 
       {/* CORPORATE / BULK ORDERS CTA — split image + copy */}
-      <section className="bg-white px-6 py-24">
+      <section className="bg-white px-6 py-16">
         <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
           <div>
             <span className="inline-block rounded-full bg-pink-light px-4 py-1.5 text-xs font-bold tracking-wide text-pink">
@@ -235,7 +235,7 @@ export default function Home() {
 
       {/* CTA BANNER */}
       {vis.ctaBanner !== false && (
-      <section className="bg-warmgray px-6 py-20 text-center">
+      <section className="bg-warmgray px-6 py-14 text-center">
         <h2 className="text-[clamp(2rem,4vw,3.5rem)] text-navy">{ctaBanner.title}</h2>
         <p className="mx-auto mt-4 max-w-md text-lg text-neutral-500">{ctaBanner.body}</p>
         <Link
@@ -249,7 +249,7 @@ export default function Home() {
 
       {/* HOW IT WORKS */}
       {vis.howItWorks !== false && (
-      <section className="bg-white px-6 py-24">
+      <section className="bg-white px-6 py-16">
         <div className="mx-auto max-w-6xl">
           <SectionHeader title="How It Works" sub="From box to door in 4 simple steps." />
           <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -263,7 +263,7 @@ export default function Home() {
 
       {/* TESTIMONIALS */}
       {vis.testimonials !== false && reviews_section && featuredReviews.length > 0 && (
-        <section className="bg-warmgray px-6 py-24">
+        <section className="bg-warmgray px-6 py-16">
           <div className="mx-auto max-w-6xl">
             <SectionHeader title={testimonialsHeading.title} sub={testimonialsHeading.sub} />
             <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">

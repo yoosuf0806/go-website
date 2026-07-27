@@ -52,6 +52,13 @@ export function buildOrderSlipHtml(order: AdminOrder): string {
   if (order.address) meta.push(`<div><strong>Address:</strong> ${esc(order.address)}</div>`)
   if (order.delivery_date)
     meta.push(`<div><strong>Delivery:</strong> ${esc(formatDate(order.delivery_date))}</div>`)
+  if (order.is_gift) {
+    meta.push(
+      `<div><strong>🎁 Gift for:</strong> ${esc(order.recipient_name || '—')}${
+        order.recipient_phone ? ` · ${esc(order.recipient_phone)}` : ''
+      }</div>`,
+    )
+  }
   if (order.note) meta.push(`<div><strong>Note:</strong> ${esc(order.note)}</div>`)
 
   return `<!doctype html>

@@ -109,6 +109,11 @@ create table if not exists orders (
   total_pieces int not null,
   source text not null default 'web',
   inquiry_id uuid,
+  voucher_code text,
+  voucher_discount numeric(10,2) not null default 0,
+  is_gift boolean not null default false,
+  recipient_name text,
+  recipient_phone text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -126,6 +131,19 @@ create table if not exists order_items (
   unit_cost numeric(10,2),
   addons jsonb not null default '[]'::jsonb,
   line_total numeric(10,2) not null
+);
+
+-- Admin-defined gift vouchers, redeemable once at storefront checkout for a
+-- flat discount off the order total. Only touched by admin CRUD and the two
+-- RPCs below — no direct anon table access.
+create table if not exists gift_vouchers (
+  id uuid primary key default uuid_generate_v4(),
+  code text not null unique,
+  amount numeric(10,2) not null check (amount > 0),
+  is_active boolean not null default true,
+  used_at timestamptz,
+  used_by_order_id uuid references orders(id) on delete set null,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists inquiries (
@@ -219,6 +237,16 @@ alter table reviews        enable row level security;
 alter table orders         enable row level security;
 alter table order_items    enable row level security;
 alter table inquiries      enable row level security;
+alter table gift_vouchers  enable row level security;
+
+-- Admin (any authenticated user, matching this project's v1 "any authenticated
+-- user is an admin" model) has full CRUD on vouchers. No anon policy — anon
+-- only ever interacts through validate_gift_voucher() / create_order() below.
+drop policy if exists "gift_vouchers_admin_all" on gift_vouchers;
+create policy "gift_vouchers_admin_all" on gift_vouchers
+  for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
 
 -- Public reads of visible/active catalogue rows.
 drop policy if exists "public read visible categories" on categories;
@@ -294,23 +322,48 @@ create policy "admin manage inquiries" on inquiries for all
 drop function if exists create_order(
   text, text, text, date, text, numeric, numeric, numeric, int, jsonb
 );
+drop function if exists create_order(
+  text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb, text, numeric
+);
 create or replace function create_order(
   p_customer_name text, p_phone text, p_email text, p_alt_phone text,
   p_address text, p_delivery_date date, p_note text,
-  p_subtotal numeric, p_delivery_fee numeric, p_total numeric, p_total_pieces int, p_items jsonb
+  p_subtotal numeric, p_delivery_fee numeric, p_total numeric, p_total_pieces int, p_items jsonb,
+  p_voucher_code text default null, p_voucher_discount numeric default 0,
+  p_is_gift boolean default false, p_recipient_name text default null, p_recipient_phone text default null
 )
 returns table (id uuid, order_no int)
 language plpgsql security definer set search_path = public as $$
-declare v_id uuid; v_order_no int;
+declare
+  v_id uuid; v_order_no int;
+  v_code text := nullif(upper(trim(coalesce(p_voucher_code, ''))), '');
+  v_voucher gift_vouchers%rowtype;
 begin
+  if v_code is not null then
+    select * into v_voucher from gift_vouchers where code = v_code for update;
+    if not found or not v_voucher.is_active then
+      raise exception 'VOUCHER_INVALID';
+    end if;
+    if v_voucher.used_at is not null then
+      raise exception 'VOUCHER_USED';
+    end if;
+  end if;
+
   insert into orders (
     customer_name, phone, email, alt_phone, address, delivery_date, note,
-    subtotal, delivery_fee, total, total_pieces, status, source, inquiry_id
+    subtotal, delivery_fee, total, total_pieces, status, source, inquiry_id,
+    voucher_code, voucher_discount, is_gift, recipient_name, recipient_phone
   ) values (
     p_customer_name, p_phone, nullif(p_email, ''), nullif(p_alt_phone, ''),
     p_address, p_delivery_date, p_note,
-    p_subtotal, p_delivery_fee, p_total, p_total_pieces, 'pending', 'web', null
+    p_subtotal, p_delivery_fee, p_total, p_total_pieces, 'pending', 'web', null,
+    v_code, coalesce(p_voucher_discount, 0),
+    coalesce(p_is_gift, false), nullif(p_recipient_name, ''), nullif(p_recipient_phone, '')
   ) returning orders.id, orders.order_no into v_id, v_order_no;
+
+  if v_code is not null then
+    update gift_vouchers set used_at = now(), used_by_order_id = v_id where code = v_code;
+  end if;
 
   insert into order_items (
     order_id, product_id, product_name, package_id, package_label,
@@ -332,8 +385,30 @@ begin
 end; $$;
 
 grant execute on function create_order(
-  text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb
+  text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb,
+  text, numeric, boolean, text, text
 ) to anon, authenticated;
+
+-- Read-only "is this code valid?" check for the checkout Apply button.
+-- Actual redemption happens atomically inside create_order() above.
+create or replace function validate_gift_voucher(p_code text)
+returns table (status text, amount numeric)
+language plpgsql security definer set search_path = public as $$
+declare v gift_vouchers%rowtype;
+begin
+  select * into v from gift_vouchers where code = upper(trim(p_code));
+  if not found or not v.is_active then
+    return query select 'invalid'::text, null::numeric;
+    return;
+  end if;
+  if v.used_at is not null then
+    return query select 'used'::text, null::numeric;
+    return;
+  end if;
+  return query select 'ok'::text, v.amount;
+end; $$;
+
+grant execute on function validate_gift_voucher(text) to anon, authenticated;
 
 -- ============================================================================
 -- Part B (OPTIONAL) — demo catalogue. Delete this block to start empty and add

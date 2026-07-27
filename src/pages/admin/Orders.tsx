@@ -166,6 +166,14 @@ function OrderRow({
           <div>{order.customer_name}</div>
           <div className="text-xs text-neutral-500">{order.phone}</div>
           <div className="mt-1 flex flex-wrap gap-1.5">
+            {order.is_gift && (
+              <span
+                className="inline-block rounded-full bg-pink-light px-2 py-0.5 text-xs font-medium text-pink"
+                title={`Gift${order.recipient_name ? ` for ${order.recipient_name}` : ''}`}
+              >
+                🎁 Gift
+              </span>
+            )}
             {hasTopper && (
               <span
                 className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
@@ -288,6 +296,12 @@ function OrderRow({
                     {order.alt_phone && <span className="text-neutral-500"> · alt {order.alt_phone}</span>}
                   </div>
                   {order.email && <div>✉️ {order.email}</div>}
+                  {order.is_gift && (
+                    <div className="mt-1 rounded bg-pink-light px-2 py-1 text-pink">
+                      🎁 Gift for: {order.recipient_name || '—'}
+                      {order.recipient_phone && ` · 📞 ${order.recipient_phone}`}
+                    </div>
+                  )}
                   {order.note && (
                     <div className="mt-1 rounded bg-white px-2 py-1 text-neutral-600">
                       <span className="font-medium">Note:</span> {order.note}

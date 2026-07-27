@@ -14,6 +14,9 @@ export interface OrderCustomer {
   address?: string
   deliveryDate?: string | null
   note?: string
+  isGift?: boolean
+  recipientName?: string | null
+  recipientPhone?: string | null
 }
 
 export interface OrderMessageInput {
@@ -91,6 +94,9 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   if (customer.email) lines.push(`✉️ ${customer.email}`)
   if (customer.address) lines.push(`📍 ${customer.address}`)
   if (customer.deliveryDate) lines.push(`🗓 Delivery: ${formatDate(customer.deliveryDate)}`)
+  if (customer.isGift && customer.recipientName) {
+    lines.push(`🎁 Gift for: ${customer.recipientName}${customer.recipientPhone ? ` | 📞 ${customer.recipientPhone}` : ''}`)
+  }
   if (customer.note) lines.push(`📝 ${customer.note}`)
 
   return lines.join('\n')
