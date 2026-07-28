@@ -33,7 +33,7 @@ export type InquiryCategory = z.infer<typeof inquiryCategorySchema>
 // added by migration 017.
 // QuoteForm: shape used for the DB insert (category required, pieceCount is number).
 export interface QuoteForm {
-  category: 'corporate'
+  category: InquiryCategory
   name: string
   phone: string
   email?: string

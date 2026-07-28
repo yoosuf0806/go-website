@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import Corporate from './pages/Corporate'
+import Wedding from './pages/Wedding'
 import NotFound from './pages/NotFound'
 
 // Admin and kitchen portals are code-split: each lazy import becomes its own
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:slug" element={<ProductDetail />} />
         <Route path="/corporate" element={<Corporate />} />
+        <Route path="/wedding" element={<Wedding />} />
       </Route>
 
       {/* Admin login (public) */}

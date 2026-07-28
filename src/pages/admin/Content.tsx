@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useAdminContent, useUpdateContent } from '../../hooks/useAdminContent'
 import type {
-  CorporateBanner,
   FaqItem,
   HeroSlide,
   IconCard,
   OccasionCard,
+  PricingTier,
   PromoSlide,
+  QuoteLandingContent,
   SeoMeta,
   SiteContent,
 } from '../../types/content'
@@ -157,38 +158,24 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         <Area label="Allergens" value={form.productInfo.allergens} onChange={(v) => set('productInfo', { ...form.productInfo, allergens: v })} />
       </Section>
 
-      <Section title="Corporate page">
-        <Text label="Heading" value={form.corporate.heading} onChange={(v) => set('corporate', { ...form.corporate, heading: v })} />
-        <Area label="Intro" value={form.corporate.intro} onChange={(v) => set('corporate', { ...form.corporate, intro: v })} />
-        <Area label="Heads-up note" value={form.corporate.preOrderNote} onChange={(v) => set('corporate', { ...form.corporate, preOrderNote: v })} />
-        <label className="block text-sm">
-          <span className="text-neutral-600">Product info points (one per line)</span>
-          <textarea
-            rows={4}
-            value={form.corporate.productInfo.join('\n')}
-            onChange={(e) => set('corporate', { ...form.corporate, productInfo: e.target.value.split('\n').filter((l) => l.trim()) })}
-            className={textareaCls}
-          />
-        </label>
-        <div>
-          <span className="block text-sm text-neutral-600">FAQ</span>
-          <FaqEditor items={form.corporate.faq} onChange={(v) => set('corporate', { ...form.corporate, faq: v })} />
-        </div>
-      </Section>
+      <QuoteLandingEditor
+        title="Corporate Orders page"
+        content={form.corporate}
+        onChange={(v) => set('corporate', v)}
+      />
 
-      <Section title="Corporate banner slideshow">
-        <p className="-mt-2 mb-2 text-xs text-neutral-500">
-          A short ad strip at the top of the corporate page. Add slides with a headline, sub-text, optional
-          button + link, and optional background image. Leave empty to hide the strip.
-        </p>
-        <CorporateBannersEditor banners={form.corporate.banners} onChange={(v) => set('corporate', { ...form.corporate, banners: v })} />
-      </Section>
+      <QuoteLandingEditor
+        title="Wedding Orders page"
+        content={form.wedding}
+        onChange={(v) => set('wedding', v)}
+      />
 
       <Section title="SEO">
         <Text label="Site name" value={form.seo.siteName} onChange={(v) => set('seo', { ...form.seo, siteName: v })} />
         <SeoEditor label="Home" meta={form.seo.home} onChange={(m) => set('seo', { ...form.seo, home: m })} />
         <SeoEditor label="Shop" meta={form.seo.shop} onChange={(m) => set('seo', { ...form.seo, shop: m })} />
-        <SeoEditor label="Corporate" meta={form.seo.corporate} onChange={(m) => set('seo', { ...form.seo, corporate: m })} />
+        <SeoEditor label="Corporate Orders" meta={form.seo.corporate} onChange={(m) => set('seo', { ...form.seo, corporate: m })} />
+        <SeoEditor label="Wedding Orders" meta={form.seo.wedding} onChange={(m) => set('seo', { ...form.seo, wedding: m })} />
       </Section>
 
       <div className="sticky bottom-0 -mx-2 flex items-center gap-3 bg-neutral-50/90 px-2 py-3 backdrop-blur">
@@ -528,42 +515,99 @@ function FaqEditor({ items, onChange }: { items: FaqItem[]; onChange: (v: FaqIte
   )
 }
 
-// Manage the short corporate banner slideshow (headline/body/CTA + optional image).
-function CorporateBannersEditor({ banners, onChange }: { banners: CorporateBanner[]; onChange: (v: CorporateBanner[]) => void }) {
-  const update = (i: number, patch: Partial<CorporateBanner>) => onChange(banners.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-  const remove = (i: number) => onChange(banners.filter((_, j) => j !== i))
-  function move(i: number, dir: number) {
-    const j = i + dir
-    if (j < 0 || j >= banners.length) return
-    const next = banners.slice()
-    ;[next[i], next[j]] = [next[j], next[i]]
-    onChange(next)
-  }
-  const add = () => onChange([...banners, { title: 'Bulk orders welcome', body: 'Exclusive pricing for 100+ pieces', cta: 'Get a quote', to: '/corporate' }])
+// Full editor for a Corporate Orders or Wedding Orders landing page: hero
+// banner, trust stats, "everything handled" checklist, occasions grid,
+// pricing tiers, and the existing quote-form copy. Reused for both pages so
+// they stay structurally identical while holding fully independent content.
+function QuoteLandingEditor({
+  title,
+  content,
+  onChange,
+}: {
+  title: string
+  content: QuoteLandingContent
+  onChange: (v: QuoteLandingContent) => void
+}) {
+  return (
+    <Section title={title}>
+      <p className="-mt-2 mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">Hero banner</p>
+      <Text label="Eyebrow" value={content.hero.eyebrow} onChange={(v) => onChange({ ...content, hero: { ...content.hero, eyebrow: v } })} />
+      <Text label="Title" value={content.hero.title} onChange={(v) => onChange({ ...content, hero: { ...content.hero, title: v } })} />
+      <Area label="Subtitle" value={content.hero.subtitle} onChange={(v) => onChange({ ...content, hero: { ...content.hero, subtitle: v } })} />
+      <Text label="Button text" value={content.hero.cta} onChange={(v) => onChange({ ...content, hero: { ...content.hero, cta: v } })} />
+      <ImageField label="Background image (optional)" value={content.hero.imageUrl} onChange={(url) => onChange({ ...content, hero: { ...content.hero, imageUrl: url } })} />
+
+      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Trust stats strip</p>
+      <IconCards items={content.stats} onChange={(v) => onChange({ ...content, stats: v })} iconLabel="Icon" />
+
+      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Everything handled for you</p>
+      <Text label="Heading" value={content.handledHeading} onChange={(v) => onChange({ ...content, handledHeading: v })} />
+      <ImageField label="Image (optional)" value={content.handledImageUrl} onChange={(url) => onChange({ ...content, handledImageUrl: url })} />
+      <label className="block text-sm">
+        <span className="text-neutral-600">Checklist items (one per line)</span>
+        <textarea
+          rows={4}
+          value={content.handledItems.join('\n')}
+          onChange={(e) => onChange({ ...content, handledItems: e.target.value.split('\n').filter((l) => l.trim()) })}
+          className={textareaCls}
+        />
+      </label>
+      <Text label="Button text" value={content.handledCta} onChange={(v) => onChange({ ...content, handledCta: v })} />
+
+      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Occasions we cover</p>
+      <Text label="Section heading" value={content.occasionsHeading} onChange={(v) => onChange({ ...content, occasionsHeading: v })} />
+      {content.occasions.map((c, i) => (
+        <OccasionEditor
+          key={i}
+          card={c}
+          onChange={(next) => onChange({ ...content, occasions: content.occasions.map((x, j) => (j === i ? next : x)) })}
+        />
+      ))}
+
+      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Pricing</p>
+      <Text label="Section title" value={content.pricingTitle} onChange={(v) => onChange({ ...content, pricingTitle: v })} />
+      <PricingTiersEditor tiers={content.pricingTiers} onChange={(v) => onChange({ ...content, pricingTiers: v })} />
+
+      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Quote request form</p>
+      <Text label="Heading" value={content.heading} onChange={(v) => onChange({ ...content, heading: v })} />
+      <Area label="Intro" value={content.intro} onChange={(v) => onChange({ ...content, intro: v })} />
+      <Area label="Heads-up note" value={content.preOrderNote} onChange={(v) => onChange({ ...content, preOrderNote: v })} />
+      <label className="block text-sm">
+        <span className="text-neutral-600">Product info points (one per line)</span>
+        <textarea
+          rows={4}
+          value={content.productInfo.join('\n')}
+          onChange={(e) => onChange({ ...content, productInfo: e.target.value.split('\n').filter((l) => l.trim()) })}
+          className={textareaCls}
+        />
+      </label>
+      <div>
+        <span className="block text-sm text-neutral-600">FAQ</span>
+        <FaqEditor items={content.faq} onChange={(v) => onChange({ ...content, faq: v })} />
+      </div>
+    </Section>
+  )
+}
+
+// Manage a simple list of pricing tiers (label + price/description text).
+function PricingTiersEditor({ tiers, onChange }: { tiers: PricingTier[]; onChange: (v: PricingTier[]) => void }) {
+  const update = (i: number, patch: Partial<PricingTier>) => onChange(tiers.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const remove = (i: number) => onChange(tiers.filter((_, j) => j !== i))
+  const add = () => onChange([...tiers, { label: 'New tier', price: '' }])
 
   return (
-    <div className="flex flex-col gap-4">
-      {banners.map((b, i) => (
-        <div key={i} className="rounded-lg border border-neutral-200 p-3">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Text label="Headline" value={b.title} onChange={(v) => update(i, { title: v })} />
-            <Text label="Sub-text" value={b.body} onChange={(v) => update(i, { body: v })} />
-            <Text label="Button text (optional)" value={b.cta ?? ''} onChange={(v) => update(i, { cta: v })} />
-            <Text label="Links to (optional, e.g. /corporate)" value={b.to ?? ''} onChange={(v) => update(i, { to: v })} />
-          </div>
-          <div className="mt-2">
-            <ImageField label="Background image (optional)" value={b.imageUrl} onChange={(url) => update(i, { imageUrl: url })} />
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-xs">
-            <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↑ Up</button>
-            <button type="button" onClick={() => move(i, 1)} disabled={i === banners.length - 1} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↓ Down</button>
-            <button type="button" onClick={() => remove(i)} className="rounded border border-neutral-300 px-2 py-1 text-red-600 hover:bg-red-50">Remove</button>
-            <span className="text-neutral-400">Banner {i + 1} of {banners.length}</span>
-          </div>
+    <div className="flex flex-col gap-3">
+      {tiers.map((t, i) => (
+        <div key={i} className="grid grid-cols-1 gap-2 rounded border border-neutral-100 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <Text label="Label (e.g. 100 – 249 pcs)" value={t.label} onChange={(v) => update(i, { label: v })} />
+          <Text label="Price / description" value={t.price} onChange={(v) => update(i, { price: v })} />
+          <button type="button" onClick={() => remove(i)} className="h-fit rounded border border-neutral-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50">
+            Remove
+          </button>
         </div>
       ))}
       <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
-        + Add banner
+        + Add tier
       </button>
     </div>
   )

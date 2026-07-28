@@ -68,17 +68,38 @@ export interface FaqItem {
   a: string
 }
 
-// One slide in the short bulk-order banner slideshow at the top of the
-// corporate page. Optional background image; falls back to a pink strip.
-export interface CorporateBanner {
+// Full-bleed banner hero at the top of a bulk-order landing page (corporate
+// or wedding). Optional background image; falls back to a navy gradient.
+export interface QuoteHero {
+  eyebrow: string
   title: string
-  body: string
-  cta?: string
-  to?: string
+  subtitle: string
+  cta: string
   imageUrl?: string
 }
 
-export interface CorporateQuoteContent {
+export interface PricingTier {
+  label: string
+  price: string
+}
+
+// Shared shape for the Corporate Orders and Wedding Orders landing pages:
+// hero banner, trust-stat strip, "everything handled for you" section,
+// occasions grid, pricing section, and the existing flavour-picker + quote
+// request form. Corporate and wedding each get their own fully independent
+// instance of this content.
+export interface QuoteLandingContent {
+  hero: QuoteHero
+  /** Trust-stat strip (e.g. "50+ Minimum Order"). Reuses IconCard: icon = emoji, title = big stat, body = label. */
+  stats: IconCard[]
+  handledHeading: string
+  handledImageUrl?: string
+  handledItems: string[]
+  handledCta: string
+  occasionsHeading: string
+  occasions: OccasionCard[]
+  pricingTitle: string
+  pricingTiers: PricingTier[]
   heading: string
   intro: string
   productInfo: string[]
@@ -87,8 +108,6 @@ export interface CorporateQuoteContent {
   preOrderThreshold: number
   preOrderLeadDays: number
   discountThreshold: number
-  /** Short ad slideshow at the top of the corporate page. Empty = hidden. */
-  banners: CorporateBanner[]
 }
 
 export interface SiteContent {
@@ -120,8 +139,10 @@ export interface SiteContent {
     home: SeoMeta
     shop: SeoMeta
     corporate: SeoMeta
+    wedding: SeoMeta
   }
-  corporate: CorporateQuoteContent
+  corporate: QuoteLandingContent
+  wedding: QuoteLandingContent
 }
 
 export const DEFAULT_CONTENT: SiteContent = {
@@ -159,7 +180,8 @@ export const DEFAULT_CONTENT: SiteContent = {
   ],
   categories: [
     { emoji: '🍫', title: 'Shop All', body: 'Browse our full collection of freshly baked brownies.', cta: 'Browse All →', to: '/shop' },
-    { emoji: '🏢', title: 'Bulk Orders', body: 'Bulk pricing for teams, events, weddings, and client gifting.', cta: 'View Range →', to: '/corporate' },
+    { emoji: '💍', title: 'Wedding Orders', body: 'Favours and gifting for engagements, showers, and receptions.', cta: 'View Range →', to: '/wedding' },
+    { emoji: '🏢', title: 'Corporate Orders', body: 'Bulk pricing for teams, events, and client gifting.', cta: 'View Range →', to: '/corporate' },
     { emoji: '🍰', title: 'Brownie Slab', body: 'Personalise with letter toppers and sparkles.', cta: 'Customise →', to: '/shop' },
   ],
   ctaBanner: {
@@ -197,11 +219,52 @@ export const DEFAULT_CONTENT: SiteContent = {
       description: 'Browse our full range of freshly baked brownies — classic, premium, and customisable slabs. Islandwide delivery across Sri Lanka.',
     },
     corporate: {
-      title: 'Corporate Gifting & Wedding Favours — Golden Oven',
-      description: 'Premium brownie boxes for teams, events, and weddings. Bulk pricing and custom packaging. Get a tailored quotation.',
+      title: 'Corporate Gifting — Golden Oven',
+      description: 'Premium brownie boxes for teams, events, and client gifting. Bulk pricing and custom packaging. Get a tailored quotation.',
+    },
+    wedding: {
+      title: 'Wedding Favours & Gifting — Golden Oven',
+      description: 'Brownie favours and gifting for engagements, bridal showers, and wedding receptions. Bulk pricing and custom packaging.',
     },
   },
   corporate: {
+    hero: {
+      eyebrow: 'Corporate Gifting',
+      title: "Gift Your Team Something They'll Actually Love.",
+      subtitle: 'Bulk brownie boxes for offices, events, client appreciation and corporate celebrations. Islandwide delivery available.',
+      cta: 'Get a Corporate Quote',
+    },
+    stats: [
+      { icon: '📦', title: '50+', body: 'Minimum Order' },
+      { icon: '🍫', title: '5', body: 'Flavours Available' },
+      { icon: '🚀', title: 'Next Day', body: 'Delivery Available' },
+      { icon: '💯', title: '100%', body: 'Halal Certified' },
+    ],
+    handledHeading: 'Everything Handled for You.',
+    handledItems: [
+      'Bulk pricing on all orders 50+',
+      'Custom quantities per box',
+      'Branded message cards available',
+      'Gift ribbon packaging',
+      'Scheduled delivery to your office or venue',
+      'Invoice provided for company records',
+    ],
+    handledCta: 'Start Your Order',
+    occasionsHeading: 'Occasions We Cover',
+    occasions: [
+      { emoji: '🎉', title: 'Year End Parties', body: 'Reward your team with something sweet', cta: '', to: '/corporate' },
+      { emoji: '💼', title: 'Client Appreciation', body: 'A gift they’ll remember', cta: '', to: '/corporate' },
+      { emoji: '👩‍💼', title: "Women's Day", body: 'Celebrate the women in your team', cta: '', to: '/corporate' },
+      { emoji: '🎂', title: 'Office Birthdays', body: 'Make every birthday feel special', cta: '', to: '/corporate' },
+      { emoji: '🤝', title: 'New Client Welcome', body: 'Start the relationship sweetly', cta: '', to: '/corporate' },
+      { emoji: '🏆', title: 'Team Milestones', body: 'Celebrate wins, big and small', cta: '', to: '/corporate' },
+    ],
+    pricingTitle: 'Bulk Pricing',
+    pricingTiers: [
+      { label: '50 – 99 pcs', price: 'Standard per-piece rate' },
+      { label: '100 – 249 pcs', price: 'Bulk discount applied' },
+      { label: '250+ pcs', price: 'Custom quote — contact us' },
+    ],
     heading: 'Corporate & Bulk Gifting',
     intro: 'Freshly baked brownie boxes for teams, events, and client gifting. Tell us what you need and we\'ll get back to you with a tailored quote.',
     productInfo: [
@@ -228,7 +291,71 @@ export const DEFAULT_CONTENT: SiteContent = {
     preOrderThreshold: 50,
     preOrderLeadDays: 4,
     discountThreshold: 100,
-    banners: [],
+  },
+  wedding: {
+    hero: {
+      eyebrow: 'Wedding Orders',
+      title: "Wedding Favours They'll Actually Love.",
+      subtitle: 'Brownie favours and gifting for engagements, bridal showers, welcome bags and wedding receptions. Islandwide delivery available.',
+      cta: 'Get a Wedding Quote',
+    },
+    stats: [
+      { icon: '📦', title: '50+', body: 'Minimum Order' },
+      { icon: '🍫', title: '5', body: 'Flavours Available' },
+      { icon: '🚀', title: 'Next Day', body: 'Delivery Available' },
+      { icon: '💯', title: '100%', body: 'Halal Certified' },
+    ],
+    handledHeading: 'Everything Handled for You.',
+    handledItems: [
+      'Bulk pricing on all favour orders',
+      'Custom quantities per favour box',
+      'Personalised message cards & wedding tags',
+      'Elegant ribbon packaging',
+      'Scheduled delivery to your venue',
+      'Invoice provided for planners & couples',
+    ],
+    handledCta: 'Start Your Order',
+    occasionsHeading: 'Occasions We Cover',
+    occasions: [
+      { emoji: '💍', title: 'Engagement Parties', body: 'Sweeten the celebration', cta: '', to: '/wedding' },
+      { emoji: '🥂', title: 'Bridal Showers', body: 'A treat for the bride’s day', cta: '', to: '/wedding' },
+      { emoji: '💒', title: 'Wedding Receptions', body: 'Favours your guests will love', cta: '', to: '/wedding' },
+      { emoji: '🎁', title: 'Welcome Gifts', body: 'Greet your guests sweetly', cta: '', to: '/wedding' },
+      { emoji: '🙏', title: 'Thank-You Favours', body: 'Show your appreciation', cta: '', to: '/wedding' },
+      { emoji: '💕', title: 'Anniversary Celebrations', body: 'Celebrate another year of love', cta: '', to: '/wedding' },
+    ],
+    pricingTitle: 'Wedding Pricing',
+    pricingTiers: [
+      { label: '50 – 99 pcs', price: 'Standard per-piece rate' },
+      { label: '100 – 249 pcs', price: 'Bulk discount applied' },
+      { label: '250+ pcs', price: 'Custom quote — contact us' },
+    ],
+    heading: 'Wedding Favours & Gifting',
+    intro: 'Freshly baked brownie favours for engagements, showers, and receptions. Tell us what you need and we\'ll get back to you with a tailored quote.',
+    productInfo: [
+      'Freshly baked to order — never pre-made or stored',
+      'Beautiful gift-ready packaging included',
+      'Islandwide delivery across Sri Lanka',
+      '100% Halal certified ingredients',
+    ],
+    faq: [
+      {
+        q: 'How far in advance should I order?',
+        a: 'We recommend at least 4 days for orders over 50 pieces. Smaller orders can often be turned around in 2 days — tell us your date and we\'ll confirm.',
+      },
+      {
+        q: 'Can I mix flavours in one order?',
+        a: 'Yes! Let us know your preferred flavour split in the message field and we\'ll accommodate where possible.',
+      },
+      {
+        q: 'Do you offer custom packaging or branding for the wedding?',
+        a: 'We offer custom ribbon, gift tags, and message card options. For fully branded packaging, contact us directly to discuss.',
+      },
+    ],
+    preOrderNote: 'Orders over 50 pieces require at least 4 days\' notice. Orders over 100 pieces qualify for a bulk discount — we\'ll confirm the rate in your quote.',
+    preOrderThreshold: 50,
+    preOrderLeadDays: 4,
+    discountThreshold: 100,
   },
 }
 
@@ -249,6 +376,7 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
       home: { ...DEFAULT_CONTENT.seo.home, ...partial.seo?.home },
       shop: { ...DEFAULT_CONTENT.seo.shop, ...partial.seo?.shop },
       corporate: { ...DEFAULT_CONTENT.seo.corporate, ...partial.seo?.corporate },
+      wedding: { ...DEFAULT_CONTENT.seo.wedding, ...partial.seo?.wedding },
     },
     promoMessages: partial.promoMessages?.length ? partial.promoMessages : DEFAULT_CONTENT.promoMessages,
     trust: partial.trust?.length ? partial.trust : DEFAULT_CONTENT.trust,
@@ -260,18 +388,24 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     heroSlides: partial.heroSlides ?? DEFAULT_CONTENT.heroSlides,
     promoSlides: partial.promoSlides ?? DEFAULT_CONTENT.promoSlides,
     sectionVisibility: { ...DEFAULT_CONTENT.sectionVisibility, ...partial.sectionVisibility },
-    corporate: {
-      ...DEFAULT_CONTENT.corporate,
-      ...partial.corporate,
-      productInfo: partial.corporate?.productInfo?.length
-        ? partial.corporate.productInfo
-        : DEFAULT_CONTENT.corporate.productInfo,
-      faq: partial.corporate?.faq?.length
-        ? partial.corporate.faq
-        : DEFAULT_CONTENT.corporate.faq,
-      // banners: an empty array is meaningful (slideshow hidden), so keep the
-      // DB value rather than substituting defaults.
-      banners: partial.corporate?.banners ?? DEFAULT_CONTENT.corporate.banners,
-    },
+    corporate: mergeQuoteLanding(DEFAULT_CONTENT.corporate, partial.corporate),
+    wedding: mergeQuoteLanding(DEFAULT_CONTENT.wedding, partial.wedding),
+  }
+}
+
+/** Merge a partial QuoteLandingContent (corporate or wedding) over its defaults,
+ *  falling back to the default list for any array the DB left empty. */
+function mergeQuoteLanding(base: QuoteLandingContent, partial?: Partial<QuoteLandingContent>): QuoteLandingContent {
+  if (!partial) return base
+  return {
+    ...base,
+    ...partial,
+    hero: { ...base.hero, ...partial.hero },
+    stats: partial.stats?.length ? partial.stats : base.stats,
+    handledItems: partial.handledItems?.length ? partial.handledItems : base.handledItems,
+    occasions: partial.occasions?.length ? partial.occasions : base.occasions,
+    pricingTiers: partial.pricingTiers?.length ? partial.pricingTiers : base.pricingTiers,
+    productInfo: partial.productInfo?.length ? partial.productInfo : base.productInfo,
+    faq: partial.faq?.length ? partial.faq : base.faq,
   }
 }
