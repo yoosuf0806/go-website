@@ -176,6 +176,17 @@ create table if not exists site_settings (
   value jsonb not null
 );
 
+-- Role-based routing for the kitchen portal (mirrors migration 025). No row
+-- is required for admin accounts — the frontend defaults missing rows to
+-- 'admin'. Only kitchen accounts need one:
+--   insert into profiles (id, role)
+--   select id, 'kitchen' from auth.users where email = 'kitchen@example.com';
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  role text not null default 'admin' check (role in ('admin', 'kitchen')),
+  created_at timestamptz not null default now()
+);
+
 -- ── inquiry_id FK (guarded) ─────────────────────────────────────────────────
 do $$ begin
   alter table orders
@@ -238,6 +249,14 @@ alter table orders         enable row level security;
 alter table order_items    enable row level security;
 alter table inquiries      enable row level security;
 alter table gift_vouchers  enable row level security;
+alter table profiles       enable row level security;
+
+-- Each signed-in user may read their own role (kitchen-portal routing).
+drop policy if exists "profiles_select_own" on profiles;
+create policy "profiles_select_own" on profiles for select using (auth.uid() = id);
+drop policy if exists "profiles_admin_all" on profiles;
+create policy "profiles_admin_all" on profiles for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 -- Admin (any authenticated user, matching this project's v1 "any authenticated
 -- user is an admin" model) has full CRUD on vouchers. No anon policy — anon
