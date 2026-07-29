@@ -2,9 +2,16 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useSession } from '../../hooks/useSession'
+import { useRole } from '../../hooks/useRole'
 
 export default function KitchenLogin() {
-  const { session, loading } = useSession()
+  const { session, loading: sessionLoading } = useSession()
+  // A session alone isn't enough to skip the form — someone testing the
+  // admin panel in the same browser would otherwise get silently bounced
+  // straight back out to /admin without ever seeing the kitchen login form.
+  // Only auto-redirect once we know the *active* session is a kitchen account.
+  const { role, loading: roleLoading } = useRole()
+  const loading = sessionLoading || (!!session && roleLoading)
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
@@ -12,7 +19,7 @@ export default function KitchenLogin() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (!loading && session) {
+  if (!loading && session && role === 'kitchen') {
     return <Navigate to="/kitchen" replace />
   }
 

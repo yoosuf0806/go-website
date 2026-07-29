@@ -63,7 +63,7 @@ export default function App() {
       <Route
         path="/admin/bake-list"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireRole="admin">
             <Suspense fallback={<AdminFallback />}>
               <BakeList />
             </Suspense>
@@ -75,7 +75,7 @@ export default function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireRole="admin">
             <Suspense fallback={<AdminFallback />}>
               <AdminLayout />
             </Suspense>
