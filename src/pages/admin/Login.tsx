@@ -2,12 +2,18 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useSession } from '../../hooks/useSession'
+import { useRole } from '../../hooks/useRole'
 
 // Admin login (spec §7): email/password via Supabase Auth. No public sign-up —
 // admin users are created in the Supabase dashboard. On success the auth state
 // change flows through useSession and ProtectedRoute lets the app in.
 export default function Login() {
-  const { session, loading } = useSession()
+  const { session, loading: sessionLoading } = useSession()
+  // Mirrors the kitchen-login fix: a session alone isn't enough to skip the
+  // form — a kitchen account testing this page in the same browser should
+  // still be able to sign in as admin here, not get silently bounced away.
+  const { role, loading: roleLoading } = useRole()
+  const loading = sessionLoading || (!!session && roleLoading)
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
@@ -15,8 +21,8 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Already signed in — don't show the form again.
-  if (!loading && session) {
+  // Already signed in as admin — don't show the form again.
+  if (!loading && session && role === 'admin') {
     return <Navigate to="/admin" replace />
   }
 
