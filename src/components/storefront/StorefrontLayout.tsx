@@ -32,7 +32,7 @@ export default function StorefrontLayout() {
   const isHome = pathname === '/'
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-navy">
+    <div className="flex min-h-screen flex-col bg-blush-50 text-navy">
       <PromoTicker />
       <BannerBar banner={settings.banner} />
       <Header
@@ -98,7 +98,7 @@ function Header({
   return (
     <header
       className={`sticky top-0 z-30 transition-colors duration-300 ${
-        solid ? 'border-b border-neutral-100 bg-white shadow-sm' : 'bg-white/10 backdrop-blur-md'
+        solid ? 'border-b border-blush-200 bg-blush-100 shadow-sm' : 'bg-white/10 backdrop-blur-md'
       }`}
       style={{ height: HEADER_HEIGHT }}
     >
