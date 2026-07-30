@@ -63,7 +63,7 @@ export default function HeroCarousel({ slides, primaryCta, secondaryCta }: HeroC
                     </Link>
                     <Link
                       to="/corporate"
-                      className="rounded-full border-2 border-white px-7 py-3 text-[15px] font-bold text-white transition-colors hover:bg-white hover:text-navy"
+                      className="rounded-full bg-navy px-7 py-3 text-[15px] font-bold text-white transition-transform hover:-translate-y-0.5"
                     >
                       {secondaryCta}
                     </Link>

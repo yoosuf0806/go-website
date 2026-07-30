@@ -114,7 +114,7 @@ export default function ProductConfigurator({
       />
 
       {/* Itemised summary */}
-      <div className="rounded-2xl bg-warmgray px-5 py-4">
+      <div className="rounded-2xl bg-blush-100 px-5 py-4">
         <div className="flex items-center justify-between border-t border-neutral-200 pt-3 first:border-t-0 first:pt-0">
           <span className="text-[13px] text-neutral-500">
             {boxQty === 1 ? '1 box' : `${boxQty} boxes`} · {selectedPackage.pieceCount * boxQty} pcs
@@ -125,7 +125,7 @@ export default function ProductConfigurator({
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-xl bg-warmgray px-4 py-3">
+      <div className="flex items-center justify-between rounded-xl bg-blush-100 px-4 py-3">
         <span className="text-[13px] font-bold text-navy">How many boxes?</span>
         <div className="flex items-center overflow-hidden rounded-full border-2 border-neutral-200 bg-white">
           <button

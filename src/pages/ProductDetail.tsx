@@ -111,7 +111,7 @@ export default function ProductDetail() {
             {['🌱 Vegetarian', '🍞 Freshly Baked', '🌙 Halal'].map((b) => (
               <span
                 key={b}
-                className="rounded-full bg-warmgray px-3 py-1.5 text-xs font-semibold text-neutral-500"
+                className="rounded-full bg-blush-100 px-3 py-1.5 text-xs font-semibold text-neutral-500"
               >
                 {b}
               </span>
@@ -175,7 +175,7 @@ export default function ProductDetail() {
 
       {/* Related */}
       {related.length > 0 && (
-        <section className="mt-16 rounded-3xl bg-warmgray p-8">
+        <section className="mt-16 rounded-3xl bg-blush-100 p-8">
           <h2 className="text-2xl text-navy">You may also like</h2>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {related.map((p) => (

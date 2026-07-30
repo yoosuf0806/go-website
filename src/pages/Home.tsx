@@ -72,7 +72,7 @@ export default function Home() {
                 </Link>
                 <Link
                   to="/corporate"
-                  className="rounded-full border-[1.5px] border-white/80 px-7 py-4 text-[15px] font-bold text-white transition-colors hover:bg-white hover:text-navy"
+                  className="rounded-full bg-navy px-7 py-4 text-[15px] font-bold text-white transition-transform hover:-translate-y-0.5"
                 >
                   {hero.secondaryCta}
                 </Link>
@@ -106,10 +106,7 @@ export default function Home() {
               ))}
             </div>
             <div className="mt-8 text-center">
-              <Link
-                to="/shop"
-                className="inline-block rounded-full border-2 border-navy px-7 py-3.5 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
-              >
+              <Link to="/shop" className="inline-block text-[15px] font-bold text-pink hover:text-pink-dark">
                 View All →
               </Link>
             </div>
@@ -172,7 +169,7 @@ export default function Home() {
             <div className="mt-10 text-center">
               <Link
                 to="/shop"
-                className="inline-block rounded-full border-2 border-navy px-7 py-3.5 text-[15px] font-bold text-navy transition-colors hover:bg-navy hover:text-white"
+                className="inline-block rounded-full bg-navy px-7 py-3.5 text-[15px] font-bold text-white transition-transform hover:-translate-y-0.5"
               >
                 Browse All Brownies →
               </Link>

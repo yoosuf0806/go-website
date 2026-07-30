@@ -20,7 +20,7 @@ export default function Accordion({ items }: { items: AccordionItem[] }) {
               type="button"
               onClick={() => setOpen(isOpen ? null : i)}
               aria-expanded={isOpen}
-              className="flex w-full items-center justify-between gap-4 bg-white px-5 py-4 text-left text-sm font-bold text-navy hover:bg-warmgray"
+              className="flex w-full items-center justify-between gap-4 bg-white px-5 py-4 text-left text-sm font-bold text-navy hover:bg-blush-100"
             >
               {item.title}
               <span className="text-xl text-pink">{isOpen ? '−' : '+'}</span>
