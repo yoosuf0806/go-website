@@ -111,7 +111,7 @@ export default function QuoteLandingPage({
           <div>
             <div className="mb-3 flex flex-wrap gap-2">
               {PILLS.map((p) => (
-                <span key={p} className="rounded-full bg-warmgray px-3 py-1.5 text-xs font-semibold text-neutral-500">
+                <span key={p} className="rounded-full bg-blush-100 px-3 py-1.5 text-xs font-semibold text-neutral-500">
                   {p}
                 </span>
               ))}
@@ -277,7 +277,7 @@ function SuccessBanner({ onReset }: { onReset: () => void }) {
       <button
         type="button"
         onClick={onReset}
-        className="mt-5 rounded-full border border-pink px-6 py-2.5 text-sm font-medium text-pink hover:bg-pink hover:text-white"
+        className="mt-5 text-sm font-medium text-neutral-500 underline hover:text-navy"
       >
         Submit another request
       </button>

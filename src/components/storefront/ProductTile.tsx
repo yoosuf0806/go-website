@@ -25,7 +25,7 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
       to={`/shop/${product.slug}`}
       className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white transition-all hover:-translate-y-1.5 hover:shadow-xl"
     >
-      <div className="relative aspect-square overflow-hidden bg-warmgray">
+      <div className="relative aspect-square overflow-hidden bg-blush-100">
         <BrownieImage
           src={product.imageUrl}
           alt={product.name}

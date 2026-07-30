@@ -35,7 +35,7 @@ export default function ProductGallery({
   const move = (dir: number) => setIndex((i) => (i + dir + items.length) % items.length)
 
   return (
-    <div className={`relative overflow-hidden rounded-[20px] bg-warmgray ${className}`}>
+    <div className={`relative overflow-hidden rounded-[20px] bg-blush-100 ${className}`}>
       <div
         className="flex h-full transition-transform duration-500 ease-[cubic-bezier(.4,0,.2,1)]"
         style={{ transform: `translateX(-${index * 100}%)` }}

@@ -361,7 +361,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
 
               {/* Contact recap so the customer can catch a typo before sending */}
               {details && (
-                <div className="mt-4 rounded-xl bg-warmgray px-4 py-3 text-xs text-neutral-600">
+                <div className="mt-4 rounded-xl bg-blush-100 px-4 py-3 text-xs text-neutral-600">
                   <div className="font-semibold text-navy">{details.name}</div>
                   <div>
                     📞 {details.phone}

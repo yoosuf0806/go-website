@@ -5,7 +5,7 @@ import type { IconCard } from '../../types/content'
 export default function QuoteStatsBar({ stats }: { stats: IconCard[] }) {
   if (stats.length === 0) return null
   return (
-    <div className="bg-warmgray py-8">
+    <div className="bg-blush-100 py-8">
       <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 px-6 sm:grid-cols-4">
         {stats.map((s, i) => (
           <div key={i} className="rounded-2xl bg-white px-4 py-6 text-center shadow-sm">
