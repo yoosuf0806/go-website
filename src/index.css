@@ -4,13 +4,23 @@
 
 @layer base {
   body {
-    @apply bg-white font-sans text-navy antialiased;
+    @apply bg-blush-50 font-sans text-navy antialiased;
   }
   h1,
   h2,
   h3 {
     @apply font-display font-bold;
   }
+}
+
+/* Hide the scrollbar on horizontally-swipeable mobile carousels (Hot Picks,
+   etc.) while keeping native touch/trackpad scrolling. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Pause the promo marquee when a visitor prefers reduced motion. */

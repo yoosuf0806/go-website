@@ -18,10 +18,12 @@ export default {
           light: '#3a1a0a',
         },
         warmgray: '#fdf6f0',
-        // Legacy tokens (removed once every surface is migrated).
-        blush: { 50: '#fdf2f4', 100: '#fbe7ec', 200: '#f7d0da', 300: '#f0aebf' },
-        wine: { DEFAULT: '#5d1f2f', 700: '#4a1826', 900: '#3a121d' },
-        ink: '#1a1512',
+        // Blush & Ink surface system (2026 mobile-first revamp). Blush-pink
+        // page surfaces replace neutral cream on migrated pages; pink/navy
+        // stay the CTA + body-text tokens. `warmgray`/`cream` remain in use
+        // on pages not yet migrated to this direction.
+        blush: { 50: '#fdf2f4', 100: '#f9d9e0', 200: '#f6dfe5' },
+        berry: { DEFAULT: '#a8355a', dark: '#7d1f38' },
         cream: '#fdf6f0',
       },
       fontFamily: {
