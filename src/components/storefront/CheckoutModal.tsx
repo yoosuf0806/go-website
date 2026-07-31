@@ -3,7 +3,7 @@ import { useCartStore } from '../../stores/cart'
 import { useVoucherStore } from '../../stores/voucher'
 import { cartTotals, lineTotal, totalAfterVoucher } from '../../lib/pricing'
 import { formatLKR, normalizePhone, toWhatsAppNumber } from '../../lib/format'
-import { addonSummary, orderWhatsAppLink } from '../../lib/whatsapp'
+import { addonSummary, buildOrderMessage, orderWhatsAppLink } from '../../lib/whatsapp'
 import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
 import { useCreateOrder } from '../../hooks/useCreateOrder'
 import { useCatalog } from '../../contexts/CatalogContext'
@@ -45,7 +45,20 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const [form, setForm] = useState<CheckoutDetails>(emptyForm)
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutDetails, string>>>({})
   const [details, setDetails] = useState<CheckoutDetails | null>(null)
-  const [successOrderNo, setSuccessOrderNo] = useState<number | null>(null)
+  // Snapshot of the placed order, captured before the cart is cleared so the
+  // confirmation screen can still show the recap, re-open WhatsApp, or fall
+  // back to copy/call. null until an order succeeds.
+  const [success, setSuccess] = useState<{
+    orderNo: number
+    waLink: string
+    message: string
+    lines: { name: string; qty: number; total: string }[]
+    deliveryLabel: string
+    totalLabel: string
+    isGift: boolean
+    recipientName: string
+    recipientPhone: string | null
+  } | null>(null)
 
   // The voucher code is entered in the Cart Drawer (shared store) — this step
   // only reflects the already-applied discount in the totals.
@@ -80,7 +93,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
       voucher.status === 'ok' ? { code: voucher.code.trim(), discount: voucher.discount } : null
     try {
       const { orderNo, phone } = await mutation.mutateAsync({ items, totals, details, voucher: appliedVoucher })
-      const link = orderWhatsAppLink(settings.business.whatsapp_number, {
+      const messageInput = {
         orderNo,
         items,
         totals,
@@ -97,11 +110,28 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
           recipientPhone: details.recipientPhone ? normalizePhone(details.recipientPhone) : null,
         },
         voucher: appliedVoucher,
+      }
+      const link = orderWhatsAppLink(settings.business.whatsapp_number, messageInput)
+      // Snapshot everything the confirmation screen needs BEFORE clearing the
+      // cart — items/totals are about to become empty.
+      setSuccess({
+        orderNo,
+        waLink: link,
+        message: buildOrderMessage(messageInput),
+        lines: items.map((i) => ({
+          name: i.productName,
+          qty: i.boxQty,
+          total: formatLKR(lineTotal(i)),
+        })),
+        deliveryLabel: totals.deliveryFee === 0 ? 'Free' : formatLKR(totals.deliveryFee),
+        totalLabel: formatLKR(finalTotal),
+        isGift: details.isGift,
+        recipientName: details.recipientName ?? '',
+        recipientPhone: details.recipientPhone ? normalizePhone(details.recipientPhone) : null,
       })
       window.open(link, '_blank', 'noopener,noreferrer')
       clearCart()
       voucher.remove()
-      setSuccessOrderNo(orderNo)
     } catch (err) {
       // A voucher can lose a race between "Apply" and "Confirm" (redeemed by
       // another checkout in between) — drop it so retrying doesn't repeat it.
@@ -122,11 +152,11 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
         {/* Header: logo left, back-to-cart affordance right (no nav — minimise exits) */}
         <div className="flex items-center justify-between border-b border-blush-200 bg-white px-5 py-4">
           <span className="font-display text-lg font-extrabold text-pink">Golden Oven</span>
-          {successOrderNo == null && step === 'details' ? (
+          {success == null && step === 'details' ? (
             <button type="button" onClick={onClose} className="text-sm font-medium text-neutral-500 hover:text-navy">
               ← Cart
             </button>
-          ) : successOrderNo == null ? (
+          ) : success == null ? (
             <button type="button" onClick={() => setStep('details')} className="text-sm font-medium text-neutral-500 hover:text-navy">
               ← Details
             </button>
@@ -143,7 +173,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
         </div>
 
         {/* Numbered step tracker */}
-        {successOrderNo == null && (
+        {success == null && (
           <div className="flex items-center gap-1.5 border-b border-blush-200 bg-white px-5 py-4">
             <TrackStep n={1} label="Details" state={stepNo > 1 ? 'done' : 'active'} />
             <TrackLine active={stepNo > 1} />
@@ -153,22 +183,15 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
           </div>
         )}
 
-        {/* ── SUCCESS ─────────────────────────────────────────── */}
-        {successOrderNo != null ? (
-          <div className="px-6 py-10 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl">✓</div>
-            <h2 className="font-display text-xl text-navy">Order #{successOrderNo} confirmed!</h2>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-neutral-600">
-              We've opened WhatsApp with your order details — send the message to confirm with Golden Oven.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-6 rounded-full bg-pink px-6 py-3 text-sm font-bold text-white hover:bg-pink-dark"
-            >
-              Done
-            </button>
-          </div>
+        {/* ── SUCCESS / CONFIRMATION (07) ─────────────────────── */}
+        {success != null ? (
+          <OrderConfirmation
+            success={success}
+            customerName={details?.name ?? ''}
+            waFallback={waFallback}
+            businessPhone={settings.business.whatsapp_number}
+            onClose={onClose}
+          />
         ) : step === 'details' ? (
           /* ── DETAILS ───────────────────────────────────────── */
           <>
@@ -417,9 +440,158 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   )
 }
 
+function OrderConfirmation({
+  success,
+  customerName,
+  waFallback,
+  businessPhone,
+  onClose,
+}: {
+  success: {
+    orderNo: number
+    waLink: string
+    message: string
+    lines: { name: string; qty: number; total: string }[]
+    deliveryLabel: string
+    totalLabel: string
+    isGift: boolean
+    recipientName: string
+    recipientPhone: string | null
+  }
+  customerName: string
+  waFallback: string | null
+  businessPhone: string
+  onClose: () => void
+}) {
+  const [recapOpen, setRecapOpen] = useState(false)
+  const [handoffOpen, setHandoffOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const firstName = customerName.trim().split(/\s+/)[0] || 'there'
+
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(success.message)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      // Clipboard can be blocked (insecure context / permissions) — the
+      // WhatsApp link and call button still cover the handoff.
+    }
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-6 pb-6 pt-9 text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink text-3xl text-white">✓</div>
+        <h2 className="font-display text-[32px] leading-tight text-navy">Thank you, {firstName}.</h2>
+        <p className="mx-auto mt-2.5 max-w-sm text-[15px] leading-relaxed text-neutral-600">
+          Your order is in. Send us the WhatsApp message below and we'll confirm timing and lettering within the hour.
+        </p>
+        <div className="pt-2 text-sm text-neutral-500">
+          Order <span className="font-bold text-navy">#{success.orderNo}</span>
+        </div>
+      </div>
+
+      {success.isGift && (
+        <div className="mx-6 flex items-center gap-3 rounded-2xl border border-pink/40 bg-blush-50 px-4 py-3.5">
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-pink/40 bg-white text-berry">✦</span>
+          <div className="text-[14px] leading-relaxed text-neutral-600">
+            Gift order — we'll coordinate delivery with{' '}
+            <span className="font-medium text-navy">
+              {success.recipientName}
+              {success.recipientPhone ? ` (${success.recipientPhone})` : ''}
+            </span>
+            .
+          </div>
+        </div>
+      )}
+
+      {/* Collapsible recap */}
+      <div className="mx-6 mt-3.5 overflow-hidden rounded-2xl border border-blush-200">
+        <button
+          type="button"
+          onClick={() => setRecapOpen((o) => !o)}
+          className="flex w-full items-center justify-between px-4 py-3.5"
+        >
+          <span className="text-[15px] font-medium text-navy">Order summary · {success.totalLabel}</span>
+          <span className="text-neutral-500">{recapOpen ? '−' : '+'}</span>
+        </button>
+        {recapOpen && (
+          <div className="border-t border-blush-100 px-4 pb-4">
+            {success.lines.map((l, i) => (
+              <div key={i} className="flex justify-between gap-2.5 pt-3 text-[14px] text-neutral-600">
+                <span>
+                  {l.name} · ×{l.qty}
+                </span>
+                <span className="text-navy">{l.total}</span>
+              </div>
+            ))}
+            <div className="flex justify-between pt-3 text-[14px] text-neutral-600">
+              <span>Delivery</span>
+              <span className="text-navy">{success.deliveryLabel}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-6 pt-5">
+        <a
+          href={success.waLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#25d366] py-4 text-[17px] font-bold text-white shadow-[0_14px_26px_-12px_rgba(37,211,102,0.9)]"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M21 11.6a8.4 8.4 0 0 1-12.4 7.4L4 20.5l1.6-4.4A8.4 8.4 0 1 1 21 11.6Z" />
+          </svg>
+          Continue on WhatsApp
+        </a>
+        <button type="button" onClick={onClose} className="mt-2.5 w-full py-3 text-[15px] font-medium text-neutral-500 hover:text-navy">
+          Back to shopping
+        </button>
+      </div>
+
+      {/* Handoff fallback — WhatsApp may not open on some devices */}
+      <div className="mx-6 mt-4 border-t border-blush-200 pb-6 pt-3.5">
+        <button
+          type="button"
+          onClick={() => setHandoffOpen((o) => !o)}
+          className="text-[13px] text-neutral-500 underline hover:text-navy"
+        >
+          WhatsApp didn't open?
+        </button>
+        {handoffOpen && (
+          <div className="mt-3 animate-tin rounded-2xl border border-blush-200 bg-blush-50 p-4">
+            <div className="pb-1.5 font-bold text-navy">Order #{success.orderNo} is saved</div>
+            <p className="pb-3 text-[14px] leading-relaxed text-neutral-600">
+              Your order is safely recorded — reach us any of these ways and quote the order number.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={copyMessage}
+                className="w-full rounded-xl bg-blush-100 py-3.5 text-[15px] font-bold text-berry-dark"
+              >
+                {copied ? 'Copied ✓' : 'Copy order message'}
+              </button>
+              {waFallback && (
+                <a
+                  href={`tel:+${waFallback}`}
+                  className="w-full rounded-xl bg-blush-100 py-3.5 text-center text-[15px] font-bold text-berry-dark"
+                >
+                  Call {businessPhone}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function inputCls(invalid: boolean): string {
   return [
-    'w-full rounded-xl border bg-white px-3.5 py-3.5 text-[16px] text-navy placeholder:text-neutral-400',
     'focus:outline-none focus:ring-2 focus:ring-pink/30',
     invalid ? 'border-pink' : 'border-blush-200 focus:border-pink',
   ].join(' ')
