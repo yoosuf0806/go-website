@@ -35,9 +35,16 @@ export default {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },
         },
+        // Gentle fade + rise for content that appears in place (e.g. the
+        // checkout gift/recipient card and the order-failure card).
+        tin: {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
       },
       animation: {
         marquee: 'marquee 24s linear infinite',
+        tin: 'tin 0.2s ease-out',
       },
     },
   },
