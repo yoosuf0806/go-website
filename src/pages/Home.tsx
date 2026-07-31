@@ -68,7 +68,9 @@ export default function Home() {
               </div>
             </div>
             <div className="aspect-[290/250] overflow-hidden rounded-[18px] bg-navy md:order-2 md:aspect-[4/3]">
-              {heroImage && <BrownieImage src={heroImage} alt="Golden Oven brownies" className="h-full w-full" />}
+              {heroImage && (
+                <BrownieImage src={heroImage} alt="Golden Oven brownies" className="h-full w-full" priority />
+              )}
             </div>
           </div>
         </section>
