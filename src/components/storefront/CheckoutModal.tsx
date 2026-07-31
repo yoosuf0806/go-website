@@ -214,7 +214,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
 
               {/* Your details */}
               <h2 className="mt-5 font-display text-lg text-navy">Your details</h2>
-              <div className="mt-3 flex flex-col gap-3">
+              <div className="mt-3.5 flex flex-col gap-4">
                 <Field label="Full name" error={errors.name}>
                   <Input autoComplete="name" placeholder="Your name" value={form.name} invalid={!!errors.name} onChange={(e) => set({ name: e.target.value })} />
                 </Field>
@@ -239,7 +239,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                   <p className="pb-3.5 pt-1.5 text-[13px] leading-relaxed text-neutral-500">
                     This is who we deliver to and coordinate timing with — not who's paying.
                   </p>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-4">
                     <Field label="Recipient name" error={errors.recipientName}>
                       <Input placeholder="Amma" value={form.recipientName ?? ''} invalid={!!errors.recipientName} onChange={(e) => set({ recipientName: e.target.value })} />
                     </Field>
@@ -252,7 +252,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
 
               {/* Delivery */}
               <h2 className="mt-5 font-display text-lg text-navy">Delivery</h2>
-              <div className="mt-3 flex flex-col gap-3">
+              <div className="mt-3.5 flex flex-col gap-4">
                 <Field label="Address" error={errors.address}>
                   <textarea
                     rows={2}
@@ -307,7 +307,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
               </p>
 
               {details && (
-                <div className="mt-4 flex flex-col gap-3">
+                <div className="mt-4 flex flex-col gap-4">
                   <RecapCard title="Contact" onEdit={() => setStep('details')}>
                     {details.name}
                     <br />
@@ -592,7 +592,8 @@ function OrderConfirmation({
 
 function inputCls(invalid: boolean): string {
   return [
-    'focus:outline-none focus:ring-2 focus:ring-pink/30',
+    'w-full rounded-xl border bg-white px-4 py-3.5 text-[16px] text-navy',
+    'placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-pink/30',
     invalid ? 'border-pink' : 'border-blush-200 focus:border-pink',
   ].join(' ')
 }
