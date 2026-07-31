@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, Link, NavLink, useLocation } from 'react-router-dom'
 import { useCatalog } from '../../contexts/CatalogContext'
 import { useCartStore } from '../../stores/cart'
+import { useCartUI } from '../../stores/cartUI'
 import { toWhatsAppNumber } from '../../lib/format'
 import WhatsAppIcon from '../ui/WhatsAppIcon'
 import BannerBar from './BannerBar'
@@ -25,7 +26,8 @@ export default function StorefrontLayout() {
   const { catalog } = useCatalog()
   const { settings } = catalog
   const { pathname } = useLocation()
-  const [cartOpen, setCartOpen] = useState(false)
+  const cartOpen = useCartUI((s) => s.open)
+  const setCartOpen = useCartUI((s) => s.setOpen)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const waNumber = toWhatsAppNumber(settings.business.whatsapp_number)
