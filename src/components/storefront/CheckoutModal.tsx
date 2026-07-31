@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useCartStore } from '../../stores/cart'
 import { useVoucherStore } from '../../stores/voucher'
 import { cartTotals, lineTotal, totalAfterVoucher } from '../../lib/pricing'
-import { formatLKR, normalizePhone } from '../../lib/format'
+import { formatLKR, normalizePhone, toWhatsAppNumber } from '../../lib/format'
 import { addonSummary, orderWhatsAppLink } from '../../lib/whatsapp'
 import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
 import { useCreateOrder } from '../../hooks/useCreateOrder'
@@ -27,11 +27,12 @@ interface CheckoutModalProps {
   onClose: () => void
 }
 
-// 3-step checkout modal (spec §6.4): Details → Review → Confirm. Confirm only
-// opens WhatsApp after a successful order insert, so admin records and the
-// customer message never diverge (spec §11). The Details step is styled after
-// the reference checkout: clean sectioned layout (Contact / Delivery), single
-// column, generous inputs, mobile-first.
+// 3-step checkout modal (spec §6.4 / 05-checkout.md): Details → Review →
+// Confirm. Confirm only opens WhatsApp after a successful order insert, so
+// admin records and the customer message never diverge (spec §11). Styled
+// after the Blush & Ink mockup: logo header, numbered step tracker, For
+// me / It's a gift pill toggle that branches the form, sectioned review
+// with Edit links, and a sticky footer with a live "View order" strip.
 export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const { catalog } = useCatalog()
   const { deliveryTiers, settings } = catalog
@@ -51,6 +52,8 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const voucher = useVoucherStore()
   const appliedDiscount = voucher.status === 'ok' ? voucher.discount : 0
   const finalTotal = totalAfterVoucher(totals.total, appliedDiscount)
+  const itemCount = items.reduce((n, i) => n + i.boxQty, 0)
+  const waFallback = toWhatsAppNumber(settings.business.whatsapp_number)
 
   const today = new Date().toISOString().slice(0, 10)
   const set = (patch: Partial<CheckoutDetails>) => setForm((f) => ({ ...f, ...patch }))
@@ -76,12 +79,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
     const appliedVoucher =
       voucher.status === 'ok' ? { code: voucher.code.trim(), discount: voucher.discount } : null
     try {
-      const { orderNo, phone } = await mutation.mutateAsync({
-        items,
-        totals,
-        details,
-        voucher: appliedVoucher,
-      })
+      const { orderNo, phone } = await mutation.mutateAsync({ items, totals, details, voucher: appliedVoucher })
       const link = orderWhatsAppLink(settings.business.whatsapp_number, {
         orderNo,
         items,
@@ -110,300 +108,310 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
       if (appliedVoucher && err instanceof Error && /voucher/i.test(err.message)) {
         voucher.remove()
       }
-      // mutation.error already holds the message; stay on the review step so
-      // the customer can retry without losing their details or cart.
+      // mutation.error already holds the message; stay on review so the
+      // customer can retry without losing their details or cart.
     }
   }
 
+  const stepNo = step === 'details' ? 1 : 2
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4">
-      <button aria-label="Close checkout" className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
-        {/* Branded header + step tracker */}
-        <div className="sticky top-0 z-10 border-b border-neutral-100 bg-white">
-          <div className="flex items-center justify-between px-5 py-3.5 sm:px-6">
-            <span className="font-display text-lg font-extrabold text-pink">Golden Oven</span>
+      <button aria-label="Close checkout" className="absolute inset-0 bg-navy/48" onClick={onClose} />
+      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-blush-50 shadow-xl sm:rounded-3xl">
+        {/* Header: logo left, back-to-cart affordance right (no nav — minimise exits) */}
+        <div className="flex items-center justify-between border-b border-blush-200 bg-white px-5 py-4">
+          <span className="font-display text-lg font-extrabold text-pink">Golden Oven</span>
+          {successOrderNo == null && step === 'details' ? (
+            <button type="button" onClick={onClose} className="text-sm font-medium text-neutral-500 hover:text-navy">
+              ← Cart
+            </button>
+          ) : successOrderNo == null ? (
+            <button type="button" onClick={() => setStep('details')} className="text-sm font-medium text-neutral-500 hover:text-navy">
+              ← Details
+            </button>
+          ) : (
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-navy"
             >
               ✕
             </button>
-          </div>
-          {successOrderNo == null && (
-            <div className="flex items-center justify-center gap-2 pb-4">
-              <StepDot label="Cart" state="done" />
-              <StepLine done />
-              <StepDot label="Details" state={step === 'details' ? 'active' : 'done'} icon="📋" />
-              <StepLine done={step === 'review'} />
-              <StepDot label="Review" state={step === 'review' ? 'active' : 'upcoming'} icon="🔍" />
-              <StepLine />
-              <StepDot label="WhatsApp" state="upcoming" icon="💬" />
-            </div>
           )}
         </div>
 
-        <div className="px-5 py-5 pb-safe sm:px-6">
-          {successOrderNo != null ? (
-            <div className="py-6 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl">
-                ✓
-              </div>
-              <h2 className="font-display text-xl text-navy">Order #{successOrderNo} confirmed!</h2>
-              <p className="mt-2 text-sm text-neutral-600">
-                We've opened WhatsApp with your order details — send the message to confirm with Golden
-                Oven.
-              </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-6 rounded-full bg-pink px-6 py-2.5 text-sm font-bold text-white hover:bg-pink-dark"
-              >
-                Done
-              </button>
-            </div>
-          ) : step === 'details' ? (
-            <>
-              <h2 className="font-display text-lg text-navy">Checkout</h2>
+        {/* Numbered step tracker */}
+        {successOrderNo == null && (
+          <div className="flex items-center gap-1.5 border-b border-blush-200 bg-white px-5 py-4">
+            <TrackStep n={1} label="Details" state={stepNo > 1 ? 'done' : 'active'} />
+            <TrackLine active={stepNo > 1} />
+            <TrackStep n={2} label="Review" state={stepNo === 2 ? 'active' : 'upcoming'} />
+            <TrackLine active={false} />
+            <TrackStep n={3} label="Confirm" state="upcoming" />
+          </div>
+        )}
 
-              {/* ── Gift / For me toggle ────────────────────────── */}
-              <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-xl border border-neutral-200">
-                <button
-                  type="button"
-                  onClick={() => set({ isGift: false })}
-                  className={`flex flex-col items-center gap-1 px-3 py-3.5 text-sm font-bold transition-colors ${
-                    !form.isGift ? 'bg-pink text-white' : 'text-navy hover:bg-neutral-50'
-                  }`}
-                >
-                  <span className="text-lg">🙂</span>
-                  It's for me
-                </button>
-                <button
-                  type="button"
-                  onClick={() => set({ isGift: true })}
-                  className={`flex flex-col items-center gap-1 border-l border-neutral-200 px-3 py-3.5 text-sm font-bold transition-colors ${
-                    form.isGift ? 'bg-pink text-white' : 'text-navy hover:bg-neutral-50'
-                  }`}
-                >
-                  <span className="text-lg">🎁</span>
-                  It's a gift
-                </button>
-              </div>
-
-              {form.isGift && (
-                <section className="mt-5 rounded-xl border border-neutral-200 p-4">
-                  <CardTitle icon="🎁" title="Recipient Information" />
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Recipient's name" error={errors.recipientName} required>
-                      <Input
-                        type="text"
-                        placeholder="Full name"
-                        value={form.recipientName ?? ''}
-                        invalid={!!errors.recipientName}
-                        onChange={(e) => set({ recipientName: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Recipient's phone" error={errors.recipientPhone} required>
-                      <Input
-                        type="tel"
-                        placeholder="07X XXX XXXX"
-                        value={form.recipientPhone ?? ''}
-                        invalid={!!errors.recipientPhone}
-                        onChange={(e) => set({ recipientPhone: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-                </section>
-              )}
-
-              {/* ── Contact ─────────────────────────────────────── */}
-              <section className="mt-5 rounded-xl border border-neutral-200 p-4">
-                <CardTitle icon="👤" title="Contact" />
-                <div className="mt-3 flex flex-col gap-3">
-                  <Field label="Full name" error={errors.name} required>
-                    <Input
-                      type="text"
-                      autoComplete="name"
-                      placeholder="Your name"
-                      value={form.name}
-                      invalid={!!errors.name}
-                      onChange={(e) => set({ name: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="Email" error={errors.email} required>
-                    <Input
-                      type="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      value={form.email}
-                      invalid={!!errors.email}
-                      onChange={(e) => set({ email: e.target.value })}
-                    />
-                  </Field>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label="Phone" error={errors.phone} required>
-                      <Input
-                        type="tel"
-                        autoComplete="tel"
-                        placeholder="07X XXX XXXX"
-                        value={form.phone}
-                        invalid={!!errors.phone}
-                        onChange={(e) => set({ phone: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Alternative contact" error={errors.altPhone} optional>
-                      <Input
-                        type="tel"
-                        autoComplete="tel"
-                        placeholder="Optional 2nd number"
-                        value={form.altPhone ?? ''}
-                        invalid={!!errors.altPhone}
-                        onChange={(e) => set({ altPhone: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-                </div>
-              </section>
-
-              {/* ── Delivery ────────────────────────────────────── */}
-              <section className="mt-5 rounded-xl border border-neutral-200 p-4">
-                <CardTitle icon="📍" title="Address Details" />
-                <div className="mt-3 flex flex-col gap-3">
-                  <Field label="Delivery address" error={errors.address} required>
-                    <textarea
-                      rows={2}
-                      autoComplete="street-address"
-                      placeholder="House / street, area, city"
-                      value={form.address}
-                      onChange={(e) => set({ address: e.target.value })}
-                      className={inputCls(!!errors.address)}
-                    />
-                  </Field>
-                  <Field label="Delivery date" error={errors.deliveryDate} required>
-                    <Input
-                      type="date"
-                      min={today}
-                      value={form.deliveryDate}
-                      invalid={!!errors.deliveryDate}
-                      onChange={(e) => set({ deliveryDate: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="Note" error={errors.note} optional>
-                    <textarea
-                      rows={2}
-                      placeholder="Anything we should know? (e.g. gate code)"
-                      value={form.note ?? ''}
-                      onChange={(e) => set({ note: e.target.value })}
-                      className={inputCls(!!errors.note)}
-                    />
-                  </Field>
-                </div>
-              </section>
-
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="mt-6 w-full rounded-full bg-pink py-3 text-sm font-bold text-white transition-colors hover:bg-pink-dark"
-              >
-                Continue to review
-              </button>
-            </>
-          ) : (
-            <>
-              <h2 className="font-display text-lg text-navy">Review your order</h2>
-              <ul className="mt-4 flex flex-col gap-3">
-                {items.map((item) => (
-                  <li key={item.key} className="text-sm">
-                    <div className="flex justify-between">
-                      <span>
-                        {item.productName} — {item.packageLabel} × {item.boxQty}
-                      </span>
-                      <span className="font-medium">{formatLKR(lineTotal(item))}</span>
-                    </div>
-                    {addonSummary(item) && (
-                      <p className="text-xs text-neutral-500">{addonSummary(item)}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {/* Gift voucher — applied from the cart drawer; shown here read-only */}
-              {voucher.status === 'ok' && (
-                <div className="mt-4 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-                  <span>Voucher applied — {voucher.code.trim().toUpperCase()}</span>
-                  <button type="button" onClick={voucher.remove} className="font-medium underline hover:no-underline">
-                    Remove
+        {/* ── SUCCESS ─────────────────────────────────────────── */}
+        {successOrderNo != null ? (
+          <div className="px-6 py-10 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl">✓</div>
+            <h2 className="font-display text-xl text-navy">Order #{successOrderNo} confirmed!</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-neutral-600">
+              We've opened WhatsApp with your order details — send the message to confirm with Golden Oven.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-6 rounded-full bg-pink px-6 py-3 text-sm font-bold text-white hover:bg-pink-dark"
+            >
+              Done
+            </button>
+          </div>
+        ) : step === 'details' ? (
+          /* ── DETAILS ───────────────────────────────────────── */
+          <>
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              {/* For me / It's a gift pill toggle */}
+              <div className="flex rounded-full border border-blush-200 bg-white p-1">
+                {([false, true] as const).map((gift) => (
+                  <button
+                    key={String(gift)}
+                    type="button"
+                    onClick={() => set({ isGift: gift })}
+                    className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-colors ${
+                      form.isGift === gift ? 'bg-pink text-white' : 'text-navy'
+                    }`}
+                  >
+                    {gift ? "It's a gift" : 'For me'}
                   </button>
+                ))}
+              </div>
+
+              {/* Your details */}
+              <h2 className="mt-5 font-display text-lg text-navy">Your details</h2>
+              <div className="mt-3 flex flex-col gap-3">
+                <Field label="Full name" error={errors.name}>
+                  <Input autoComplete="name" placeholder="Your name" value={form.name} invalid={!!errors.name} onChange={(e) => set({ name: e.target.value })} />
+                </Field>
+                <Field label="Mobile number" error={errors.phone} hint="We'll message you here on WhatsApp.">
+                  <Input type="tel" autoComplete="tel" placeholder="07X XXX XXXX" value={form.phone} invalid={!!errors.phone} onChange={(e) => set({ phone: e.target.value })} />
+                </Field>
+                <Field label="Email" error={errors.email}>
+                  <Input type="email" autoComplete="email" placeholder="you@example.com" value={form.email} invalid={!!errors.email} onChange={(e) => set({ email: e.target.value })} />
+                </Field>
+                <Field label="Alternative contact" error={errors.altPhone} optional>
+                  <Input type="tel" autoComplete="tel" placeholder="Optional 2nd number" value={form.altPhone ?? ''} invalid={!!errors.altPhone} onChange={(e) => set({ altPhone: e.target.value })} />
+                </Field>
+              </div>
+
+              {/* Recipient card — gift orders only */}
+              {form.isGift && (
+                <div className="mt-5 rounded-2xl border border-blush-200 bg-white p-4 animate-tin">
+                  <div className="flex items-center gap-2.5 pb-1">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-blush-200 bg-blush-50 text-berry">✦</span>
+                    <h3 className="font-display text-[17px] text-navy">Who's receiving it?</h3>
+                  </div>
+                  <p className="pb-3.5 pt-1.5 text-[13px] leading-relaxed text-neutral-500">
+                    This is who we deliver to and coordinate timing with — not who's paying.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <Field label="Recipient name" error={errors.recipientName}>
+                      <Input placeholder="Amma" value={form.recipientName ?? ''} invalid={!!errors.recipientName} onChange={(e) => set({ recipientName: e.target.value })} />
+                    </Field>
+                    <Field label="Recipient mobile" error={errors.recipientPhone}>
+                      <Input type="tel" placeholder="07X XXX XXXX" value={form.recipientPhone ?? ''} invalid={!!errors.recipientPhone} onChange={(e) => set({ recipientPhone: e.target.value })} />
+                    </Field>
+                  </div>
                 </div>
               )}
 
-              <div className="mt-4 border-t border-neutral-200 pt-3">
-                <div className="flex justify-between text-sm text-neutral-600">
-                  <span>Subtotal</span>
-                  <span>{formatLKR(totals.subtotal)}</span>
-                </div>
-                <div className="mt-1 flex justify-between text-sm text-neutral-600">
-                  <span>Delivery ({totals.totalPieces} pcs)</span>
-                  <span>{formatLKR(totals.deliveryFee)}</span>
-                </div>
-                {appliedDiscount > 0 && (
-                  <div className="mt-1 flex justify-between text-sm text-green-700">
-                    <span>Voucher discount</span>
-                    <span>−{formatLKR(appliedDiscount)}</span>
-                  </div>
-                )}
-                <div className="mt-2 flex justify-between text-base font-semibold text-navy">
-                  <span>Total</span>
-                  <span>{formatLKR(finalTotal)}</span>
-                </div>
+              {/* Delivery */}
+              <h2 className="mt-5 font-display text-lg text-navy">Delivery</h2>
+              <div className="mt-3 flex flex-col gap-3">
+                <Field label="Address" error={errors.address}>
+                  <textarea
+                    rows={2}
+                    autoComplete="street-address"
+                    placeholder="No. 24, Rosmead Place, Colombo 07"
+                    value={form.address}
+                    onChange={(e) => set({ address: e.target.value })}
+                    className={inputCls(!!errors.address)}
+                  />
+                </Field>
+                <Field label="Delivery date" error={errors.deliveryDate}>
+                  <Input type="date" min={today} value={form.deliveryDate} invalid={!!errors.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} />
+                </Field>
+                <Field label="Note" error={errors.note} optional>
+                  <textarea
+                    rows={2}
+                    placeholder="Anything we should know? (e.g. gate code)"
+                    value={form.note ?? ''}
+                    onChange={(e) => set({ note: e.target.value })}
+                    className={inputCls(!!errors.note)}
+                  />
+                </Field>
               </div>
+            </div>
 
-              {/* Contact recap so the customer can catch a typo before sending */}
+            {/* Sticky footer: View order strip + CTA */}
+            <div className="border-t border-blush-200 bg-white">
+              <div className="flex items-center justify-between border-b border-blush-100 px-5 py-3">
+                <span className="text-sm text-neutral-500">
+                  View order · {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                </span>
+                <span className="font-bold text-navy">{formatLKR(finalTotal)}</span>
+              </div>
+              <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark"
+                >
+                  Continue to review
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* ── REVIEW ────────────────────────────────────────── */
+          <>
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              <h2 className="font-display text-[26px] text-navy">Look right?</h2>
+              <p className="mt-1 text-sm leading-relaxed text-neutral-500">
+                Nothing is charged here. We'll confirm everything on WhatsApp.
+              </p>
+
               {details && (
-                <div className="mt-4 rounded-xl bg-blush-100 px-4 py-3 text-xs text-neutral-600">
-                  <div className="font-semibold text-navy">{details.name}</div>
-                  <div>
-                    📞 {details.phone}
-                    {details.altPhone ? ` · ${details.altPhone}` : ''}
-                  </div>
-                  <div>✉️ {details.email}</div>
-                  <div>📍 {details.address}</div>
+                <div className="mt-4 flex flex-col gap-3">
+                  <RecapCard title="Contact" onEdit={() => setStep('details')}>
+                    {details.name}
+                    <br />
+                    {details.phone}
+                    {details.altPhone ? ` · ${details.altPhone}` : ''} · {details.email}
+                  </RecapCard>
+
                   {details.isGift && (
-                    <div className="mt-2 border-t border-neutral-200 pt-2">
-                      <span className="font-semibold text-pink">🎁 Gift for:</span> {details.recipientName}
-                      {details.recipientPhone ? ` · 📞 ${details.recipientPhone}` : ''}
+                    <RecapCard title="Gift · recipient" tone="gift" onEdit={() => setStep('details')}>
+                      {details.recipientName}
+                      {details.recipientPhone ? ` · ${details.recipientPhone}` : ''}
+                    </RecapCard>
+                  )}
+
+                  <RecapCard title="Delivery" onEdit={() => setStep('details')}>
+                    {details.address}
+                    <br />
+                    <span className="text-neutral-500">{details.deliveryDate}</span>
+                    {details.note ? (
+                      <>
+                        <br />
+                        <span className="text-neutral-500">{details.note}</span>
+                      </>
+                    ) : null}
+                  </RecapCard>
+
+                  {/* Order */}
+                  <div className="rounded-2xl border border-blush-200 bg-white p-4">
+                    <div className="flex items-center justify-between pb-3">
+                      <span className="text-[13px] font-bold uppercase tracking-wide text-neutral-500">Order</span>
+                      <button type="button" onClick={onClose} className="text-sm font-medium text-pink">
+                        Edit
+                      </button>
+                    </div>
+                    <ul className="flex flex-col gap-2.5">
+                      {items.map((item) => (
+                        <li key={item.key} className="flex items-center justify-between gap-3 text-sm">
+                          <div className="min-w-0">
+                            <div className="text-navy">{item.productName}</div>
+                            <div className="truncate text-[13px] text-neutral-500">
+                              {[item.packageLabel, addonSummary(item)].filter(Boolean).join(' · ')} · ×{item.boxQty}
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-navy">{formatLKR(lineTotal(item))}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {voucher.status === 'ok' && (
+                      <div className="mt-3 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+                        <span>Voucher applied — {voucher.code.trim().toUpperCase()}</span>
+                        <button type="button" onClick={voucher.remove} className="font-medium underline hover:no-underline">
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    <div className="mt-3 border-t border-blush-100 pt-2.5">
+                      <div className="flex justify-between pb-1 text-sm text-neutral-600">
+                        <span>Subtotal</span>
+                        <span>{formatLKR(totals.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-neutral-600">
+                        <span>Delivery ({totals.totalPieces} pcs)</span>
+                        <span>{totals.deliveryFee === 0 ? 'Free' : formatLKR(totals.deliveryFee)}</span>
+                      </div>
+                      {appliedDiscount > 0 && (
+                        <div className="mt-1 flex justify-between text-sm text-green-700">
+                          <span>Voucher discount</span>
+                          <span>−{formatLKR(appliedDiscount)}</span>
+                        </div>
+                      )}
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <span className="text-base font-bold text-navy">Total</span>
+                        <span className="text-xl font-bold text-navy">{formatLKR(finalTotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Failure retry state */}
+                  {mutation.isError && (
+                    <div className="rounded-2xl border border-pink bg-white p-4 animate-tin">
+                      <div className="pb-1.5 font-bold text-pink">We couldn't save that order</div>
+                      <p className="pb-3 text-sm leading-relaxed text-neutral-600">
+                        Nothing was lost and nothing was charged — your details are still here. Try again, or message us
+                        and we'll take it from there.
+                      </p>
+                      <div className="flex gap-2.5">
+                        <button
+                          type="button"
+                          onClick={handleConfirm}
+                          disabled={mutation.isPending}
+                          className="flex-1 rounded-xl bg-pink py-3.5 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
+                        >
+                          Try again
+                        </button>
+                        {waFallback && (
+                          <a
+                            href={`https://wa.me/${waFallback}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 rounded-xl bg-[#25d366] py-3.5 text-center text-sm font-bold text-white"
+                          >
+                            WhatsApp us
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
+            </div>
 
-              {mutation.isError && (
-                <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {mutation.error.message} — nothing was charged, please retry.
-                </p>
-              )}
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStep('details')}
-                  className="flex-1 rounded-full border border-neutral-300 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  disabled={mutation.isPending}
-                  className="flex-1 rounded-full bg-pink py-3 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
-                >
-                  {mutation.isPending ? 'Confirming…' : mutation.isError ? 'Retry' : 'Confirm order'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+            {/* Sticky footer: Confirm */}
+            <div className="border-t border-blush-200 bg-white px-4 pb-[max(1.125rem,env(safe-area-inset-bottom))] pt-3.5">
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={mutation.isPending}
+                className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:opacity-50"
+              >
+                {mutation.isPending ? 'Confirming…' : 'Confirm order'}
+              </button>
+              <p className="pt-2.5 text-center text-[13px] text-neutral-500">
+                Next: we open WhatsApp with your order pre-filled.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -411,83 +419,94 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
 
 function inputCls(invalid: boolean): string {
   return [
-    'w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-navy placeholder:text-neutral-400',
-    'focus:outline-none focus:ring-2 focus:ring-pink/40',
-    invalid ? 'border-red-400' : 'border-neutral-300 focus:border-pink',
+    'w-full rounded-xl border bg-white px-3.5 py-3.5 text-[16px] text-navy placeholder:text-neutral-400',
+    'focus:outline-none focus:ring-2 focus:ring-pink/30',
+    invalid ? 'border-pink' : 'border-blush-200 focus:border-pink',
   ].join(' ')
 }
 
-function Input({
-  invalid,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
+function Input({ invalid, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
   return <input {...props} className={inputCls(!!invalid)} />
 }
 
 function Field({
   label,
   error,
-  required,
+  hint,
   optional,
   children,
 }: {
   label: string
   error?: string
-  required?: boolean
+  hint?: string
   optional?: boolean
   children: React.ReactNode
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-navy">
+      <span className="text-[13px] font-medium text-neutral-500">
         {label}
-        {optional && <span className="ml-1 font-normal text-neutral-400">(optional)</span>}
-        {required && <span className="ml-0.5 text-pink">*</span>}
+        {optional && <span className="ml-1 text-neutral-400">(optional)</span>}
       </span>
-      <div className="mt-1">{children}</div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      <div className="mt-1.5">{children}</div>
+      {error ? (
+        <p className="mt-1.5 text-[13px] text-pink">{error}</p>
+      ) : hint ? (
+        <p className="mt-1.5 text-[13px] text-neutral-500">{hint}</p>
+      ) : null}
     </label>
   )
 }
 
-function CardTitle({ icon, title }: { icon: string; title: string }) {
+// One recap card on the Review step. `tone="gift"` gives the recipient card
+// the pink-tinted border that visually distinguishes it, matching the mockup.
+function RecapCard({
+  title,
+  tone = 'default',
+  onEdit,
+  children,
+}: {
+  title: string
+  tone?: 'default' | 'gift'
+  onEdit: () => void
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pink-light text-sm">{icon}</span>
-      <h3 className="font-display text-base text-navy">{title}</h3>
+    <div className={`rounded-2xl border bg-white p-4 ${tone === 'gift' ? 'border-pink/40' : 'border-blush-200'}`}>
+      <div className="flex items-center justify-between pb-2">
+        <span className={`text-[13px] font-bold uppercase tracking-wide ${tone === 'gift' ? 'text-berry' : 'text-neutral-500'}`}>
+          {title}
+        </span>
+        <button type="button" onClick={onEdit} className="text-sm font-medium text-pink">
+          Edit
+        </button>
+      </div>
+      <div className="text-[15px] leading-relaxed text-navy">{children}</div>
     </div>
   )
 }
 
-function StepDot({
-  label,
-  state,
-  icon,
-}: {
-  label: string
-  state: 'done' | 'active' | 'upcoming'
-  icon?: string
-}) {
+function TrackStep({ n, label, state }: { n: number; label: string; state: 'done' | 'active' | 'upcoming' }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div
-        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
-          state === 'done'
+    <div className="flex flex-1 flex-col items-center gap-1.5">
+      <span
+        className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+          state === 'active'
             ? 'bg-pink text-white'
-            : state === 'active'
-              ? 'bg-pink text-white shadow-[0_0_0_3px_rgba(217,45,86,0.25)]'
-              : 'bg-neutral-100 text-neutral-400'
+            : state === 'done'
+              ? 'border border-pink bg-blush-50 text-pink'
+              : 'border border-blush-200 bg-blush-50 text-neutral-500'
         }`}
       >
-        {state === 'done' ? '✓' : icon}
-      </div>
-      <span className={`text-[10px] font-semibold ${state === 'upcoming' ? 'text-neutral-400' : 'text-navy'}`}>
+        {state === 'done' ? '✓' : n}
+      </span>
+      <span className={`text-xs ${state === 'upcoming' ? 'font-medium text-neutral-500' : 'font-bold text-navy'}`}>
         {label}
       </span>
     </div>
   )
 }
 
-function StepLine({ done = false }: { done?: boolean }) {
-  return <div className={`mb-3.5 h-0.5 w-6 rounded ${done ? 'bg-pink' : 'bg-neutral-200'}`} />
+function TrackLine({ active }: { active: boolean }) {
+  return <span className={`mb-6 h-0.5 flex-1 ${active ? 'bg-pink' : 'bg-blush-200'}`} />
 }
