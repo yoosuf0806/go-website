@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { CatalogProduct, CatalogPackage, CatalogAddon, ProductPackageStockMap } from '../../types/catalog'
 import { stockKey } from '../../types/catalog'
 import { lineTotal, type CartItem } from '../../lib/pricing'
@@ -51,6 +51,8 @@ export default function ProductConfigurator({
   const [packageId, setPackageId] = useState(firstInStock?.id ?? '')
   const [addonSelection, setAddonSelection] = useState<AddonSelection>(emptyAddonSelection())
   const [boxQty, setBoxQty] = useState(1)
+  const [justAdded, setJustAdded] = useState(false)
+  const toastTimer = useRef<number | undefined>(undefined)
   const addItem = useCartStore((s) => s.addItem)
 
   const selectedPackage = availablePackages.find((p) => p.id === packageId) ?? firstInStock
@@ -83,8 +85,14 @@ export default function ProductConfigurator({
     if (!previewItem || !selectedInStock) return
     addItem(previewItem)
     setBoxQty(1)
+    setJustAdded(true)
+    window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setJustAdded(false), 2200)
     onAdded?.()
   }
+
+  const pkgSummary = `${boxQty === 1 ? '1 box' : `${boxQty} boxes`} · ${selectedPackage.pieceCount * boxQty} pcs`
+  const totalLabel = previewItem ? formatLKR(lineTotal(previewItem)) : '—'
 
   return (
     <div className="flex flex-col gap-5">
@@ -113,49 +121,56 @@ export default function ProductConfigurator({
         onChange={setAddonSelection}
       />
 
-      {/* Itemised summary */}
-      <div className="rounded-2xl bg-blush-100 px-5 py-4">
-        <div className="flex items-center justify-between border-t border-neutral-200 pt-3 first:border-t-0 first:pt-0">
-          <span className="text-[13px] text-neutral-500">
-            {boxQty === 1 ? '1 box' : `${boxQty} boxes`} · {selectedPackage.pieceCount * boxQty} pcs
-          </span>
-          <span className="font-display text-[1.3rem] text-navy">
-            {previewItem ? formatLKR(lineTotal(previewItem)) : '—'}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between rounded-xl bg-blush-100 px-4 py-3">
-        <span className="text-[13px] font-bold text-navy">How many boxes?</span>
-        <div className="flex items-center overflow-hidden rounded-full border-2 border-neutral-200 bg-white">
+      <div className="flex items-center justify-between border-t border-blush-200 pt-5">
+        <span className="text-base font-medium text-navy">Boxes</span>
+        <div className="flex items-center gap-1 rounded-full border border-blush-200 p-1">
           <button
             type="button"
             onClick={() => setBoxQty((q) => Math.max(1, q - 1))}
             aria-label="Decrease box quantity"
-            className="flex h-9 w-9 items-center justify-center text-xl font-bold text-navy hover:bg-pink-light hover:text-pink"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-blush-50 text-xl font-medium text-navy hover:bg-blush-100"
           >
             −
           </button>
-          <span className="min-w-9 text-center font-bold text-navy">{boxQty}</span>
+          <span className="min-w-10 text-center text-[17px] font-bold text-navy">{boxQty}</span>
           <button
             type="button"
             onClick={() => setBoxQty((q) => q + 1)}
             aria-label="Increase box quantity"
-            className="flex h-9 w-9 items-center justify-center text-xl font-bold text-navy hover:bg-pink-light hover:text-pink"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-blush-50 text-xl font-medium text-navy hover:bg-blush-100"
           >
             +
           </button>
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleAddToCart}
-        disabled={!selectedInStock}
-        className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:hover:bg-neutral-300"
-      >
-        {selectedInStock ? 'Add to Cart 🛒' : 'Sold Out'}
-      </button>
+      {/* Sticky on mobile so the CTA + live price never scroll away (spec:
+          "never let it scroll away"); a normal inline panel on desktop where
+          there's no scroll-hunt problem to solve. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-blush-200 bg-white/96 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:static lg:rounded-2xl lg:border lg:bg-blush-100 lg:px-5 lg:py-4 lg:backdrop-blur-none">
+        <div className="flex-none">
+          <div className="text-xs text-neutral-500">{pkgSummary}</div>
+          <div className="font-display text-[1.2rem] text-navy">{totalLabel}</div>
+        </div>
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={!selectedInStock}
+          className="flex-1 rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:hover:bg-neutral-300"
+        >
+          {selectedInStock ? 'Add to Cart' : 'Sold Out'}
+        </button>
+      </div>
+
+      {justAdded && (
+        <div
+          className="fixed inset-x-4 bottom-[5.5rem] z-30 flex items-center gap-2.5 rounded-2xl bg-navy px-4 py-3.5 text-sm font-medium text-white shadow-lg lg:hidden"
+          role="status"
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#25d366] text-xs font-bold">✓</span>
+          Added to cart
+        </div>
+      )}
     </div>
   )
 }
