@@ -84,7 +84,7 @@ export default function Home() {
 
       {/* TRUST BAR */}
       {vis.trust !== false && (
-      <div className="bg-blush-50 py-7">
+      <div className="bg-blush-100 py-7">
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 px-6 text-center sm:grid-cols-3">
           {trust.map((t) => (
             <Trust key={t.title} icon={t.icon} title={t.title} body={t.body} />
@@ -118,7 +118,7 @@ export default function Home() {
       {vis.slideshow !== false && <Slideshow promoSlides={content.promoSlides} />}
 
       {/* SLAB SPOTLIGHT — "Say It With a Brownie Slab" */}
-      <section className="bg-blush-50 px-6 py-10 md:py-16">
+      <section className="bg-blush-100 px-6 py-10 md:py-16">
         <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2">
           <div
             className="aspect-square rounded-[20px] bg-navy bg-cover bg-center shadow-[0_30px_60px_rgba(26,10,0,0.2)]"
@@ -180,7 +180,7 @@ export default function Home() {
 
       {/* CATEGORY GRID */}
       {vis.categories !== false && (
-      <section className="bg-blush-50 px-6 py-10 md:py-16">
+      <section className="bg-blush-100 px-6 py-10 md:py-16">
         <div className="mx-auto max-w-6xl">
           <SectionHeader
             title="Find Your Perfect Box"
@@ -234,7 +234,7 @@ export default function Home() {
 
       {/* CTA BANNER */}
       {vis.ctaBanner !== false && (
-      <section className="bg-blush-50 px-6 py-10 md:py-14 text-center">
+      <section className="bg-blush-100 px-6 py-10 md:py-14 text-center">
         <h2 className="text-[clamp(2rem,4vw,3.5rem)] text-navy">{ctaBanner.title}</h2>
         <p className="mx-auto mt-4 max-w-md text-lg text-neutral-500">{ctaBanner.body}</p>
         <Link
@@ -262,7 +262,7 @@ export default function Home() {
 
       {/* TESTIMONIALS */}
       {vis.testimonials !== false && reviews_section && featuredReviews.length > 0 && (
-        <section className="bg-blush-50 px-6 py-10 md:py-16">
+        <section className="bg-blush-100 px-6 py-10 md:py-16">
           <div className="mx-auto max-w-6xl">
             <SectionHeader title={testimonialsHeading.title} sub={testimonialsHeading.sub} />
             <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -304,7 +304,7 @@ export default function Home() {
       )}
 
       {/* BADGE STRIP */}
-      <div className="bg-blush-50 px-6 py-10 md:py-16">
+      <div className="bg-blush-100 px-6 py-10 md:py-16">
         <div className="mx-auto grid max-w-5xl grid-cols-2 gap-8 lg:grid-cols-4">
           {badges.map((b) => (
             <Badge key={b.title} icon={b.icon} title={b.title} body={b.body} />
