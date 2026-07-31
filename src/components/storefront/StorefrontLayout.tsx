@@ -197,8 +197,8 @@ function Footer() {
   return (
     <footer className="bg-navy px-6 pb-8 pt-16 text-white">
       <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
-          <div>
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
             <Link to="/" className="font-display text-2xl lowercase text-pink">
               golden oven
             </Link>
@@ -251,6 +251,13 @@ function Footer() {
             links={[
               { to: '/shop', label: 'Delivery Zones' },
               { to: '/shop', label: 'How It Works' },
+            ]}
+          />
+          <FooterCol
+            title="Policies"
+            links={[
+              { to: '/policies/returns', label: 'Return Policy' },
+              { to: '/policies/payment', label: 'Payment Terms' },
             ]}
           />
         </div>
