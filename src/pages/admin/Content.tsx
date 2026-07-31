@@ -140,6 +140,56 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         <Text label="Button" value={form.ctaBanner.cta} onChange={(v) => set('ctaBanner', { ...form.ctaBanner, cta: v })} />
       </Section>
 
+      <Section title="Homepage · Corporate band">
+        <Text label="Eyebrow" value={form.homeCorporate.eyebrow} onChange={(v) => set('homeCorporate', { ...form.homeCorporate, eyebrow: v })} />
+        <Text label="Title" value={form.homeCorporate.title} onChange={(v) => set('homeCorporate', { ...form.homeCorporate, title: v })} />
+        <Area label="Body" value={form.homeCorporate.body} onChange={(v) => set('homeCorporate', { ...form.homeCorporate, body: v })} />
+        <Text label="Button" value={form.homeCorporate.cta} onChange={(v) => set('homeCorporate', { ...form.homeCorporate, cta: v })} />
+      </Section>
+
+      <Section title="Homepage · FAQ">
+        <FaqEditor items={form.homeFaq} onChange={(v) => set('homeFaq', v)} />
+      </Section>
+
+      <Section title="Footer · Policy pages">
+        <p className="text-xs text-neutral-500">
+          Shown in the footer under “Policies”. Leave a blank line between paragraphs. Linked at /policies/returns and
+          /policies/payment.
+        </p>
+        <div className="rounded border border-neutral-100 p-3">
+          <Text
+            label="Return Policy — title"
+            value={form.policies.returns.title}
+            onChange={(v) => set('policies', { ...form.policies, returns: { ...form.policies.returns, title: v } })}
+          />
+          <label className="mt-2 block text-sm">
+            <span className="text-neutral-600">Return Policy — body</span>
+            <textarea
+              rows={8}
+              value={form.policies.returns.body}
+              onChange={(e) => set('policies', { ...form.policies, returns: { ...form.policies.returns, body: e.target.value } })}
+              className={textareaCls}
+            />
+          </label>
+        </div>
+        <div className="rounded border border-neutral-100 p-3">
+          <Text
+            label="Payment Terms — title"
+            value={form.policies.payment.title}
+            onChange={(v) => set('policies', { ...form.policies, payment: { ...form.policies.payment, title: v } })}
+          />
+          <label className="mt-2 block text-sm">
+            <span className="text-neutral-600">Payment Terms — body</span>
+            <textarea
+              rows={8}
+              value={form.policies.payment.body}
+              onChange={(e) => set('policies', { ...form.policies, payment: { ...form.policies.payment, body: e.target.value } })}
+              className={textareaCls}
+            />
+          </label>
+        </div>
+      </Section>
+
       <Section title="How it works">
         <IconCards items={form.howItWorks} onChange={(v) => set('howItWorks', v)} iconLabel="Step" />
       </Section>
@@ -489,7 +539,8 @@ function PromoSlidesEditor({
   )
 }
 
-// Manage the corporate-page FAQ list (question + answer).
+// Manage a FAQ list (question + answer) with add / edit / delete. Reused for
+// the homepage FAQ and the corporate/wedding page FAQs.
 function FaqEditor({ items, onChange }: { items: FaqItem[]; onChange: (v: FaqItem[]) => void }) {
   const update = (i: number, patch: Partial<FaqItem>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const remove = (i: number) => onChange(items.filter((_, j) => j !== i))

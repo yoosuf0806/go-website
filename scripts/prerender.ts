@@ -41,6 +41,8 @@ async function main() {
     { url: '/shop', out: 'shop/index.html' },
     { url: '/corporate', out: 'corporate/index.html' },
     { url: '/wedding', out: 'wedding/index.html' },
+    { url: '/policies/returns', out: 'policies/returns/index.html' },
+    { url: '/policies/payment', out: 'policies/payment/index.html' },
     ...catalog.products.map((p) => ({
       url: `/shop/${p.slug}`,
       out: `shop/${p.slug}/index.html`,

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCatalog } from '../contexts/CatalogContext'
 import { toWhatsAppNumber } from '../lib/format'
@@ -17,7 +18,7 @@ export default function Home() {
   const { catalog } = useCatalog()
   const { reviews: featuredReviews, settings, content, products, packages } = catalog
   const { reviews_section } = settings.features
-  const { hero, trust, ctaBanner, testimonialsHeading } = content
+  const { hero, trust, ctaBanner, testimonialsHeading, homeCorporate, homeFaq } = content
   const vis = content.sectionVisibility
 
   const hotPicks = products.filter((p) => p.isHotPick && p.inStock)
@@ -123,7 +124,7 @@ export default function Home() {
             <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">
               9, 12 or 15 pieces. Your flavours, their name on top.
             </p>
-            <div className="mt-4 aspect-[326/140] overflow-hidden rounded-[14px] bg-blush-50 md:mt-5 md:flex-1">
+            <div className="mt-4 aspect-[326/220] overflow-hidden rounded-[14px] bg-blush-50 md:mt-5 md:aspect-[4/3] md:flex-1">
               {slabImage && <BrownieImage src={slabImage} alt="Brownie slab" className="h-full w-full" />}
             </div>
             <Link
@@ -187,39 +188,16 @@ export default function Home() {
       <section className="mt-6 bg-navy px-[22px] py-7 text-blush-50 md:mt-14 md:py-16">
         <div className="mx-auto max-w-4xl md:grid md:grid-cols-[1fr_auto] md:items-center md:gap-10">
           <div>
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#f4b9c8]">Corporate</span>
-            <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-white md:text-[36px]">50 boxes. One invoice.</h2>
-            <p className="mt-2 text-[15px] leading-relaxed text-blush-50/70 md:text-lg">
-              Branded toppers, scheduled delivery, formal quotation.
-            </p>
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#f4b9c8]">{homeCorporate.eyebrow}</span>
+            <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-white md:text-[36px]">{homeCorporate.title}</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-blush-50/70 md:text-lg">{homeCorporate.body}</p>
           </div>
           <Link
             to="/corporate"
             className="mt-4 block rounded-2xl bg-pink py-4 text-center text-base font-bold text-white transition-colors hover:bg-pink-dark md:mt-0 md:px-10"
           >
-            Request a Quote
+            {homeCorporate.cta}
           </Link>
-        </div>
-      </section>
-
-      {/* ORDER IN ONE MESSAGE — WhatsApp reassurance card */}
-      <section className="px-[22px] pt-6 md:pt-14">
-        <div className="mx-auto max-w-6xl md:px-8">
-          <div className="rounded-[18px] border border-blush-200 bg-white p-5 md:p-6">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[#25d366]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M21 11.6a8.4 8.4 0 0 1-12.4 7.4L4 20.5l1.6-4.4A8.4 8.4 0 1 1 21 11.6Z" />
-                </svg>
-              </span>
-              <div>
-                <div className="font-display text-[17px] text-navy">Order in one message</div>
-                <div className="pt-0.5 text-[13px] leading-relaxed text-neutral-500">
-                  No card needed. We confirm everything on WhatsApp.
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -250,6 +228,20 @@ export default function Home() {
         </section>
       )}
 
+      {/* FAQ — admin add/edit/delete; hidden when empty */}
+      {homeFaq.length > 0 && (
+        <section className="px-[22px] pt-7 md:py-14">
+          <div className="mx-auto max-w-3xl md:px-8">
+            <h2 className="font-display text-[25px] text-navy md:text-center md:text-[32px]">Questions, answered</h2>
+            <div className="mt-3.5 flex flex-col gap-2.5 md:mt-8">
+              {homeFaq.map((item, i) => (
+                <FaqRow key={i} q={item.q} a={item.a} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* FINAL WHATSAPP CTA */}
       {waNumber && (
         <section className="px-[22px] pb-9 pt-7 md:pb-16 md:pt-14">
@@ -265,6 +257,29 @@ export default function Home() {
             Order on WhatsApp
           </a>
         </section>
+      )}
+    </div>
+  )
+}
+
+// A single expandable FAQ row (accordion). Collapsed by default.
+function FaqRow({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="overflow-hidden rounded-2xl border border-blush-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+      >
+        <span className="text-[15px] font-medium text-navy">{q}</span>
+        <span className={`shrink-0 text-neutral-400 transition-transform ${open ? 'rotate-45' : ''}`}>+</span>
+      </button>
+      {open && (
+        <p className="whitespace-pre-line border-t border-blush-100 px-4 pb-4 pt-3 text-[14px] leading-relaxed text-neutral-600">
+          {a}
+        </p>
       )}
     </div>
   )

@@ -68,6 +68,14 @@ export interface FaqItem {
   a: string
 }
 
+// A footer policy page (Return Policy, Payment Terms). `body` is plain text;
+// blank lines separate paragraphs when rendered. Hidden from the footer when
+// the body is empty.
+export interface PolicyContent {
+  title: string
+  body: string
+}
+
 // Full-bleed banner hero at the top of a bulk-order landing page (corporate
 // or wedding). Optional background image; falls back to a navy gradient.
 export interface QuoteHero {
@@ -130,6 +138,12 @@ export interface SiteContent {
   trust: IconCard[]
   categories: OccasionCard[]
   ctaBanner: CtaBanner
+  /** Homepage "Corporate" band (the navy strip). Admin-editable copy + CTA. */
+  homeCorporate: { eyebrow: string; title: string; body: string; cta: string }
+  /** Homepage FAQ — admin add/edit/delete; hidden when empty. */
+  homeFaq: FaqItem[]
+  /** Footer policy pages (return + payment terms). Rendered at /policies/:slug. */
+  policies: { returns: PolicyContent; payment: PolicyContent }
   howItWorks: IconCard[]
   badges: IconCard[]
   testimonialsHeading: { title: string; sub: string }
@@ -188,6 +202,28 @@ export const DEFAULT_CONTENT: SiteContent = {
     title: 'Made for Every Little Win',
     body: 'From birthday boxes to corporate hampers — freshly baked, islandwide delivery, made to order.',
     cta: 'Browse All Brownies →',
+  },
+  homeCorporate: {
+    eyebrow: 'Corporate',
+    title: '50 boxes. One invoice.',
+    body: 'Branded toppers, scheduled delivery, formal quotation.',
+    cta: 'Request a Quote',
+  },
+  homeFaq: [
+    { q: 'How much notice do you need?', a: 'Most orders need 2–3 days. Slabs and bulk/corporate orders are best placed a week ahead, especially for a specific delivery date.' },
+    { q: 'Do you deliver islandwide?', a: 'Yes — we deliver across Sri Lanka. Colombo and suburbs are usually next-day; other areas may take a little longer. We confirm timing on WhatsApp.' },
+    { q: 'How do I pay?', a: 'There is no card checkout on the site. You place the order here, we confirm everything on WhatsApp, and settle by bank transfer or cash on delivery.' },
+    { q: 'Are the brownies halal?', a: 'Yes — all our ingredients are 100% halal certified.' },
+  ],
+  policies: {
+    returns: {
+      title: 'Return & Refund Policy',
+      body: 'Because every order is freshly baked to order, we cannot accept returns of the brownies themselves for change of mind.\n\nIf something is wrong with your order — the wrong items, damage in transit, or a quality issue — contact us on WhatsApp within 24 hours of delivery with a photo. We will replace the order or arrange a refund.\n\nRefunds, where agreed, are made to your original payment method (bank transfer reversal or the arrangement agreed at checkout) within 5 business days.\n\nFor cancellations: orders can be cancelled for a full refund up until baking begins. Once an order is in production we may not be able to cancel it, as ingredients have already been prepared.',
+    },
+    payment: {
+      title: 'Payment Terms',
+      body: 'Golden Oven does not take card payments on this website. You place your order here, we confirm the details and total with you on WhatsApp, and payment is settled directly.\n\nAccepted methods: bank transfer and cash on delivery. For corporate and bulk orders, we issue a formal invoice and accept bank transfer against it.\n\nOrders are confirmed once payment (or, for cash on delivery, confirmation) is received. Prices are in Sri Lankan Rupees (LKR) and include applicable taxes unless stated otherwise.\n\nFor bulk and corporate orders, payment terms are set out on the quotation we provide.',
+    },
   },
   howItWorks: [
     { icon: '1', title: 'Choose a Category', body: 'Browse Shop All, Bulk Orders, or Brownie Slab.' },
@@ -368,6 +404,14 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     ...partial,
     hero: { ...DEFAULT_CONTENT.hero, ...partial.hero },
     ctaBanner: { ...DEFAULT_CONTENT.ctaBanner, ...partial.ctaBanner },
+    homeCorporate: { ...DEFAULT_CONTENT.homeCorporate, ...partial.homeCorporate },
+    // homeFaq: an empty array is a valid "hide the FAQ" state, so keep whatever
+    // the admin saved rather than substituting defaults.
+    homeFaq: partial.homeFaq ?? DEFAULT_CONTENT.homeFaq,
+    policies: {
+      returns: { ...DEFAULT_CONTENT.policies.returns, ...partial.policies?.returns },
+      payment: { ...DEFAULT_CONTENT.policies.payment, ...partial.policies?.payment },
+    },
     testimonialsHeading: { ...DEFAULT_CONTENT.testimonialsHeading, ...partial.testimonialsHeading },
     productInfo: { ...DEFAULT_CONTENT.productInfo, ...partial.productInfo },
     seo: {
