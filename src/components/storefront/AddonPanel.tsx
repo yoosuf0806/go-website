@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { CatalogAddon, GiftRibbonConfig } from '../../types/catalog'
 import type { CartAddon } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
@@ -78,6 +79,46 @@ interface AddonPanelProps {
   disabled?: boolean
 }
 
+type OpenSection = 'topper' | 'message' | 'ribbon' | null
+
+// Accordion row shell — one section, collapsed by default. Matches the
+// mockup's toggle-row pattern: label + summary on the left, a small sign
+// (Free / +/−) on the right, expand on tap, collapse the others.
+function Row({
+  label,
+  summary,
+  sign,
+  open,
+  onToggle,
+  bordered = true,
+  children,
+}: {
+  label: string
+  summary: string
+  sign: string
+  open: boolean
+  onToggle: () => void
+  bordered?: boolean
+  children?: React.ReactNode
+}) {
+  return (
+    <div className={bordered ? 'border-t border-blush-200' : ''}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+      >
+        <div>
+          <div className="text-base font-medium text-navy">{label}</div>
+          <div className="mt-0.5 text-[13px] text-neutral-500">{summary}</div>
+        </div>
+        <span className={sign === 'Free' ? 'text-[13px] text-berry' : 'text-xl text-neutral-500'}>{sign}</span>
+      </button>
+      {open && <div className="border-t border-blush-200 px-4 pb-4 pt-1">{children}</div>}
+    </div>
+  )
+}
+
 export default function AddonPanel({
   addons,
   topperMaxChars,
@@ -86,6 +127,9 @@ export default function AddonPanel({
   onChange,
   disabled,
 }: AddonPanelProps) {
+  const [open, setOpen] = useState<OpenSection>(null)
+  const toggle = (key: OpenSection) => setOpen((cur) => (cur === key ? null : key))
+
   const message = addons.find((a) => a.id === 'gift_message')
   const ribbon = addons.find((a) => a.id === 'gift_ribbon')
 
@@ -101,100 +145,123 @@ export default function AddonPanel({
   // 12pc box, 0 — hidden — for the 9pc box).
   const showTopper = topperMaxChars > 0 && productAllowsLetterTopper
 
+  const filledLines = value.letterTopper.lines.filter((l) => l.trim() !== '')
+  const topperSummary = filledLines.length > 0 ? filledLines.join(' · ') : 'Optional — up to 3 lines'
+  const topperPreview = filledLines.join(' · ')
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="overflow-hidden rounded-2xl border border-blush-200">
       {showTopper && (
-        <div className="rounded-md border border-neutral-200 p-3">
-          <p className="text-sm font-medium text-navy">Letter Topper (free)</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+        <Row
+          label="Letter topper"
+          summary={topperSummary}
+          sign="Free"
+          open={open === 'topper'}
+          onToggle={() => toggle('topper')}
+          bordered={false}
+        >
+          <p className="text-[14px] leading-relaxed text-neutral-500">
+            {TOPPER_LINES} lines, {topperMaxChars} letters each — perfect for a name or a short message.
+          </p>
+          <div className="mt-3 flex flex-col gap-2.5">
             {value.letterTopper.lines.map((line, i) => (
-              <input
-                key={i}
-                type="text"
-                value={line}
-                disabled={disabled}
-                maxLength={topperMaxChars}
-                placeholder={`up to ${topperMaxChars} letters`}
-                onChange={(e) => {
-                  const upper = e.target.value.toUpperCase()
-                  if (!isValidTopperLine(upper, topperMaxChars)) return
-                  const lines = [...value.letterTopper.lines]
-                  lines[i] = upper
-                  onChange({ ...value, letterTopper: { lines } })
-                }}
-                className="h-11 w-24 rounded border border-neutral-300 px-2 text-center text-sm uppercase placeholder:text-[10px] placeholder:normal-case"
-              />
+              <div key={i} className="flex items-center gap-2.5">
+                <input
+                  type="text"
+                  value={line}
+                  disabled={disabled}
+                  maxLength={topperMaxChars}
+                  placeholder={`Line ${i + 1}`}
+                  onChange={(e) => {
+                    const upper = e.target.value.toUpperCase()
+                    if (!isValidTopperLine(upper, topperMaxChars)) return
+                    const lines = [...value.letterTopper.lines]
+                    lines[i] = upper
+                    onChange({ ...value, letterTopper: { lines } })
+                  }}
+                  className="h-11 flex-1 rounded-lg border border-blush-200 bg-white px-3 text-sm uppercase text-navy placeholder:normal-case placeholder:text-neutral-400 focus:border-pink focus:outline-none"
+                />
+                <span className="w-10 shrink-0 text-right text-xs text-neutral-400">
+                  {line.length}/{topperMaxChars}
+                </span>
+              </div>
             ))}
           </div>
-        </div>
+          <div className="mt-3.5 rounded-xl bg-navy p-4 text-center">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-white/45">Preview</div>
+            <div className="mt-2 min-h-8 font-display text-xl leading-tight tracking-wide text-white">
+              {topperPreview || '—'}
+            </div>
+          </div>
+        </Row>
       )}
 
       {message && (
-        <div className="rounded-md border border-neutral-200 p-3">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={value.giftMessage.enabled}
-              disabled={disabled}
-              onChange={(e) =>
-                onChange({ ...value, giftMessage: { ...value.giftMessage, enabled: e.target.checked } })
-              }
-            />
-            {message.label} (+{formatLKR(message.price)})
-          </label>
-          {value.giftMessage.enabled && (
-            <div className="mt-2">
-              <textarea
-                value={value.giftMessage.text}
-                disabled={disabled}
-                maxLength={GIFT_MESSAGE_MAX}
-                rows={2}
-                onChange={(e) =>
-                  onChange({ ...value, giftMessage: { ...value.giftMessage, text: e.target.value } })
-                }
-                className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
-              />
-              <p className="mt-0.5 text-right text-xs text-neutral-400">
-                {value.giftMessage.text.length}/{GIFT_MESSAGE_MAX}
-              </p>
-            </div>
-          )}
-        </div>
+        <Row
+          label="Gift message"
+          summary={
+            value.giftMessage.enabled && value.giftMessage.text
+              ? value.giftMessage.text
+              : `Handwritten on a card · ${GIFT_MESSAGE_MAX} chars`
+          }
+          sign={value.giftMessage.enabled ? '−' : '+'}
+          open={open === 'message'}
+          onToggle={() => {
+            const nextEnabled = open !== 'message' ? true : value.giftMessage.enabled
+            onChange({ ...value, giftMessage: { ...value.giftMessage, enabled: nextEnabled } })
+            toggle('message')
+          }}
+        >
+          <textarea
+            value={value.giftMessage.text}
+            disabled={disabled}
+            maxLength={GIFT_MESSAGE_MAX}
+            rows={3}
+            placeholder="Happy birthday, Amma — from all of us."
+            onChange={(e) =>
+              onChange({
+                ...value,
+                giftMessage: { enabled: true, text: e.target.value },
+              })
+            }
+            className="w-full resize-none rounded-xl border border-blush-200 bg-white p-3 text-[15px] leading-relaxed text-navy placeholder:text-neutral-400 focus:border-pink focus:outline-none"
+          />
+          <div className="pt-1 text-right text-xs text-neutral-500">
+            {value.giftMessage.text.length} / {GIFT_MESSAGE_MAX}
+          </div>
+          {message.price > 0 && <p className="text-xs text-neutral-500">Adds {formatLKR(message.price)}</p>}
+        </Row>
       )}
 
       {ribbon && (
-        <div className="rounded-md border border-neutral-200 p-3">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={value.giftRibbon.enabled}
-              disabled={disabled}
-              onChange={(e) =>
-                onChange({ ...value, giftRibbon: { ...value.giftRibbon, enabled: e.target.checked } })
-              }
-            />
-            {ribbon.label} (+{formatLKR(ribbon.price)})
-          </label>
-          {value.giftRibbon.enabled && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {ribbonColors.map((color) => (
+        <Row
+          label="Gift ribbon"
+          summary={value.giftRibbon.enabled && value.giftRibbon.color ? value.giftRibbon.color : 'Choose a colour'}
+          sign={value.giftRibbon.enabled ? '−' : '+'}
+          open={open === 'ribbon'}
+          onToggle={() => toggle('ribbon')}
+        >
+          <div className="flex flex-wrap gap-2.5">
+            {ribbonColors.map((color) => {
+              const selected = value.giftRibbon.enabled && value.giftRibbon.color === color
+              return (
                 <button
                   key={color}
                   type="button"
                   disabled={disabled}
-                  onClick={() => onChange({ ...value, giftRibbon: { ...value.giftRibbon, color } })}
-                  className={`min-h-[40px] rounded-full border px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
-                    value.giftRibbon.color === color
-                      ? 'border-pink bg-pink-light text-pink'
-                      : 'border-neutral-200 bg-white text-navy hover:border-pink'
+                  onClick={() => onChange({ ...value, giftRibbon: { enabled: true, color } })}
+                  className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    selected ? 'border-pink bg-pink-light text-pink' : 'border-blush-200 bg-white text-navy hover:border-pink'
                   }`}
                 >
+                  <span className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ backgroundColor: color.toLowerCase() }} />
                   {color}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+              )
+            })}
+          </div>
+          {ribbon.price > 0 && <p className="pt-2 text-xs text-neutral-500">Adds {formatLKR(ribbon.price)}</p>}
+        </Row>
       )}
     </div>
   )

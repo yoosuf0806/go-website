@@ -3,19 +3,18 @@ import { useCatalog } from '../contexts/CatalogContext'
 import { formatLKR } from '../lib/format'
 import ProductGallery from '../components/storefront/ProductGallery'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
-import ProductTile from '../components/storefront/ProductTile'
-import Accordion from '../components/storefront/Accordion'
 import Seo, { SITE_URL } from '../components/Seo'
 
 const RELATED_COUNT = 4
 
-// Product detail page (/shop/:slug) — the browniegod-style flow: gallery,
-// configure + add to cart, accordions, and related products. Each product has
-// its own URL (indexable; SEO meta + prerender wired in later chunks).
+// Product detail page (/shop/:slug): gallery, configure + add to cart
+// (sticky bottom bar on mobile — 03-product-detail.md), a single "details"
+// block, a horizontal cross-sell strip, and one featured review. Each
+// product has its own URL (indexable; SEO meta + prerender wired in).
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
   const { catalog, loading, getProductBySlug } = useCatalog()
-  const { products, packages, addons, content } = catalog
+  const { products, packages, addons, categories, reviews, settings, content } = catalog
   const product = slug ? getProductBySlug(slug) : undefined
 
   // While the live catalogue is still loading, don't flash "not found".
@@ -42,6 +41,18 @@ export default function ProductDetail() {
     .filter((p) => p.id !== product.id && p.categoryId === product.categoryId)
     .concat(products.filter((p) => p.id !== product.id && p.categoryId !== product.categoryId))
     .slice(0, RELATED_COUNT)
+
+  const category = categories.find((c) => c.id === product.categoryId)
+  const categoryLabel = [category?.name, product.isSlabAvailable ? 'Customisable' : null]
+    .filter(Boolean)
+    .join(' · ')
+  const detailsText = [content.productInfo.freshness, content.productInfo.allergens]
+    .filter(Boolean)
+    .join(' ')
+  const featuredReview = settings.features.reviews_section ? reviews[0] : undefined
+  const avgRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null
 
   const path = `/shop/${product.slug}`
   const seoDescription = product.description ?? content.seo.shop.description
@@ -73,7 +84,10 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    // pb: clears the fixed mobile Add-to-Cart bar so it never permanently
+    // covers the tail of the page content; lg: that bar isn't fixed, so no
+    // spacer is needed there.
+    <div className="pb-28 lg:pb-0">
       <Seo
         title={`${product.name} — ${content.seo.siteName}`}
         description={seoDescription}
@@ -81,108 +95,94 @@ export default function ProductDetail() {
         image={product.imageUrl ?? undefined}
         jsonLd={[productLd, breadcrumbLd]}
       />
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-[13px] text-neutral-500">
-        <Link to="/" className="font-bold text-pink hover:underline">
+
+      <nav className="mx-auto flex max-w-6xl items-center gap-2 px-5 pt-4 text-[13px] text-neutral-400 lg:px-6">
+        <Link to="/" className="hover:text-pink">
           Home
         </Link>
         <span>/</span>
-        <Link to="/shop" className="font-bold text-pink hover:underline">
+        <Link to="/shop" className="hover:text-pink">
           All Brownies
         </Link>
         <span>/</span>
-        <span>{product.name}</span>
+        <span className="text-neutral-500">{product.name}</span>
       </nav>
 
-      <div className="mt-6 grid grid-cols-1 gap-12 md:grid-cols-2">
+      <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-2 lg:gap-14 lg:px-6 lg:pt-6">
         {/* Gallery */}
-        <div className="md:sticky md:top-28 md:self-start">
+        <div className="mt-3 lg:sticky lg:top-28 lg:mt-0 lg:self-start">
           <ProductGallery
             media={product.media}
             fallbackImageUrl={product.imageUrl}
             alt={product.name}
-            className="aspect-square w-full"
+            className="aspect-[390/330] w-full lg:aspect-square lg:rounded-[20px]"
           />
         </div>
 
         {/* Info + configurator */}
-        <div>
-          <div className="mb-3 flex flex-wrap gap-2">
-            {['🌱 Vegetarian', '🍞 Freshly Baked', '🌙 Halal'].map((b) => (
-              <span
-                key={b}
-                className="rounded-full bg-blush-100 px-3 py-1.5 text-xs font-semibold text-neutral-500"
-              >
-                {b}
-              </span>
-            ))}
+        <div className="px-5 pt-4 lg:px-0 lg:pt-0">
+          {categoryLabel && (
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-berry">{categoryLabel}</span>
+          )}
+          <h1 className="mt-1.5 text-[clamp(1.8rem,3vw,2.5rem)] leading-tight text-navy">{product.name}</h1>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="font-display text-[1.5rem] text-pink">{formatLKR(product.pricePerPiece)}</span>
+            <span className="text-sm text-neutral-500">per piece</span>
           </div>
 
-          <h1 className="text-[clamp(1.8rem,3vw,2.5rem)] leading-tight text-navy">{product.name}</h1>
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <span className="text-[#f4a100]" aria-hidden>
-              ★★★★★
-            </span>
-            <Link to="/#reviews" className="text-neutral-400 hover:text-pink">
-              Loved by our customers
-            </Link>
-          </div>
+          {product.description && (
+            <p className="mt-3 text-[15px] leading-relaxed text-neutral-500">{product.description}</p>
+          )}
 
-          <p className="mt-3 text-[1.8rem] font-bold text-navy">
-            {formatLKR(product.pricePerPiece)}
-            <span className="ml-1 text-base font-normal text-neutral-400">per piece</span>
-          </p>
-
-          {product.description && <p className="mt-3 text-sm leading-relaxed text-neutral-500">{product.description}</p>}
-
-          <ul className="mt-4 flex flex-col gap-2 text-[13px] text-neutral-500">
-            <li>📅 Schedule your delivery date in the cart</li>
-            <li>🚚 Islandwide delivery available</li>
-            <li>💬 Add a free gift message at checkout</li>
-          </ul>
-
-          <hr className="my-6 border-neutral-200" />
-
-          <ProductConfigurator
-            product={product}
-            packages={packages}
-            addons={addons}
-            productPackageStock={catalog.productPackageStock}
-          />
-
-          <div className="mt-8">
-            <Accordion
-              items={[
-                {
-                  title: 'Description',
-                  content:
-                    product.description ??
-                    'Handmade, fudgy, and baked fresh to order in Sri Lanka.',
-                },
-                {
-                  title: 'Freshness & Storage',
-                  content: content.productInfo.freshness,
-                },
-                {
-                  title: 'Allergens',
-                  content: content.productInfo.allergens,
-                },
-              ]}
+          <div className="mt-5">
+            <ProductConfigurator
+              product={product}
+              packages={packages}
+              addons={addons}
+              productPackageStock={catalog.productPackageStock}
             />
           </div>
+
+          {detailsText && (
+            <div className="mt-8 border-t border-blush-200 pt-5">
+              <h2 className="font-display text-lg text-navy">The details</h2>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-500">{detailsText}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Related */}
+      {/* Pairs well with — cross-sell strip, kept clear of the primary
+          add-to-cart decision (mockup: below the fold, horizontal scroll). */}
       {related.length > 0 && (
-        <section className="mt-16 rounded-3xl bg-blush-100 p-8">
-          <h2 className="text-2xl text-navy">You may also like</h2>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-10">
+          <h2 className="px-5 font-display text-xl text-navy lg:mx-auto lg:max-w-6xl lg:px-6">Pairs well with</h2>
+          <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-1 lg:mx-auto lg:max-w-6xl lg:px-6">
             {related.map((p) => (
-              <ProductTile key={p.id} product={p} packages={packages} />
+              <Link key={p.id} to={`/shop/${p.slug}`} className="w-[140px] flex-none">
+                <div className="aspect-square overflow-hidden rounded-xl bg-blush-100">
+                  {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
+                </div>
+                <div className="mt-2 truncate text-[13px] font-medium text-navy">{p.name}</div>
+                <div className="text-[13px] font-bold text-[#c02249]">{formatLKR(p.pricePerPiece)}</div>
+              </Link>
             ))}
           </div>
-        </section>
+        </div>
+      )}
+
+      {/* Single featured review — light social proof right on the decision
+          page, distinct from Home's full testimonials grid. */}
+      {featuredReview && (
+        <div className="mx-5 mt-8 rounded-2xl bg-blush-100 p-5 lg:mx-auto lg:max-w-6xl">
+          <div className="flex items-center gap-2">
+            {avgRating && <span className="text-[15px] font-bold text-navy">{avgRating}</span>}
+            <span className="text-sm text-berry">{'★'.repeat(featuredReview.rating)}</span>
+            <span className="text-[13px] text-neutral-500">· {reviews.length} reviews</span>
+          </div>
+          <p className="mt-2.5 text-sm leading-relaxed text-neutral-600">“{featuredReview.body}”</p>
+          <p className="mt-2 text-[13px] font-medium text-neutral-500">{featuredReview.author}</p>
+        </div>
       )}
     </div>
   )
