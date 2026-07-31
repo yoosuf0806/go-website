@@ -138,6 +138,8 @@ export interface SiteContent {
   trust: IconCard[]
   categories: OccasionCard[]
   ctaBanner: CtaBanner
+  /** Homepage "Build your own slab" card. Admin-editable copy + image. */
+  homeSlab: { eyebrow: string; title: string; body: string; cta: string; imageUrl: string | null }
   /** Homepage "Corporate" band (the navy strip). Admin-editable copy + CTA. */
   homeCorporate: { eyebrow: string; title: string; body: string; cta: string }
   /** Homepage FAQ — admin add/edit/delete; hidden when empty. */
@@ -208,6 +210,13 @@ export const DEFAULT_CONTENT: SiteContent = {
     title: '50 boxes. One invoice.',
     body: 'Branded toppers, scheduled delivery, formal quotation.',
     cta: 'Request a Quote',
+  },
+  homeSlab: {
+    eyebrow: 'Free lettering',
+    title: 'Build your own slab',
+    body: '9, 12 or 15 pieces. Your flavours, their name on top.',
+    cta: 'Build Your Slab',
+    imageUrl: null,
   },
   homeFaq: [
     { q: 'How much notice do you need?', a: 'Most orders need 2–3 days. Slabs and bulk/corporate orders are best placed a week ahead, especially for a specific delivery date.' },
@@ -405,6 +414,7 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     hero: { ...DEFAULT_CONTENT.hero, ...partial.hero },
     ctaBanner: { ...DEFAULT_CONTENT.ctaBanner, ...partial.ctaBanner },
     homeCorporate: { ...DEFAULT_CONTENT.homeCorporate, ...partial.homeCorporate },
+    homeSlab: { ...DEFAULT_CONTENT.homeSlab, ...partial.homeSlab },
     // homeFaq: an empty array is a valid "hide the FAQ" state, so keep whatever
     // the admin saved rather than substituting defaults.
     homeFaq: partial.homeFaq ?? DEFAULT_CONTENT.homeFaq,

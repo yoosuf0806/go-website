@@ -6,7 +6,6 @@ import type {
   IconCard,
   OccasionCard,
   PricingTier,
-  PromoSlide,
   QuoteLandingContent,
   SeoMeta,
   SiteContent,
@@ -59,10 +58,7 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
           {([
             ['hotPicks', 'Hot Picks'],
             ['trust', 'Trust bar'],
-            ['slideshow', 'Slideshow'],
-            ['categories', 'Occasion cards'],
-            ['ctaBanner', 'CTA banner'],
-            ['howItWorks', 'How it works'],
+            ['ctaBanner', 'Promo strip'],
             ['testimonials', 'Testimonials'],
           ] as const).map(([key, label]) => (
             <label key={key} className="flex items-center gap-2 text-sm">
@@ -116,28 +112,19 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         <IconCards items={form.trust} onChange={(v) => set('trust', v)} />
       </Section>
 
-      <Section title="Promo slideshow">
+      <Section title="Homepage · Build your slab">
         <p className="-mt-2 mb-2 text-xs text-neutral-500">
-          The rotating banner below the trust bar. Add slides with their own text + optional background
-          image. Leave empty to use the built-in default slides.
+          The white “Build your own slab” card on the home page.
         </p>
-        <PromoSlidesEditor slides={form.promoSlides} onChange={(v) => set('promoSlides', v)} />
-      </Section>
-
-      <Section title="Occasion cards">
-        {form.categories.map((c, i) => (
-          <OccasionEditor
-            key={i}
-            card={c}
-            onChange={(next) => set('categories', form.categories.map((x, j) => (j === i ? next : x)))}
-          />
-        ))}
-      </Section>
-
-      <Section title="Promo banner">
-        <Text label="Title" value={form.ctaBanner.title} onChange={(v) => set('ctaBanner', { ...form.ctaBanner, title: v })} />
-        <Area label="Body" value={form.ctaBanner.body} onChange={(v) => set('ctaBanner', { ...form.ctaBanner, body: v })} />
-        <Text label="Button" value={form.ctaBanner.cta} onChange={(v) => set('ctaBanner', { ...form.ctaBanner, cta: v })} />
+        <Text label="Eyebrow" value={form.homeSlab.eyebrow} onChange={(v) => set('homeSlab', { ...form.homeSlab, eyebrow: v })} />
+        <Text label="Title" value={form.homeSlab.title} onChange={(v) => set('homeSlab', { ...form.homeSlab, title: v })} />
+        <Area label="Body" value={form.homeSlab.body} onChange={(v) => set('homeSlab', { ...form.homeSlab, body: v })} />
+        <Text label="Button" value={form.homeSlab.cta} onChange={(v) => set('homeSlab', { ...form.homeSlab, cta: v })} />
+        <ImageField
+          label="Card image"
+          value={form.homeSlab.imageUrl ?? undefined}
+          onChange={(url) => set('homeSlab', { ...form.homeSlab, imageUrl: url ?? null })}
+        />
       </Section>
 
       <Section title="Homepage · Corporate band">
@@ -188,14 +175,6 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
             />
           </label>
         </div>
-      </Section>
-
-      <Section title="How it works">
-        <IconCards items={form.howItWorks} onChange={(v) => set('howItWorks', v)} iconLabel="Step" />
-      </Section>
-
-      <Section title="Badge strip">
-        <IconCards items={form.badges} onChange={(v) => set('badges', v)} />
       </Section>
 
       <Section title="Testimonials heading">
@@ -472,69 +451,6 @@ function HeroSlidesEditor({
         </label>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
-    </div>
-  )
-}
-
-// Manage the promo slideshow slides (eyebrow/title/body/CTA + optional image).
-function PromoSlidesEditor({
-  slides,
-  onChange,
-}: {
-  slides: PromoSlide[]
-  onChange: (v: PromoSlide[]) => void
-}) {
-  function update(i: number, patch: Partial<PromoSlide>) {
-    onChange(slides.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
-  }
-  function remove(i: number) {
-    onChange(slides.filter((_, idx) => idx !== i))
-  }
-  function move(i: number, dir: number) {
-    const j = i + dir
-    if (j < 0 || j >= slides.length) return
-    const next = slides.slice()
-    ;[next[i], next[j]] = [next[j], next[i]]
-    onChange(next)
-  }
-  function add() {
-    onChange([
-      ...slides,
-      { eyebrow: 'Now Available', title: 'New collection', body: '', cta: 'Shop Now', to: '/shop' },
-    ])
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {slides.map((slide, i) => (
-        <div key={i} className="rounded-lg border border-neutral-200 p-3">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Text label="Eyebrow (small label)" value={slide.eyebrow} onChange={(v) => update(i, { eyebrow: v })} />
-            <Text label="Title" value={slide.title} onChange={(v) => update(i, { title: v })} />
-            <Text label="Button text" value={slide.cta} onChange={(v) => update(i, { cta: v })} />
-            <Text label="Links to (/shop or /corporate)" value={slide.to} onChange={(v) => update(i, { to: v })} />
-          </div>
-          <div className="mt-2">
-            <Area label="Body" value={slide.body} onChange={(v) => update(i, { body: v })} />
-          </div>
-          <div className="mt-2">
-            <ImageField
-              label="Background image (optional)"
-              value={slide.imageUrl}
-              onChange={(url) => update(i, { imageUrl: url })}
-            />
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-xs">
-            <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↑ Up</button>
-            <button type="button" onClick={() => move(i, 1)} disabled={i === slides.length - 1} className="rounded border border-neutral-300 px-2 py-1 disabled:opacity-40">↓ Down</button>
-            <button type="button" onClick={() => remove(i)} className="rounded border border-neutral-300 px-2 py-1 text-red-600 hover:bg-red-50">Remove</button>
-            <span className="text-neutral-400">Slide {i + 1} of {slides.length}</span>
-          </div>
-        </div>
-      ))}
-      <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
-        + Add promo slide
-      </button>
     </div>
   )
 }

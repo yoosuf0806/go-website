@@ -18,13 +18,12 @@ export default function Home() {
   const { catalog } = useCatalog()
   const { reviews: featuredReviews, settings, content, products, packages } = catalog
   const { reviews_section } = settings.features
-  const { hero, trust, ctaBanner, testimonialsHeading, homeCorporate, homeFaq } = content
+  const { hero, trust, ctaBanner, testimonialsHeading, homeCorporate, homeFaq, homeSlab } = content
   const vis = content.sectionVisibility
 
   const hotPicks = products.filter((p) => p.isHotPick && p.inStock)
   const heroImage = hotPicks.find((p) => p.imageUrl)?.imageUrl ?? products.find((p) => p.imageUrl)?.imageUrl ?? null
-  const slabCat = content.categories.find((c) => /slab/i.test(c.title))
-  const slabImage = slabCat?.imageUrl ?? heroImage
+  const slabImage = homeSlab.imageUrl ?? heroImage
   const flavours = products.filter((p) => p.inStock).slice(0, 5)
   const waNumber = toWhatsAppNumber(settings.business.whatsapp_number)
   const promoText = content.promoMessages[0]
@@ -119,11 +118,9 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-6 px-[22px] md:grid-cols-2 md:gap-8 md:px-8">
           {/* Build your own slab */}
           <div className="flex flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">Free lettering</span>
-            <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">Build your own slab</h2>
-            <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">
-              9, 12 or 15 pieces. Your flavours, their name on top.
-            </p>
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">{homeSlab.eyebrow}</span>
+            <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">{homeSlab.title}</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">{homeSlab.body}</p>
             <div className="mt-4 aspect-[326/220] overflow-hidden rounded-[14px] bg-blush-50 md:mt-5 md:aspect-[4/3] md:flex-1">
               {slabImage && <BrownieImage src={slabImage} alt="Brownie slab" className="h-full w-full" />}
             </div>
@@ -131,7 +128,7 @@ export default function Home() {
               to="/shop"
               className="mt-4 block rounded-2xl bg-navy py-4 text-center text-base font-bold text-white transition-transform hover:-translate-y-0.5"
             >
-              Build Your Slab
+              {homeSlab.cta}
             </Link>
           </div>
 
