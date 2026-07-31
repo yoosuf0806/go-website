@@ -180,12 +180,67 @@ export async function uploadProductMedia(file: File): Promise<ProductMedia> {
  * content sections (hero slides, trust bar, occasion cards) that only need an
  * image URL, reusing the same bucket and public-URL flow as product media.
  */
+// Downscale + re-encode an image before upload. Admin uploads are often
+// straight off a phone (3–5000px, several MB), which blew out mobile layout
+// and load times when served raw. We cap the longest edge at MAX_EDGE and
+// re-encode as compressed JPEG/WebP. SVGs and GIFs are passed through
+// untouched (vector / animation would be destroyed by canvas rasterisation).
+const MAX_EDGE = 1600
+const JPEG_QUALITY = 0.82
+
+async function resizeImage(file: File): Promise<Blob> {
+  if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file
+  if (typeof document === 'undefined' || typeof createImageBitmap === 'undefined') return file
+
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch {
+    // Undecodable by the browser — let the raw file through rather than fail
+    // the whole upload; the server/storage still receives something valid.
+    return file
+  }
+
+  const { width, height } = bitmap
+  const scale = Math.min(1, MAX_EDGE / Math.max(width, height))
+  // Nothing to do if it's already within bounds AND already a compressed type.
+  if (scale === 1 && (file.type === 'image/jpeg' || file.type === 'image/webp')) {
+    bitmap.close()
+    return file
+  }
+
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(width * scale)
+  canvas.height = Math.round(height * scale)
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    bitmap.close()
+    return file
+  }
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  bitmap.close()
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY),
+  )
+  // If re-encoding somehow produced nothing or a bigger file, keep the original.
+  if (!blob || blob.size >= file.size) return file
+  return blob
+}
+
 export async function uploadImage(file: File): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'jpg'
+  const resized = await resizeImage(file)
+  // After resize the bytes are JPEG (unless we passed through an SVG/GIF or the
+  // original was smaller). Extension follows the actual output type so the
+  // stored object and its content-type agree.
+  const isPassthrough = resized === file
+  const ext = isPassthrough ? (file.name.split('.').pop() ?? 'jpg') : 'jpg'
+  const contentType = isPassthrough ? file.type || 'image/jpeg' : 'image/jpeg'
   const path = `content/${crypto.randomUUID()}.${ext}`
-  const { error } = await supabase.storage.from('product-images').upload(path, file, {
+  const { error } = await supabase.storage.from('product-images').upload(path, resized, {
     cacheControl: '3600',
     upsert: false,
+    contentType,
   })
   if (error) throw new Error(error.message)
   const { data } = supabase.storage.from('product-images').getPublicUrl(path)
