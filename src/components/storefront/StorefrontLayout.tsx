@@ -24,21 +24,26 @@ const NAV = [
 // WhatsApp float.
 export default function StorefrontLayout() {
   const { catalog } = useCatalog()
-  const { settings } = catalog
+  const { settings, content } = catalog
   const { pathname } = useLocation()
   const cartOpen = useCartUI((s) => s.open)
   const setCartOpen = useCartUI((s) => s.setOpen)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const waNumber = toWhatsAppNumber(settings.business.whatsapp_number)
+  // Transparent-over-hero only makes sense over a dark full-bleed image — i.e.
+  // when the admin has uploaded hero slides (rendered by HeroCarousel). The
+  // default Home hero is the light blush block, which needs a solid header
+  // (navy on blush) to stay legible, matching the mockup.
   const isHome = pathname === '/'
+  const overDarkHero = isHome && content.heroSlides.length > 0
 
   return (
     <div className="flex min-h-screen flex-col bg-blush-50 text-navy">
       <PromoTicker />
       <BannerBar banner={settings.banner} />
       <Header
-        transparentOverHero={isHome}
+        transparentOverHero={overDarkHero}
         onCartClick={() => setCartOpen(true)}
         onMenuClick={() => setMobileNav(true)}
       />
