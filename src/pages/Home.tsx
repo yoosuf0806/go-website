@@ -119,7 +119,7 @@ export default function Home() {
       <section className="pt-6 md:py-14">
         <div className="mx-auto grid max-w-6xl gap-6 px-[22px] md:grid-cols-2 md:gap-8 md:px-8">
           {/* Build your own slab */}
-          <div className="flex flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
+          <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">{homeSlab.eyebrow}</span>
             <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">{homeSlab.title}</h2>
             <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">{homeSlab.body}</p>
@@ -135,7 +135,7 @@ export default function Home() {
           </div>
 
           {/* It arrives gift-ready */}
-          <div className="flex flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
+          <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">Gift-ready</span>
             <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">It arrives gift-ready</h2>
             <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">
