@@ -114,6 +114,11 @@ create table if not exists orders (
   is_gift boolean not null default false,
   recipient_name text,
   recipient_phone text,
+  payment_method text check (payment_method in ('bank_transfer', 'card')),
+  payment_status text not null default 'unpaid'
+    check (payment_status in ('unpaid', 'awaiting_verification', 'paid', 'failed')),
+  payment_ref text,
+  slip_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -230,6 +235,7 @@ insert into site_settings (key, value) values
   ('banner',   '{"enabled": false, "text": "", "starts_at": null, "ends_at": null}'::jsonb),
   ('features', '{"corporate_section": true, "wedding_section": true, "reviews_section": true}'::jsonb),
   ('business', '{"whatsapp_number": "", "google_business_url": ""}'::jsonb),
+  ('bank_transfer', '{"bank_name": "Nations Trust Bank", "account_name": "M N AHAMED", "account_no": "200520120714", "branch": "Mt Lavinia", "enabled": true}'::jsonb),
   -- Editable storefront content (admin Content & SEO). Starts empty: the app
   -- fills defaults until the admin saves, which writes the full blob here.
   ('content',  '{}'::jsonb)
@@ -307,7 +313,7 @@ create policy "admin all delivery tiers" on delivery_tiers for all
 
 drop policy if exists "public read public settings" on site_settings;
 create policy "public read public settings" on site_settings for select
-  using (key in ('banner', 'features', 'business'));
+  using (key in ('banner', 'features', 'business', 'bank_transfer'));
 drop policy if exists "admin all settings" on site_settings;
 create policy "admin all settings" on site_settings for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
@@ -344,12 +350,17 @@ drop function if exists create_order(
 drop function if exists create_order(
   text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb, text, numeric
 );
+drop function if exists create_order(
+  text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb,
+  text, numeric, boolean, text, text
+);
 create or replace function create_order(
   p_customer_name text, p_phone text, p_email text, p_alt_phone text,
   p_address text, p_delivery_date date, p_note text,
   p_subtotal numeric, p_delivery_fee numeric, p_total numeric, p_total_pieces int, p_items jsonb,
   p_voucher_code text default null, p_voucher_discount numeric default 0,
-  p_is_gift boolean default false, p_recipient_name text default null, p_recipient_phone text default null
+  p_is_gift boolean default false, p_recipient_name text default null, p_recipient_phone text default null,
+  p_payment_method text default null, p_payment_ref text default null, p_slip_url text default null
 )
 returns table (id uuid, order_no int)
 language plpgsql security definer set search_path = public as $$
@@ -357,6 +368,10 @@ declare
   v_id uuid; v_order_no int;
   v_code text := nullif(upper(trim(coalesce(p_voucher_code, ''))), '');
   v_voucher gift_vouchers%rowtype;
+  v_payment_status text := case
+    when p_payment_method = 'bank_transfer' then 'awaiting_verification'
+    else 'unpaid'
+  end;
 begin
   if v_code is not null then
     select * into v_voucher from gift_vouchers where code = v_code for update;
@@ -371,13 +386,15 @@ begin
   insert into orders (
     customer_name, phone, email, alt_phone, address, delivery_date, note,
     subtotal, delivery_fee, total, total_pieces, status, source, inquiry_id,
-    voucher_code, voucher_discount, is_gift, recipient_name, recipient_phone
+    voucher_code, voucher_discount, is_gift, recipient_name, recipient_phone,
+    payment_method, payment_status, payment_ref, slip_url
   ) values (
     p_customer_name, p_phone, nullif(p_email, ''), nullif(p_alt_phone, ''),
     p_address, p_delivery_date, p_note,
     p_subtotal, p_delivery_fee, p_total, p_total_pieces, 'pending', 'web', null,
     v_code, coalesce(p_voucher_discount, 0),
-    coalesce(p_is_gift, false), nullif(p_recipient_name, ''), nullif(p_recipient_phone, '')
+    coalesce(p_is_gift, false), nullif(p_recipient_name, ''), nullif(p_recipient_phone, ''),
+    p_payment_method, v_payment_status, nullif(p_payment_ref, ''), nullif(p_slip_url, '')
   ) returning orders.id, orders.order_no into v_id, v_order_no;
 
   if v_code is not null then
@@ -405,7 +422,7 @@ end; $$;
 
 grant execute on function create_order(
   text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb,
-  text, numeric, boolean, text, text
+  text, numeric, boolean, text, text, text, text, text
 ) to anon, authenticated;
 
 -- Read-only "is this code valid?" check for the checkout Apply button.

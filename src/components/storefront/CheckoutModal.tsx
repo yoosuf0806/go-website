@@ -4,11 +4,12 @@ import { useVoucherStore } from '../../stores/voucher'
 import { cartTotals, lineTotal, totalAfterVoucher } from '../../lib/pricing'
 import { formatLKR, normalizePhone, toWhatsAppNumber } from '../../lib/format'
 import { addonSummary, buildOrderMessage, orderWhatsAppLink } from '../../lib/whatsapp'
-import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
+import { checkoutDetailsSchema, paymentSchema, type CheckoutDetails, type PaymentMethod } from '../../schemas/checkout'
 import { useCreateOrder } from '../../hooks/useCreateOrder'
 import { useCatalog } from '../../contexts/CatalogContext'
+import { uploadBankSlip, validateSlipFile } from '../../lib/bankSlips'
 
-type Step = 'details' | 'review'
+type Step = 'details' | 'review' | 'payment'
 
 const emptyForm: CheckoutDetails = {
   name: '',
@@ -58,7 +59,18 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
     isGift: boolean
     recipientName: string
     recipientPhone: string | null
+    paymentMethod: PaymentMethod | null
   } | null>(null)
+
+  // Payment step state (bank transfer is the only live method; card is
+  // disabled until the PayHere PR). Slip is uploaded to a private bucket the
+  // moment it's picked, so by "Place order" time we already hold its path.
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('bank_transfer')
+  const [payRef, setPayRef] = useState('')
+  const [slipPath, setSlipPath] = useState<string | null>(null)
+  const [slipName, setSlipName] = useState<string | null>(null)
+  const [slipUploading, setSlipUploading] = useState(false)
+  const [payErrors, setPayErrors] = useState<{ paymentRef?: string; slipUrl?: string }>({})
 
   // The voucher code is entered in the Cart Drawer (shared store) — this step
   // only reflects the already-applied discount in the totals.
@@ -67,6 +79,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const finalTotal = totalAfterVoucher(totals.total, appliedDiscount)
   const itemCount = items.reduce((n, i) => n + i.boxQty, 0)
   const waFallback = toWhatsAppNumber(settings.business.whatsapp_number)
+  const bank = settings.bankTransfer
 
   const today = new Date().toISOString().slice(0, 10)
   const set = (patch: Partial<CheckoutDetails>) => setForm((f) => ({ ...f, ...patch }))
@@ -87,12 +100,75 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
     setStep('review')
   }
 
+  // Review → Payment. Details are already validated at this point.
+  function handleToPayment() {
+    setStep('payment')
+  }
+
+  // Upload the slip the instant it's chosen, so "Place order" is a single tap
+  // that never waits on a network upload. Store only the object path.
+  async function handleSlipFile(file: File | null) {
+    if (!file) return
+    const guard = validateSlipFile(file)
+    if (guard) {
+      setPayErrors((e) => ({ ...e, slipUrl: guard }))
+      return
+    }
+    setPayErrors((e) => ({ ...e, slipUrl: undefined }))
+    setSlipUploading(true)
+    try {
+      const { path } = await uploadBankSlip(file)
+      setSlipPath(path)
+      setSlipName(file.name)
+    } catch (err) {
+      setPayErrors((e) => ({
+        ...e,
+        slipUrl: err instanceof Error ? err.message : 'Upload failed — try again.',
+      }))
+    } finally {
+      setSlipUploading(false)
+    }
+  }
+
   async function handleConfirm() {
     if (!details) return
+
+    // Validate the payment step (bank transfer needs ref + slip).
+    const payResult = paymentSchema.safeParse({
+      method: payMethod,
+      paymentRef: payRef,
+      slipUrl: slipPath ?? '',
+    })
+    if (!payResult.success) {
+      const pe: { paymentRef?: string; slipUrl?: string } = {}
+      for (const issue of payResult.error.issues) {
+        const key = issue.path[0] as 'paymentRef' | 'slipUrl'
+        if (!pe[key]) pe[key] = issue.message
+      }
+      setPayErrors(pe)
+      return
+    }
+    setPayErrors({})
+
+    const isBank = payMethod === 'bank_transfer'
     const appliedVoucher =
       voucher.status === 'ok' ? { code: voucher.code.trim(), discount: voucher.discount } : null
     try {
-      const { orderNo, phone } = await mutation.mutateAsync({ items, totals, details, voucher: appliedVoucher })
+      const { orderNo, phone } = await mutation.mutateAsync({
+        items,
+        totals,
+        details,
+        voucher: appliedVoucher,
+        payment: {
+          method: payMethod,
+          paymentRef: isBank ? payRef.trim() : null,
+          slipUrl: isBank ? slipPath : null,
+        },
+      })
+
+      // Bank transfer skips the WhatsApp handoff — the order lands as
+      // "awaiting verification" and admin checks the slip. Only card/legacy
+      // flows build a WhatsApp message.
       const messageInput = {
         orderNo,
         items,
@@ -111,13 +187,13 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
         },
         voucher: appliedVoucher,
       }
-      const link = orderWhatsAppLink(settings.business.whatsapp_number, messageInput)
+      const link = isBank ? '' : orderWhatsAppLink(settings.business.whatsapp_number, messageInput)
       // Snapshot everything the confirmation screen needs BEFORE clearing the
       // cart — items/totals are about to become empty.
       setSuccess({
         orderNo,
         waLink: link,
-        message: buildOrderMessage(messageInput),
+        message: isBank ? '' : buildOrderMessage(messageInput),
         lines: items.map((i) => ({
           name: i.productName,
           qty: i.boxQty,
@@ -128,8 +204,9 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
         isGift: details.isGift,
         recipientName: details.recipientName ?? '',
         recipientPhone: details.recipientPhone ? normalizePhone(details.recipientPhone) : null,
+        paymentMethod: payMethod,
       })
-      window.open(link, '_blank', 'noopener,noreferrer')
+      if (!isBank && link) window.open(link, '_blank', 'noopener,noreferrer')
       clearCart()
       voucher.remove()
     } catch (err) {
@@ -138,12 +215,12 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
       if (appliedVoucher && err instanceof Error && /voucher/i.test(err.message)) {
         voucher.remove()
       }
-      // mutation.error already holds the message; stay on review so the
-      // customer can retry without losing their details or cart.
+      // mutation.error already holds the message; stay on payment so the
+      // customer can retry without losing their details, cart, or slip.
     }
   }
 
-  const stepNo = step === 'details' ? 1 : 2
+  const stepNo = step === 'details' ? 1 : step === 'review' ? 2 : 3
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4">
@@ -156,9 +233,13 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
             <button type="button" onClick={onClose} className="text-sm font-medium text-neutral-500 hover:text-navy">
               ← Cart
             </button>
-          ) : success == null ? (
+          ) : success == null && step === 'review' ? (
             <button type="button" onClick={() => setStep('details')} className="text-sm font-medium text-neutral-500 hover:text-navy">
               ← Details
+            </button>
+          ) : success == null ? (
+            <button type="button" onClick={() => setStep('review')} className="text-sm font-medium text-neutral-500 hover:text-navy">
+              ← Review
             </button>
           ) : (
             <button
@@ -177,9 +258,9 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
           <div className="flex items-center gap-1.5 border-b border-blush-200 bg-white px-5 py-4">
             <TrackStep n={1} label="Details" state={stepNo > 1 ? 'done' : 'active'} />
             <TrackLine active={stepNo > 1} />
-            <TrackStep n={2} label="Review" state={stepNo === 2 ? 'active' : 'upcoming'} />
-            <TrackLine active={false} />
-            <TrackStep n={3} label="Confirm" state="upcoming" />
+            <TrackStep n={2} label="Review" state={stepNo > 2 ? 'done' : stepNo === 2 ? 'active' : 'upcoming'} />
+            <TrackLine active={stepNo > 2} />
+            <TrackStep n={3} label="Payment" state={stepNo === 3 ? 'active' : 'upcoming'} />
           </div>
         )}
 
@@ -297,13 +378,13 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
               </div>
             </div>
           </>
-        ) : (
+        ) : step === 'review' ? (
           /* ── REVIEW ────────────────────────────────────────── */
           <>
             <div className="flex-1 overflow-y-auto px-5 py-5">
               <h2 className="font-display text-[26px] text-navy">Look right?</h2>
               <p className="mt-1 text-sm leading-relaxed text-neutral-500">
-                Nothing is charged here. We'll confirm everything on WhatsApp.
+                Check your details, then choose how you'd like to pay on the next step.
               </p>
 
               {details && (
@@ -384,53 +465,211 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                       </div>
                     </div>
                   </div>
-
-                  {/* Failure retry state */}
-                  {mutation.isError && (
-                    <div className="rounded-2xl border border-pink bg-white p-4 animate-tin">
-                      <div className="pb-1.5 font-bold text-pink">We couldn't save that order</div>
-                      <p className="pb-3 text-sm leading-relaxed text-neutral-600">
-                        Nothing was lost and nothing was charged — your details are still here. Try again, or message us
-                        and we'll take it from there.
-                      </p>
-                      <div className="flex gap-2.5">
-                        <button
-                          type="button"
-                          onClick={handleConfirm}
-                          disabled={mutation.isPending}
-                          className="flex-1 rounded-xl bg-pink py-3.5 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
-                        >
-                          Try again
-                        </button>
-                        {waFallback && (
-                          <a
-                            href={`https://wa.me/${waFallback}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 rounded-xl bg-[#25d366] py-3.5 text-center text-sm font-bold text-white"
-                          >
-                            WhatsApp us
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
-            {/* Sticky footer: Confirm */}
+            {/* Sticky footer: continue to payment */}
             <div className="border-t border-blush-200 bg-white px-4 pb-[max(1.125rem,env(safe-area-inset-bottom))] pt-3.5">
               <button
                 type="button"
-                onClick={handleConfirm}
-                disabled={mutation.isPending}
-                className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:opacity-50"
+                onClick={handleToPayment}
+                className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark"
               >
-                {mutation.isPending ? 'Confirming…' : 'Confirm order'}
+                Continue to payment
               </button>
               <p className="pt-2.5 text-center text-[13px] text-neutral-500">
-                Next: we open WhatsApp with your order pre-filled.
+                Next: choose how you'd like to pay.
+              </p>
+            </div>
+          </>
+        ) : (
+          /* ── PAYMENT ───────────────────────────────────────── */
+          <>
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              <h2 className="font-display text-[26px] text-navy">How would you like to pay?</h2>
+              <p className="mt-1 text-sm leading-relaxed text-neutral-500">
+                Pay by bank transfer and upload your slip — we'll verify it and confirm your order.
+              </p>
+
+              <div className="mt-4 flex flex-col gap-3">
+                {/* Card — coming soon (PayHere), shown but disabled */}
+                <div className="flex items-center justify-between rounded-2xl border border-blush-200 bg-white/60 p-4 opacity-70">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 border-blush-200" />
+                    <div>
+                      <div className="font-bold text-navy">Pay by card</div>
+                      <div className="text-[13px] text-neutral-500">Visa · Mastercard · Genie</div>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-blush-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                    Soon
+                  </span>
+                </div>
+
+                {/* Bank transfer — the live method */}
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('bank_transfer')}
+                  className={`rounded-2xl border p-4 text-left transition-colors ${
+                    payMethod === 'bank_transfer'
+                      ? 'border-pink bg-white ring-1 ring-pink'
+                      : 'border-blush-200 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 ${
+                          payMethod === 'bank_transfer' ? 'border-pink' : 'border-blush-200'
+                        }`}
+                      >
+                        {payMethod === 'bank_transfer' && <span className="h-2.5 w-2.5 rounded-full bg-pink" />}
+                      </span>
+                      <div>
+                        <div className="font-bold text-navy">Bank transfer</div>
+                        <div className="text-[13px] text-neutral-500">Upload slip · manual verify</div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Transfer-to details (from admin-editable settings) */}
+                {payMethod === 'bank_transfer' && bank.enabled && (
+                  <div className="rounded-2xl border border-blush-200 bg-blush-50 p-4">
+                    <div className="pb-3 text-[13px] font-bold uppercase tracking-wide text-neutral-500">
+                      Transfer to
+                    </div>
+                    <dl className="flex flex-col gap-2 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-neutral-500">Bank</dt>
+                        <dd className="font-medium text-navy">{bank.bank_name}</dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-neutral-500">Name</dt>
+                        <dd className="font-medium text-navy">{bank.account_name}</dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-neutral-500">Account No</dt>
+                        <dd className="font-medium text-navy">{bank.account_no}</dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <dt className="text-neutral-500">Branch</dt>
+                        <dd className="font-medium text-navy">{bank.branch}</dd>
+                      </div>
+                    </dl>
+                    <div className="mt-3 flex items-baseline justify-between border-t border-blush-200 pt-3">
+                      <span className="font-bold text-navy">Amount</span>
+                      <span className="text-lg font-bold text-navy">{formatLKR(finalTotal)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Reference number */}
+                {payMethod === 'bank_transfer' && (
+                  <Field label="Transfer reference number" error={payErrors.paymentRef}>
+                    <input
+                      type="text"
+                      inputMode="text"
+                      value={payRef}
+                      onChange={(e) => {
+                        setPayRef(e.target.value)
+                        if (payErrors.paymentRef) setPayErrors((x) => ({ ...x, paymentRef: undefined }))
+                      }}
+                      placeholder="e.g. 9F3K2109"
+                      className="w-full rounded-xl border border-blush-200 bg-white px-4 py-3 text-navy placeholder:text-neutral-400 focus:border-pink focus:outline-none focus:ring-2 focus:ring-pink/40"
+                    />
+                  </Field>
+                )}
+
+                {/* Slip upload */}
+                {payMethod === 'bank_transfer' && (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-navy">Bank slip screenshot</label>
+                    <label
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors ${
+                        payErrors.slipUrl
+                          ? 'border-pink bg-white'
+                          : slipPath
+                            ? 'border-green-400 bg-green-50'
+                            : 'border-blush-200 bg-white hover:border-pink'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="sr-only"
+                        onChange={(e) => handleSlipFile(e.target.files?.[0] ?? null)}
+                      />
+                      {slipUploading ? (
+                        <span className="text-sm font-medium text-neutral-500">Uploading…</span>
+                      ) : slipPath ? (
+                        <>
+                          <span className="text-sm font-bold text-green-700">✓ Slip uploaded</span>
+                          <span className="mt-0.5 max-w-full truncate text-[13px] text-neutral-500">{slipName}</span>
+                          <span className="mt-1 text-[13px] font-medium text-pink">Replace</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-sm font-medium text-navy">Tap to upload your slip</span>
+                          <span className="mt-0.5 text-[13px] text-neutral-500">JPG, PNG or WebP · max 5 MB</span>
+                        </>
+                      )}
+                    </label>
+                    {payErrors.slipUrl && <p className="mt-1.5 text-[13px] text-pink">{payErrors.slipUrl}</p>}
+                  </div>
+                )}
+
+                {/* Failure retry state */}
+                {mutation.isError && (
+                  <div className="rounded-2xl border border-pink bg-white p-4 animate-tin">
+                    <div className="pb-1.5 font-bold text-pink">We couldn't place that order</div>
+                    <p className="pb-3 text-sm leading-relaxed text-neutral-600">
+                      Nothing was lost — your details and slip are still here. Try again, or message us and we'll take
+                      it from there.
+                    </p>
+                    <div className="flex gap-2.5">
+                      <button
+                        type="button"
+                        onClick={handleConfirm}
+                        disabled={mutation.isPending}
+                        className="flex-1 rounded-xl bg-pink py-3.5 text-sm font-bold text-white hover:bg-pink-dark disabled:opacity-50"
+                      >
+                        Try again
+                      </button>
+                      {waFallback && (
+                        <a
+                          href={`https://wa.me/${waFallback}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 rounded-xl bg-[#25d366] py-3.5 text-center text-sm font-bold text-white"
+                        >
+                          WhatsApp us
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sticky footer: place order */}
+            <div className="border-t border-blush-200 bg-white px-4 pb-[max(1.125rem,env(safe-area-inset-bottom))] pt-3.5">
+              <div className="flex items-baseline justify-between pb-2.5">
+                <span className="text-sm text-neutral-500">Total</span>
+                <span className="text-lg font-bold text-navy">{formatLKR(finalTotal)}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={mutation.isPending || slipUploading}
+                className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:opacity-50"
+              >
+                {mutation.isPending ? 'Placing order…' : 'Place order'}
+              </button>
+              <p className="pt-2.5 text-center text-[13px] text-neutral-500">
+                Your order is placed as <span className="font-medium text-navy">Awaiting verification</span> — we'll
+                confirm once we've checked your slip.
               </p>
             </div>
           </>
@@ -457,6 +696,7 @@ function OrderConfirmation({
     isGift: boolean
     recipientName: string
     recipientPhone: string | null
+    paymentMethod: PaymentMethod | null
   }
   customerName: string
   waFallback: string | null
@@ -467,6 +707,7 @@ function OrderConfirmation({
   const [handoffOpen, setHandoffOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const firstName = customerName.trim().split(/\s+/)[0] || 'there'
+  const isBank = success.paymentMethod === 'bank_transfer'
 
   async function copyMessage() {
     try {
@@ -485,7 +726,9 @@ function OrderConfirmation({
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink text-3xl text-white">✓</div>
         <h2 className="font-display text-[32px] leading-tight text-navy">Thank you, {firstName}.</h2>
         <p className="mx-auto mt-2.5 max-w-sm text-[15px] leading-relaxed text-neutral-600">
-          Your order is in. Send us the WhatsApp message below and we'll confirm timing and lettering within the hour.
+          {isBank
+            ? "Your order is in and marked awaiting verification. We'll check your transfer slip and confirm timing within the hour."
+            : "Your order is in. Send us the WhatsApp message below and we'll confirm timing and lettering within the hour."}
         </p>
         <div className="pt-2 text-sm text-neutral-500">
           Order <span className="font-bold text-navy">#{success.orderNo}</span>
@@ -535,24 +778,37 @@ function OrderConfirmation({
       </div>
 
       <div className="px-6 pt-5">
-        <a
-          href={success.waLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#25d366] py-4 text-[17px] font-bold text-white shadow-[0_14px_26px_-12px_rgba(37,211,102,0.9)]"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M21 11.6a8.4 8.4 0 0 1-12.4 7.4L4 20.5l1.6-4.4A8.4 8.4 0 1 1 21 11.6Z" />
-          </svg>
-          Continue on WhatsApp
-        </a>
-        <button type="button" onClick={onClose} className="mt-2.5 w-full py-3 text-[15px] font-medium text-neutral-500 hover:text-navy">
-          Back to shopping
-        </button>
+        {isBank ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-2xl bg-pink py-4 text-[17px] font-bold text-white hover:bg-pink-dark"
+          >
+            Back to shopping
+          </button>
+        ) : (
+          <>
+            <a
+              href={success.waLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#25d366] py-4 text-[17px] font-bold text-white shadow-[0_14px_26px_-12px_rgba(37,211,102,0.9)]"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M21 11.6a8.4 8.4 0 0 1-12.4 7.4L4 20.5l1.6-4.4A8.4 8.4 0 1 1 21 11.6Z" />
+              </svg>
+              Continue on WhatsApp
+            </a>
+            <button type="button" onClick={onClose} className="mt-2.5 w-full py-3 text-[15px] font-medium text-neutral-500 hover:text-navy">
+              Back to shopping
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Handoff fallback — WhatsApp may not open on some devices */}
-      <div className="mx-6 mt-4 border-t border-blush-200 pb-6 pt-3.5">
+      {/* Handoff fallback — WhatsApp may not open on some devices (card flow only) */}
+      {!isBank && (
+        <div className="mx-6 mt-4 border-t border-blush-200 pb-6 pt-3.5">
         <button
           type="button"
           onClick={() => setHandoffOpen((o) => !o)}
@@ -585,7 +841,8 @@ function OrderConfirmation({
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

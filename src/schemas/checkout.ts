@@ -51,4 +51,39 @@ export const checkoutDetailsSchema = z.object({
     }
   })
 
+// Payment step (spec: separate step after Review). Only bank transfer is live;
+// card is wired in a later PayHere PR. Bank transfer requires BOTH a reference
+// number and an uploaded slip before the order can be placed — validated here
+// so the CheckoutModal and any future caller share one rule.
+export const PAYMENT_METHODS = ['bank_transfer', 'card'] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+
+export const paymentSchema = z
+  .object({
+    method: z.enum(PAYMENT_METHODS),
+    // slipUrl is the object path returned by the storage upload; the file
+    // itself is uploaded before this validates.
+    paymentRef: z.string().trim().max(120).optional(),
+    slipUrl: z.string().trim().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.method !== 'bank_transfer') return
+    if (!data.paymentRef?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['paymentRef'],
+        message: 'Enter the transfer reference number',
+      })
+    }
+    if (!data.slipUrl?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['slipUrl'],
+        message: 'Upload your bank transfer slip',
+      })
+    }
+  })
+
+export type PaymentDetails = z.infer<typeof paymentSchema>
+
 export type CheckoutDetails = z.infer<typeof checkoutDetailsSchema>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useCartStore } from '../../stores/cart'
 import { useVoucherStore } from '../../stores/voucher'
 import { cartTotals, lineTotal, totalAfterVoucher, findTier } from '../../lib/pricing'
@@ -17,6 +18,7 @@ interface CartDrawerProps {
 // and the WhatsApp message use, so nothing can drift (spec §11).
 export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
   const { catalog } = useCatalog()
+  const [confirming, setConfirming] = useState(false)
   const items = useCartStore((s) => s.items)
   const incrementBoxQty = useCartStore((s) => s.incrementBoxQty)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -198,20 +200,44 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
                 <span className="text-[22px] font-bold text-navy">{formatLKR(finalTotal)}</span>
               </div>
 
-              <button
-                type="button"
-                onClick={onCheckout}
-                className="mt-3.5 w-full rounded-2xl bg-pink py-4 text-base font-bold text-white hover:bg-pink-dark"
-              >
-                Checkout
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-2 w-full py-2 text-[15px] font-medium text-neutral-500 hover:text-navy"
-              >
-                Continue shopping
-              </button>
+              {confirming ? (
+                <div className="mt-3.5 animate-tin">
+                  <p className="pb-2.5 text-center text-[14px] text-neutral-600">
+                    Ready to place your order for <span className="font-bold text-navy">{formatLKR(finalTotal)}</span>?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onCheckout}
+                    className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white hover:bg-pink-dark"
+                  >
+                    Place order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    className="mt-2 w-full py-2 text-[15px] font-medium text-neutral-500 hover:text-navy"
+                  >
+                    ← Keep shopping
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(true)}
+                    className="mt-3.5 w-full rounded-2xl bg-pink py-4 text-base font-bold text-white hover:bg-pink-dark"
+                  >
+                    Place order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-2 w-full py-2 text-[15px] font-medium text-neutral-500 hover:text-navy"
+                  >
+                    Continue shopping
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

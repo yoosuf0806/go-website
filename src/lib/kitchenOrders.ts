@@ -87,18 +87,41 @@ export function offsetDate(days: number): string {
   return d.toISOString().split('T')[0]
 }
 
+// Payment/processing gate as a pure predicate so the rule is unit-testable.
+// An order is visible to the kitchen when:
+//   - its payment is confirmed (card auto-paid, or bank transfer admin-verified), OR
+//   - it's a corporate/wedding conversion (source='inquiry_conversion') that
+//     admin has processed by advancing it past 'pending', OR
+//   - it's a legacy web order with no payment step (pre-payment WhatsApp flow),
+//     which has no payment_method and isn't an inquiry conversion.
+export function kitchenVisible(o: {
+  payment_status?: string | null
+  payment_method?: string | null
+  source?: string | null
+  status?: string | null
+}): boolean {
+  if (o.payment_status === 'paid') return true
+  if (o.source === 'inquiry_conversion') return o.status != null && o.status !== 'pending'
+  // Legacy web order with no payment method: flows through as before.
+  return o.payment_method == null
+}
+
 export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenOrder[]> {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_no, status, customer_name, address, delivery_date, note, total_pieces, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
+      'id, order_no, status, customer_name, address, delivery_date, note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
     )
     .eq('delivery_date', deliveryDate)
     .neq('status', 'cancelled')
     .order('order_no', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as unknown as KitchenOrder[]
+  return ((data ?? []) as unknown as (KitchenOrder & {
+    payment_status?: string | null
+    payment_method?: string | null
+    source?: string | null
+  })[]).filter(kitchenVisible)
 }
 
 export async function advanceKitchenStatus(id: string, to: OrderStatus): Promise<void> {
