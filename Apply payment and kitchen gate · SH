@@ -5,40 +5,39 @@
 #   git checkout main && git pull
 #   git checkout -b claude/payment-and-kitchen-gate
 #   bash apply_payment_and_kitchen_gate.sh
-#   git add -A && git commit -m "feat(checkout+kitchen): bank transfer payment step + slip upload; admin confirm-payment releases order to kitchen board"
+#   git add -A && git commit -m "feat(checkout+kitchen): bank transfer payment step + slip upload; payment/processing gate releases orders to kitchen"
 #   git push -u origin claude/payment-and-kitchen-gate
 #
-# Then open the PR at:
+# Open the PR:
 #   https://github.com/yoosuf0806/go-website/compare/main...claude/payment-and-kitchen-gate
 #
+# *** NOTE: an earlier PR committed the apply-SCRIPT files but never ran them,
+# *** so the payment feature is NOT actually in main. This script contains the
+# *** real code. IMPORTANT: it must be RUN (bash apply_...sh) so it applies the
+# *** patch, and you must `git add -A` AFTER running it, before committing.
+#
 # *** AFTER MERGING, run supabase/migrations/026_payment_method.sql in the
-# *** Supabase SQL editor (adds payment columns, seeds the editable bank block,
-# *** creates the private bank-slips bucket, extends create_order).
-#   Verify:
+# *** Supabase SQL editor. Verify:
 #     select column_name from information_schema.columns
 #     where table_name='orders'
 #       and column_name in ('payment_method','payment_status','payment_ref','slip_url');
 #     select id, public from storage.buckets where id='bank-slips';   -- public=false
 #
-# WHAT THIS PR DOES (two connected parts):
-#   1. Checkout: adds a Payment step. Bank transfer shows your Nations Trust
-#      details, a reference field, and slip upload (both required). Bank orders
-#      land as payment_status='awaiting_verification' and SKIP WhatsApp; card
-#      (PayHere) is shown but disabled until a later PR. Cart "Place order" now
-#      has a confirm/keep-shopping step.
-#   2. Kitchen gating: the kitchen board only shows orders once payment is
-#      confirmed. Admin > Orders gets a "Confirm payment received" button on
-#      awaiting-verification orders — pressing it sets payment_status='paid',
-#      which is what releases the order to the kitchen. Legacy WhatsApp orders
-#      (no payment_method) still flow to the kitchen as before. Card orders will
-#      be auto-marked paid by the PayHere callback in the later PR, so they'll
-#      reach the kitchen with no manual step.
-#
-# No new migration for part 2 — it reuses the payment_status column from 026.
-# setup.sql is updated for fresh one-shot installs; no action for your live DB.
+# WHAT THIS DOES:
+#  1. Checkout gains a Payment step. Bank transfer shows your Nations Trust
+#     details, a reference field, and slip upload (both required); the order
+#     lands as payment_status='awaiting_verification' and SKIPS WhatsApp. Card
+#     (PayHere) is shown but disabled until a later PR. Cart "Place order" now
+#     has a confirm / keep-shopping step.
+#  2. Kitchen gate — the kitchen board only shows an order when:
+#       - payment is confirmed (card auto-paid, or bank transfer that admin
+#         verified via the new "Confirm payment received" button), OR
+#       - it's a corporate/wedding conversion admin has advanced past 'pending', OR
+#       - it's a legacy WhatsApp order (no payment method) — unchanged.
+#     No new migration for the gate — it reuses the 026 payment columns.
+#  setup.sql is updated for fresh one-shot installs; no action for your live DB.
 
 set -euo pipefail
-
 PATCH_FILE="$(mktemp)"
 cat > "$PATCH_FILE" << 'PATCH_EOF'
 diff --git a/scripts/seed-data.ts b/scripts/seed-data.ts
@@ -721,7 +720,7 @@ index 65c8d4f..a4a0d89 100644
    )
  }
 diff --git a/src/hooks/useAdminOrders.ts b/src/hooks/useAdminOrders.ts
-index 0420e0a..842efc7 100644
+index 0420e0a..336cebd 100644
 --- a/src/hooks/useAdminOrders.ts
 +++ b/src/hooks/useAdminOrders.ts
 @@ -1,5 +1,5 @@
@@ -731,14 +730,17 @@ index 0420e0a..842efc7 100644
  import type { OrderStatus } from '../lib/orderStatus'
  
  // Admin order list, live from Supabase with a short staleTime (spec §8). Status
-@@ -32,3 +32,18 @@ export function useUpdateOrderStatus() {
-     },
-   })
- }
+@@ -29,6 +29,21 @@ export function useUpdateOrderStatus() {
+     onSuccess: () => {
+       qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
++      qc.invalidateQueries({ queryKey: ['kitchen-orders'] })
++    },
++  })
++}
 +
 +// Confirm a bank-transfer payment (admin verified the slip). Invalidates the
-+// admin list AND the kitchen board, since confirming payment is what makes the
-+// order appear as a job for the kitchen.
++// kitchen board too, since confirming payment is what surfaces the job there.
 +export function useConfirmOrderPayment() {
 +  const qc = useQueryClient()
 +  return useMutation({
@@ -747,11 +749,11 @@ index 0420e0a..842efc7 100644
 +      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
 +      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
 +      qc.invalidateQueries({ queryKey: ['kitchen-orders'] })
-+    },
-+  })
-+}
+     },
+   })
+ }
 diff --git a/src/lib/adminOrders.ts b/src/lib/adminOrders.ts
-index cd178c0..3f14af7 100644
+index cd178c0..2fe4e66 100644
 --- a/src/lib/adminOrders.ts
 +++ b/src/lib/adminOrders.ts
 @@ -30,6 +30,10 @@ export interface AdminOrder {
@@ -774,19 +776,15 @@ index cd178c0..3f14af7 100644
      )
      .order('created_at', { ascending: false })
  
-@@ -69,3 +73,14 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
+@@ -69,3 +73,10 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
    const { error } = await supabase.from('orders').update({ status }).eq('id', id)
    if (error) throw new Error(error.message)
  }
 +
 +// Mark a bank-transfer order's payment as confirmed after the admin has
-+// checked the slip. Setting payment_status = 'paid' is what releases the
-+// order to the kitchen board (fetchKitchenOrders gates on it).
++// checked the slip. Setting payment_status='paid' releases it to the kitchen.
 +export async function confirmOrderPayment(id: string): Promise<void> {
-+  const { error } = await supabase
-+    .from('orders')
-+    .update({ payment_status: 'paid' })
-+    .eq('id', id)
++  const { error } = await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', id)
 +  if (error) throw new Error(error.message)
 +}
 diff --git a/src/lib/bankSlips.test.ts b/src/lib/bankSlips.test.ts
@@ -886,73 +884,92 @@ index 0000000..a154261
 +}
 diff --git a/src/lib/kitchenOrders.test.ts b/src/lib/kitchenOrders.test.ts
 new file mode 100644
-index 0000000..f9da52b
+index 0000000..55481ad
 --- /dev/null
 +++ b/src/lib/kitchenOrders.test.ts
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,34 @@
 +import { describe, it, expect } from 'vitest'
-+import { kitchenPaymentVisible } from './kitchenOrders'
++import { kitchenVisible } from './kitchenOrders'
 +
-+describe('kitchenPaymentVisible (payment gate for the kitchen board)', () => {
++describe('kitchenVisible (payment + processing gate for the kitchen board)', () => {
 +  it('shows a paid bank-transfer order', () => {
-+    expect(kitchenPaymentVisible({ payment_status: 'paid', payment_method: 'bank_transfer' })).toBe(true)
++    expect(kitchenVisible({ payment_status: 'paid', payment_method: 'bank_transfer', source: 'web', status: 'pending' })).toBe(true)
 +  })
 +
 +  it('hides an unverified bank-transfer order', () => {
-+    expect(
-+      kitchenPaymentVisible({ payment_status: 'awaiting_verification', payment_method: 'bank_transfer' }),
-+    ).toBe(false)
++    expect(kitchenVisible({ payment_status: 'awaiting_verification', payment_method: 'bank_transfer', source: 'web', status: 'pending' })).toBe(false)
++  })
++
++  it('shows a paid card order (PayHere auto-confirmed)', () => {
++    expect(kitchenVisible({ payment_status: 'paid', payment_method: 'card', source: 'web', status: 'pending' })).toBe(true)
 +  })
 +
 +  it('hides an unpaid card order', () => {
-+    expect(kitchenPaymentVisible({ payment_status: 'unpaid', payment_method: 'card' })).toBe(false)
++    expect(kitchenVisible({ payment_status: 'unpaid', payment_method: 'card', source: 'web', status: 'pending' })).toBe(false)
 +  })
 +
-+  it('shows a paid card order (PayHere callback marked it paid)', () => {
-+    expect(kitchenPaymentVisible({ payment_status: 'paid', payment_method: 'card' })).toBe(true)
++  it('hides a corporate/wedding conversion still at pending (not yet processed)', () => {
++    expect(kitchenVisible({ source: 'inquiry_conversion', status: 'pending', payment_method: null })).toBe(false)
 +  })
 +
-+  it('shows a legacy order with no payment method (pre-payment WhatsApp flow)', () => {
-+    expect(kitchenPaymentVisible({ payment_status: 'unpaid', payment_method: null })).toBe(true)
-+    expect(kitchenPaymentVisible({})).toBe(true)
++  it('shows a corporate/wedding conversion once admin advances it past pending', () => {
++    expect(kitchenVisible({ source: 'inquiry_conversion', status: 'confirmed', payment_method: null })).toBe(true)
++    expect(kitchenVisible({ source: 'inquiry_conversion', status: 'baking', payment_method: null })).toBe(true)
++  })
++
++  it('shows a legacy web order with no payment method (pre-payment WhatsApp flow)', () => {
++    expect(kitchenVisible({ source: 'web', payment_method: null, status: 'pending' })).toBe(true)
++    expect(kitchenVisible({})).toBe(true)
 +  })
 +})
 diff --git a/src/lib/kitchenOrders.ts b/src/lib/kitchenOrders.ts
-index a92c0a5..3e37c7f 100644
+index a92c0a5..7e098c9 100644
 --- a/src/lib/kitchenOrders.ts
 +++ b/src/lib/kitchenOrders.ts
-@@ -87,6 +87,17 @@ export function offsetDate(days: number): string {
+@@ -87,18 +87,41 @@ export function offsetDate(days: number): string {
    return d.toISOString().split('T')[0]
  }
  
-+// Payment gate as a pure predicate, mirroring the .or() filter in
-+// fetchKitchenOrders so the rule is unit-testable. An order is visible to the
-+// kitchen when it's confirmed paid, OR it's a legacy order with no payment
-+// method (the pre-payment-feature WhatsApp flow, which has no payment step).
-+export function kitchenPaymentVisible(o: {
++// Payment/processing gate as a pure predicate so the rule is unit-testable.
++// An order is visible to the kitchen when:
++//   - its payment is confirmed (card auto-paid, or bank transfer admin-verified), OR
++//   - it's a corporate/wedding conversion (source='inquiry_conversion') that
++//     admin has processed by advancing it past 'pending', OR
++//   - it's a legacy web order with no payment step (pre-payment WhatsApp flow),
++//     which has no payment_method and isn't an inquiry conversion.
++export function kitchenVisible(o: {
 +  payment_status?: string | null
 +  payment_method?: string | null
++  source?: string | null
++  status?: string | null
 +}): boolean {
-+  return o.payment_status === 'paid' || o.payment_method == null
++  if (o.payment_status === 'paid') return true
++  if (o.source === 'inquiry_conversion') return o.status != null && o.status !== 'pending'
++  // Legacy web order with no payment method: flows through as before.
++  return o.payment_method == null
 +}
 +
  export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenOrder[]> {
    const { data, error } = await supabase
      .from('orders')
-@@ -95,6 +106,13 @@ export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenO
+     .select(
+-      'id, order_no, status, customer_name, address, delivery_date, note, total_pieces, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
++      'id, order_no, status, customer_name, address, delivery_date, note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
      )
      .eq('delivery_date', deliveryDate)
      .neq('status', 'cancelled')
-+    // Payment gate: the kitchen only sees an order once its payment is
-+    // confirmed. Bank transfers become 'paid' when admin verifies the slip;
-+    // card (PayHere) orders become 'paid' via the callback. Legacy orders
-+    // with no payment_method (WhatsApp flow) have no payment step, so they
-+    // pass through as before — otherwise this filter would hide every
-+    // pre-payment-feature order.
-+    .or('payment_status.eq.paid,payment_method.is.null')
      .order('order_no', { ascending: true })
  
    if (error) throw new Error(error.message)
+-  return (data ?? []) as unknown as KitchenOrder[]
++  return ((data ?? []) as unknown as (KitchenOrder & {
++    payment_status?: string | null
++    payment_method?: string | null
++    source?: string | null
++  })[]).filter(kitchenVisible)
+ }
+ 
+ export async function advanceKitchenStatus(id: string, to: OrderStatus): Promise<void> {
 diff --git a/src/lib/liveCatalog.ts b/src/lib/liveCatalog.ts
 index 28739fd..59ef898 100644
 --- a/src/lib/liveCatalog.ts
@@ -1011,7 +1028,7 @@ index 411fe2c..00f9cfd 100644
      .single()
  
 diff --git a/src/pages/admin/Orders.tsx b/src/pages/admin/Orders.tsx
-index 3adc60b..56ef0bf 100644
+index 3adc60b..6260fa4 100644
 --- a/src/pages/admin/Orders.tsx
 +++ b/src/pages/admin/Orders.tsx
 @@ -1,6 +1,7 @@
@@ -1059,7 +1076,7 @@ index 3adc60b..56ef0bf 100644
  }) {
    const { catalog } = useCatalog()
    const tier = findTier(order.total_pieces, catalog.deliveryTiers)
-@@ -307,6 +315,46 @@ function OrderRow({
+@@ -307,6 +315,44 @@ function OrderRow({
                        <span className="font-medium">Note:</span> {order.note}
                      </div>
                    )}
@@ -1096,9 +1113,7 @@ index 3adc60b..56ef0bf 100644
 +                          >
 +                            {confirmingPayment ? 'Confirming…' : '✓ Confirm payment received'}
 +                          </button>
-+                          <p className="mt-1 text-[11px] text-neutral-400">
-+                            Sends this order to the kitchen board.
-+                          </p>
++                          <p className="mt-1 text-[11px] text-neutral-400">Sends this order to the kitchen board.</p>
 +                        </div>
 +                      )}
 +                    </div>
@@ -1106,7 +1121,7 @@ index 3adc60b..56ef0bf 100644
                  </dl>
                </div>
              </div>
-@@ -317,6 +365,30 @@ function OrderRow({
+@@ -317,6 +363,30 @@ function OrderRow({
    )
  }
  
@@ -1524,24 +1539,13 @@ index 8ccdae5..5a1c3de 100644
  
  -- Read-only "is this code valid?" check for the checkout Apply button.
 PATCH_EOF
-
-echo "→ Applying patch…"
-git apply --index "$PATCH_FILE"
-rm -f "$PATCH_FILE"
-
-echo "→ Installing deps…"
-npm install --silent
-
-echo "→ Rebuilding catalog snapshot…"
-npm run snapshot --silent || true
-
+echo "→ Applying patch…"; git apply --index "$PATCH_FILE"; rm -f "$PATCH_FILE"
+echo "→ Installing deps…"; npm install --silent
+echo "→ Snapshot…"; npm run snapshot --silent || true
 echo "→ Typecheck…"; npx tsc -b
-echo "→ Lint…";      npx oxlint
-echo "→ Tests…";     npx vitest run
-echo "→ Build…";     npm run build
-
+echo "→ Lint…"; npx oxlint
+echo "→ Tests…"; npx vitest run
+echo "→ Build…"; npm run build
 echo
-echo "✅ Done. Review, commit, push, and open the PR:"
-echo "   https://github.com/yoosuf0806/go-website/compare/main...claude/payment-and-kitchen-gate"
-echo
-echo "⚠️  After merging, run supabase/migrations/026_payment_method.sql in the Supabase SQL editor."
+echo "✅ Done. Remember: git add -A && commit && push, then open the PR."
+echo "⚠️  After merging, run supabase/migrations/026_payment_method.sql in Supabase."
