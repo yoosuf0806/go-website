@@ -14,9 +14,9 @@ export default function QuoteHandledSection({
   ctaHref: string
 }) {
   return (
-    <section className="bg-cream px-6 py-16">
+    <section className="bg-blush-50 px-6 py-14 sm:px-10">
       <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
-        <div className="aspect-[4/3] overflow-hidden rounded-3xl bg-pink-light shadow-[0_20px_44px_rgba(0,0,0,0.1)]">
+        <div className="aspect-[4/3] overflow-hidden rounded-3xl bg-blush-100">
           {imageUrl ? (
             <img src={imageUrl} alt="" className="h-full w-full object-cover" />
           ) : (

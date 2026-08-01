@@ -1,17 +1,24 @@
 import type { IconCard } from '../../types/content'
 
-// Trust-stat strip directly below the hero (e.g. "50+ Minimum Order"). Reuses
-// the IconCard shape: icon = emoji, title = the big stat, body = its label.
+// Feature bullets directly below the hero (e.g. "Your branding, on the
+// brownie" / "Delivered on your schedule"). Reuses the IconCard shape
+// (icon/title/body) that used to render as a numeric stat-strip — same
+// admin-editable data (content.stats), restyled to match the mockup's
+// icon-square + title + body row pattern.
 export default function QuoteStatsBar({ stats }: { stats: IconCard[] }) {
   if (stats.length === 0) return null
   return (
-    <div className="bg-blush-100 py-8">
-      <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 px-6 sm:grid-cols-4">
+    <div className="px-6 pt-6 sm:px-10">
+      <div className="mx-auto flex max-w-3xl flex-col gap-3.5">
         {stats.map((s, i) => (
-          <div key={i} className="rounded-2xl bg-white px-4 py-6 text-center shadow-sm">
-            <div className="text-2xl">{s.icon}</div>
-            <strong className="mt-2 block font-display text-2xl font-extrabold text-pink">{s.title}</strong>
-            <p className="text-[13px] font-semibold text-[#a03040]">{s.body}</p>
+          <div key={i} className="flex items-start gap-3.5">
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] border border-blush-200 bg-blush-50 text-berry">
+              {s.icon}
+            </span>
+            <div>
+              <div className="text-[16px] font-medium text-navy">{s.title}</div>
+              <p className="pt-0.5 text-[14px] leading-relaxed text-[#5c4450]">{s.body}</p>
+            </div>
           </div>
         ))}
       </div>
