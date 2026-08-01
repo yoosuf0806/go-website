@@ -1,29 +1,26 @@
 import type { OccasionCard } from '../../types/content'
 
-// "Occasions We Cover" — a simple grid of emoji/title/body cards. Reuses the
-// homepage OccasionCard shape but ignores its cta/to (this grid is purely
-// informational, not a set of navigation links).
+// "Popular for" — a horizontal-scroll strip of occasion cards. Reuses the
+// homepage OccasionCard shape but ignores its cta/to (purely informational
+// here, not a set of navigation links).
 export default function QuoteOccasionsGrid({ heading, occasions }: { heading: string; occasions: OccasionCard[] }) {
   if (occasions.length === 0) return null
   return (
-    <section className="bg-white px-6 py-16">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-center font-display text-[clamp(1.6rem,3vw,2.3rem)] font-semibold text-navy">
-          {heading}
-        </h2>
-        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {occasions.map((o, i) => (
-            <div key={i} className="rounded-2xl bg-cream p-6">
+    <section className="pt-6">
+      <h2 className="px-6 pb-3 font-display text-xl text-navy sm:px-10">{heading}</h2>
+      <div className="no-scrollbar flex gap-3 overflow-x-auto px-6 pb-1 sm:px-10">
+        {occasions.map((o, i) => (
+          <div key={i} className="w-[150px] flex-none">
+            <div className="aspect-[150/120] overflow-hidden rounded-xl bg-blush-100">
               {o.imageUrl ? (
-                <img src={o.imageUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+                <img src={o.imageUrl} alt="" className="h-full w-full object-cover" />
               ) : (
-                <div className="text-2xl">{o.emoji}</div>
+                <div className="flex h-full w-full items-center justify-center text-3xl">{o.emoji}</div>
               )}
-              <h3 className="mt-3 font-display text-lg font-semibold text-navy">{o.title}</h3>
-              <p className="mt-1 text-sm text-neutral-500">{o.body}</p>
             </div>
-          ))}
-        </div>
+            <p className="pt-2 text-[14px] font-medium text-navy">{o.title}</p>
+          </div>
+        ))}
       </div>
     </section>
   )

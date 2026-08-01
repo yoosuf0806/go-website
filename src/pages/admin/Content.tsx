@@ -504,7 +504,9 @@ function QuoteLandingEditor({
       <Text label="Button text" value={content.hero.cta} onChange={(v) => onChange({ ...content, hero: { ...content.hero, cta: v } })} />
       <ImageField label="Background image (optional)" value={content.hero.imageUrl} onChange={(url) => onChange({ ...content, hero: { ...content.hero, imageUrl: url } })} />
 
-      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Trust stats strip</p>
+      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+        Feature bullets (shown below the hero — icon, title, body)
+      </p>
       <IconCards items={content.stats} onChange={(v) => onChange({ ...content, stats: v })} iconLabel="Icon" />
 
       <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Everything handled for you</p>
