@@ -13,10 +13,10 @@ import CheckoutModal from './CheckoutModal'
 const HEADER_HEIGHT = 68
 
 const NAV = [
-  { to: '/shop', label: 'Shop All' },
+  { to: '/slab', label: 'Brownie Slab' },
   { to: '/wedding', label: 'Wedding Orders' },
   { to: '/corporate', label: 'Corporate Orders' },
-  { to: '/shop', label: 'Brownie Slab' },
+  { to: '/shop', label: 'Shop All' },
 ]
 
 // Shared storefront chrome: pink promo marquee, fixed header (transparent over
@@ -234,9 +234,9 @@ function Footer() {
           <FooterCol
             title="Shop"
             links={[
-              { to: '/shop', label: 'Shop All' },
+              { to: '/slab', label: 'Brownie Slab' },
               { to: '/corporate', label: 'Bulk Orders' },
-              { to: '/shop', label: 'Brownie Slab' },
+              { to: '/shop', label: 'Shop All' },
             ]}
           />
           <FooterCol

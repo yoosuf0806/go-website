@@ -156,9 +156,35 @@ export interface SiteContent {
     shop: SeoMeta
     corporate: SeoMeta
     wedding: SeoMeta
+    slab: SeoMeta
   }
   corporate: QuoteLandingContent
   wedding: QuoteLandingContent
+  /** Brownie Slab landing page (/slab): banner, how-it-works, flavour picker
+   *  (driven live by slab-enabled products), product gallery, and FAQ. */
+  slab: SlabLandingContent
+}
+
+// Brownie Slab landing page content. The flavour list itself is NOT stored
+// here — it's read live from slab-enabled products; this holds only the
+// editable copy, banner image, gallery images, and FAQ.
+export interface SlabLandingContent {
+  banner: {
+    eyebrow: string
+    title: string
+    subtitle: string
+    cta: string
+    imageUrl?: string
+  }
+  /** "How it works" strip. Reuses IconCard: icon = emoji, title, body. */
+  howItWorks: IconCard[]
+  flavoursHeading: string
+  flavoursIntro: string
+  galleryHeading: string
+  /** Admin-managed gallery image URLs. Empty = gallery section hidden. */
+  gallery: string[]
+  faqHeading: string
+  faq: FaqItem[]
 }
 
 export const DEFAULT_CONTENT: SiteContent = {
@@ -270,6 +296,10 @@ export const DEFAULT_CONTENT: SiteContent = {
     wedding: {
       title: 'Wedding Favours & Gifting — Golden Oven',
       description: 'Brownie favours and gifting for engagements, bridal showers, and wedding receptions. Bulk pricing and custom packaging.',
+    },
+    slab: {
+      title: 'Brownie Slab — Golden Oven',
+      description: 'One big shareable brownie slab, freshly baked in your choice of flavour. Perfect for celebrations, offices, and gifting. Add letter toppers free.',
     },
   },
   corporate: {
@@ -402,6 +432,39 @@ export const DEFAULT_CONTENT: SiteContent = {
     preOrderLeadDays: 4,
     discountThreshold: 100,
   },
+  slab: {
+    banner: {
+      eyebrow: 'The Brownie Slab',
+      title: 'One big slab. Every bit shareable.',
+      subtitle: 'A generous, freshly baked brownie slab in your choice of flavour — cut it your way, top it with a free letter message, and make any table the centrepiece.',
+      cta: 'Choose your flavour',
+      imageUrl: undefined,
+    },
+    howItWorks: [
+      { icon: '🍫', title: 'Pick a flavour', body: 'Choose from our slab-ready brownie flavours.' },
+      { icon: '✍️', title: 'Add a message', body: 'Free letter toppers — spell out a name or a note.' },
+      { icon: '🚚', title: 'Freshly delivered', body: 'Baked to order and delivered islandwide.' },
+    ],
+    flavoursHeading: 'Choose your flavour',
+    flavoursIntro: 'Every one of these can be ordered as a full slab.',
+    galleryHeading: 'Our slab gallery',
+    gallery: [],
+    faqHeading: 'Brownie slab FAQ',
+    faq: [
+      {
+        q: 'How big is a brownie slab?',
+        a: 'The slab is a single large brownie made to share — sized to serve a group. Exact piece counts are shown on each flavour when you order.',
+      },
+      {
+        q: 'Can I add a message on top?',
+        a: 'Yes — letter toppers are free and built in. Spell out a name, a date, or a short message.',
+      },
+      {
+        q: 'How much notice do you need?',
+        a: 'Slabs are baked fresh to order. We recommend ordering at least a day ahead; larger orders may need more lead time.',
+      },
+    ],
+  },
 }
 
 /** Deep-merge a partial (DB) content object over the defaults so missing keys
@@ -431,6 +494,7 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
       shop: { ...DEFAULT_CONTENT.seo.shop, ...partial.seo?.shop },
       corporate: { ...DEFAULT_CONTENT.seo.corporate, ...partial.seo?.corporate },
       wedding: { ...DEFAULT_CONTENT.seo.wedding, ...partial.seo?.wedding },
+      slab: { ...DEFAULT_CONTENT.seo.slab, ...partial.seo?.slab },
     },
     promoMessages: partial.promoMessages?.length ? partial.promoMessages : DEFAULT_CONTENT.promoMessages,
     trust: partial.trust?.length ? partial.trust : DEFAULT_CONTENT.trust,
@@ -444,6 +508,22 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     sectionVisibility: { ...DEFAULT_CONTENT.sectionVisibility, ...partial.sectionVisibility },
     corporate: mergeQuoteLanding(DEFAULT_CONTENT.corporate, partial.corporate),
     wedding: mergeQuoteLanding(DEFAULT_CONTENT.wedding, partial.wedding),
+    slab: mergeSlabLanding(DEFAULT_CONTENT.slab, partial.slab),
+  }
+}
+
+/** Merge a partial SlabLandingContent over defaults. gallery is intentionally
+ *  preserved as-is (an empty array is a valid "hide the gallery" state), while
+ *  howItWorks/faq fall back to defaults when the DB left them empty. */
+function mergeSlabLanding(base: SlabLandingContent, partial?: Partial<SlabLandingContent>): SlabLandingContent {
+  if (!partial) return base
+  return {
+    ...base,
+    ...partial,
+    banner: { ...base.banner, ...partial.banner },
+    howItWorks: partial.howItWorks?.length ? partial.howItWorks : base.howItWorks,
+    faq: partial.faq?.length ? partial.faq : base.faq,
+    gallery: partial.gallery ?? base.gallery,
   }
 }
 

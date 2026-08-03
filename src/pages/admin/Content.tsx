@@ -9,6 +9,7 @@ import type {
   QuoteLandingContent,
   SeoMeta,
   SiteContent,
+  SlabLandingContent,
 } from '../../types/content'
 import { uploadImage } from '../../lib/adminProducts'
 import Toast from '../../components/ui/Toast'
@@ -199,12 +200,15 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         onChange={(v) => set('wedding', v)}
       />
 
+      <SlabPageEditor content={form.slab} onChange={(v) => set('slab', v)} />
+
       <Section title="SEO">
         <Text label="Site name" value={form.seo.siteName} onChange={(v) => set('seo', { ...form.seo, siteName: v })} />
         <SeoEditor label="Home" meta={form.seo.home} onChange={(m) => set('seo', { ...form.seo, home: m })} />
         <SeoEditor label="Shop" meta={form.seo.shop} onChange={(m) => set('seo', { ...form.seo, shop: m })} />
         <SeoEditor label="Corporate Orders" meta={form.seo.corporate} onChange={(m) => set('seo', { ...form.seo, corporate: m })} />
         <SeoEditor label="Wedding Orders" meta={form.seo.wedding} onChange={(m) => set('seo', { ...form.seo, wedding: m })} />
+        <SeoEditor label="Brownie Slab" meta={form.seo.slab} onChange={(m) => set('seo', { ...form.seo, slab: m })} />
       </Section>
 
       <div className="sticky bottom-0 -mx-2 flex items-center gap-3 bg-neutral-50/90 px-2 py-3 backdrop-blur">
@@ -578,6 +582,95 @@ function PricingTiersEditor({ tiers, onChange }: { tiers: PricingTier[]; onChang
       <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
         + Add tier
       </button>
+    </div>
+  )
+}
+
+// Admin editor for the Brownie Slab landing page (/slab). The flavour list is
+// NOT edited here — it's read live from slab-enabled products. This edits the
+// banner (copy + image), how-it-works strip, section headings, the product
+// gallery (add/remove images), and the FAQ.
+function SlabPageEditor({
+  content,
+  onChange,
+}: {
+  content: SlabLandingContent
+  onChange: (v: SlabLandingContent) => void
+}) {
+  return (
+    <Section title="Brownie Slab page">
+      <p className="text-xs text-neutral-500">
+        The flavour cards are driven automatically by your slab-enabled products — no need to edit them here.
+      </p>
+
+      <div className="rounded border border-neutral-100 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Banner</div>
+        <div className="mt-2 flex flex-col gap-2">
+          <Text label="Eyebrow" value={content.banner.eyebrow} onChange={(v) => onChange({ ...content, banner: { ...content.banner, eyebrow: v } })} />
+          <Text label="Title" value={content.banner.title} onChange={(v) => onChange({ ...content, banner: { ...content.banner, title: v } })} />
+          <Area label="Subtitle" value={content.banner.subtitle} onChange={(v) => onChange({ ...content, banner: { ...content.banner, subtitle: v } })} />
+          <Text label="Button" value={content.banner.cta} onChange={(v) => onChange({ ...content, banner: { ...content.banner, cta: v } })} />
+          <ImageField label="Banner image (optional)" value={content.banner.imageUrl} onChange={(url) => onChange({ ...content, banner: { ...content.banner, imageUrl: url } })} />
+        </div>
+      </div>
+
+      <div className="rounded border border-neutral-100 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">How it works (3 steps)</div>
+        <div className="mt-2">
+          <IconCards items={content.howItWorks} onChange={(v) => onChange({ ...content, howItWorks: v })} iconLabel="Emoji" />
+        </div>
+      </div>
+
+      <Text label="Flavours heading" value={content.flavoursHeading} onChange={(v) => onChange({ ...content, flavoursHeading: v })} />
+      <Area label="Flavours intro" value={content.flavoursIntro} onChange={(v) => onChange({ ...content, flavoursIntro: v })} />
+
+      <div className="rounded border border-neutral-100 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Product gallery</div>
+        <Text label="Gallery heading" value={content.galleryHeading} onChange={(v) => onChange({ ...content, galleryHeading: v })} />
+        <div className="mt-2">
+          <GalleryEditor images={content.gallery} onChange={(v) => onChange({ ...content, gallery: v })} />
+        </div>
+      </div>
+
+      <div className="rounded border border-neutral-100 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">FAQ</div>
+        <Text label="FAQ heading" value={content.faqHeading} onChange={(v) => onChange({ ...content, faqHeading: v })} />
+        <div className="mt-2">
+          <FaqEditor items={content.faq} onChange={(v) => onChange({ ...content, faq: v })} />
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+// Add/remove/reorder-free gallery editor: each row is an uploaded image with a
+// remove button; a trailing uploader appends. An empty gallery hides the
+// section on the storefront.
+function GalleryEditor({ images, onChange }: { images: string[]; onChange: (v: string[]) => void }) {
+  const removeAt = (i: number) => onChange(images.filter((_, j) => j !== i))
+  const addImage = (url: string | undefined) => {
+    if (url) onChange([...images, url])
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {images.map((url, i) => (
+            <div key={i} className="relative">
+              <img src={url} alt={`Gallery ${i + 1}`} className="aspect-square w-full rounded object-cover" />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 text-xs font-bold text-red-600 shadow hover:bg-white"
+                aria-label={`Remove image ${i + 1}`}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <ImageField label="Add a gallery image" value={undefined} onChange={addImage} />
     </div>
   )
 }

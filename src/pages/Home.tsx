@@ -127,7 +127,7 @@ export default function Home() {
               {slabImage && <BrownieImage src={slabImage} alt="Brownie slab" className="h-full w-full" />}
             </div>
             <Link
-              to="/shop"
+              to="/slab"
               className="mt-4 block rounded-2xl bg-navy py-4 text-center text-base font-bold text-white transition-transform hover:-translate-y-0.5"
             >
               {homeSlab.cta}
