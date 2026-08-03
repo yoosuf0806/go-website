@@ -15,11 +15,19 @@ export interface AppliedVoucher {
   discount: number
 }
 
+/** Payment selection carried from the checkout Payment step into the RPC. */
+export interface OrderPayment {
+  method: 'bank_transfer' | 'card'
+  paymentRef?: string | null
+  slipUrl?: string | null
+}
+
 export interface CreateOrderInput {
   items: CartLine[]
   totals: CartTotals
   details: CheckoutDetails
   voucher?: AppliedVoucher | null
+  payment?: OrderPayment | null
 }
 
 export interface CreatedOrder {
@@ -43,7 +51,7 @@ export function orderItemsPayload(items: CartLine[]) {
   }))
 }
 
-export async function createOrder({ items, totals, details, voucher }: CreateOrderInput): Promise<CreatedOrder> {
+export async function createOrder({ items, totals, details, voucher, payment }: CreateOrderInput): Promise<CreatedOrder> {
   const phone = normalizePhone(details.phone)
   if (!phone) throw new Error('Invalid phone number')
   // Optional second number: normalise if given, otherwise omit.
@@ -69,6 +77,9 @@ export async function createOrder({ items, totals, details, voucher }: CreateOrd
       p_is_gift: details.isGift ?? false,
       p_recipient_name: details.isGift ? details.recipientName || null : null,
       p_recipient_phone: details.isGift && details.recipientPhone ? normalizePhone(details.recipientPhone) : null,
+      p_payment_method: payment?.method ?? null,
+      p_payment_ref: payment?.paymentRef || null,
+      p_slip_url: payment?.slipUrl || null,
     })
     .single()
 

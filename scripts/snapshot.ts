@@ -37,6 +37,7 @@ import type {
   BannerSetting,
   FeaturesSetting,
   BusinessSetting,
+  BankTransferSetting,
   ProductPackageStockMap,
 } from '../src/types/catalog.ts'
 import { stockKey } from '../src/types/catalog.ts'
@@ -145,6 +146,7 @@ function mapSettings(raw: SeedData['settings']): CatalogSettings {
     banner: raw.banner as unknown as BannerSetting,
     features: raw.features as unknown as FeaturesSetting,
     business: raw.business as unknown as BusinessSetting,
+    bankTransfer: raw.bankTransfer as unknown as BankTransferSetting,
   }
 }
 
@@ -212,6 +214,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       banner: (settingsByKey.banner ?? {}) as Record<string, unknown>,
       features: (settingsByKey.features ?? {}) as Record<string, unknown>,
       business: (settingsByKey.business ?? {}) as Record<string, unknown>,
+      bankTransfer: (settingsByKey.bank_transfer ?? {}) as Record<string, unknown>,
       content: (settingsByKey.content ?? undefined) as Record<string, unknown> | undefined,
     },
     productPackageStock: (productPackageStock.data ?? []) as RawProductPackageStock[],

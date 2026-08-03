@@ -89,6 +89,7 @@ export interface RawSettings {
   banner: Record<string, unknown>
   features: Record<string, unknown>
   business: Record<string, unknown>
+  bankTransfer: Record<string, unknown>
   /** Editable storefront content blob; undefined → DEFAULT_CONTENT at build. */
   content?: Record<string, unknown>
 }
@@ -285,6 +286,13 @@ export const seedData: SeedData = {
     banner: { enabled: false, text: '', starts_at: null, ends_at: null },
     features: { corporate_section: true, wedding_section: true, reviews_section: true },
     business: { whatsapp_number: '94771234567', google_business_url: 'https://g.page/golden-oven' },
+    bankTransfer: {
+      bank_name: 'Nations Trust Bank',
+      account_name: 'M N AHAMED',
+      account_no: '200520120714',
+      branch: 'Mt Lavinia',
+      enabled: true,
+    },
   },
 
   // No row = in stock. Cashew Brownie (a3333333…) is in stock as 9pc but

@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
-import { useAllAdminOrders, useUpdateOrderStatus } from '../../hooks/useAdminOrders'
+import { useEffect, useMemo, useState } from 'react'
+import { useAllAdminOrders, useUpdateOrderStatus, useConfirmOrderPayment } from '../../hooks/useAdminOrders'
 import type { AdminOrder } from '../../lib/adminOrders'
+import { signedSlipUrl } from '../../lib/bankSlips'
 import { STATUS_LABELS, nextStatus, canCancel, type OrderStatus } from '../../lib/orderStatus'
 import {
   ordersForTab,
@@ -34,6 +35,7 @@ export default function Orders() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const { data: orders, isLoading, isError, error } = useAllAdminOrders()
   const updateStatus = useUpdateOrderStatus()
+  const confirmPayment = useConfirmOrderPayment()
 
   const all = orders ?? []
   const counts = useMemo(
@@ -120,6 +122,8 @@ export default function Orders() {
                   onToggle={() => setExpanded((cur) => (cur === order.id ? null : order.id))}
                   onAdvance={(to) => updateStatus.mutate({ id: order.id, status: to })}
                   busy={updateStatus.isPending}
+                  onConfirmPayment={() => confirmPayment.mutate(order.id)}
+                  confirmingPayment={confirmPayment.isPending}
                 />
               ))}
             </tbody>
@@ -137,6 +141,8 @@ function OrderRow({
   onToggle,
   onAdvance,
   busy,
+  onConfirmPayment,
+  confirmingPayment,
 }: {
   order: AdminOrder
   allOrders: AdminOrder[]
@@ -144,6 +150,8 @@ function OrderRow({
   onToggle: () => void
   onAdvance: (to: OrderStatus) => void
   busy: boolean
+  onConfirmPayment: () => void
+  confirmingPayment: boolean
 }) {
   const { catalog } = useCatalog()
   const tier = findTier(order.total_pieces, catalog.deliveryTiers)
@@ -307,6 +315,44 @@ function OrderRow({
                       <span className="font-medium">Note:</span> {order.note}
                     </div>
                   )}
+                  {order.payment_method && (
+                    <div className="mt-1 rounded bg-white px-2 py-1.5 text-neutral-700">
+                      <span className="font-medium">Payment:</span>{' '}
+                      {order.payment_method === 'bank_transfer' ? 'Bank transfer' : 'Card'}
+                      {order.payment_status && (
+                        <span
+                          className={`ml-1.5 rounded px-1.5 py-0.5 text-xs font-semibold ${
+                            order.payment_status === 'paid'
+                              ? 'bg-green-100 text-green-700'
+                              : order.payment_status === 'awaiting_verification'
+                                ? 'bg-amber-100 text-amber-700'
+                                : order.payment_status === 'failed'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-neutral-100 text-neutral-600'
+                          }`}
+                        >
+                          {order.payment_status.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                      {order.payment_ref && (
+                        <div className="text-xs text-neutral-500">Ref: {order.payment_ref}</div>
+                      )}
+                      {order.slip_url && <SlipLink path={order.slip_url} />}
+                      {order.payment_status === 'awaiting_verification' && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={onConfirmPayment}
+                            disabled={confirmingPayment}
+                            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {confirmingPayment ? 'Confirming…' : '✓ Confirm payment received'}
+                          </button>
+                          <p className="mt-1 text-[11px] text-neutral-400">Sends this order to the kitchen board.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </dl>
               </div>
             </div>
@@ -314,6 +360,30 @@ function OrderRow({
         </tr>
       )}
     </>
+  )
+}
+
+function SlipLink({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    signedSlipUrl(path).then((u) => {
+      if (alive) setUrl(u)
+    })
+    return () => {
+      alive = false
+    }
+  }, [path])
+  if (!url) return <div className="text-xs text-neutral-400">Loading slip…</div>
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-xs font-medium text-pink underline hover:no-underline"
+    >
+      View bank slip
+    </a>
   )
 }
 

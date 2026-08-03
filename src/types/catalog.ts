@@ -125,10 +125,18 @@ export interface BusinessSetting {
   whatsapp_number: string
   google_business_url: string
 }
+export interface BankTransferSetting {
+  bank_name: string
+  account_name: string
+  account_no: string
+  branch: string
+  enabled: boolean
+}
 export interface CatalogSettings {
   banner: BannerSetting
   features: FeaturesSetting
   business: BusinessSetting
+  bankTransfer: BankTransferSetting
 }
 
 export interface Catalog {

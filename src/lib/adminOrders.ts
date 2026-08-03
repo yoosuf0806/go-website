@@ -30,6 +30,10 @@ export interface AdminOrder {
   is_gift?: boolean
   recipient_name?: string | null
   recipient_phone?: string | null
+  payment_method?: string | null
+  payment_status?: string | null
+  payment_ref?: string | null
+  slip_url?: string | null
   subtotal: number
   delivery_fee: number
   total: number
@@ -49,7 +53,7 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<AdminOrde
   let query = supabase
     .from('orders')
     .select(
-      'id, order_no, status, customer_name, phone, email, alt_phone, address, delivery_date, note, is_gift, recipient_name, recipient_phone, subtotal, delivery_fee, total, total_pieces, source, created_at, order_items(id, product_name, package_label, piece_count, box_qty, unit_price, addons, line_total)',
+      'id, order_no, status, customer_name, phone, email, alt_phone, address, delivery_date, note, is_gift, recipient_name, recipient_phone, payment_method, payment_status, payment_ref, slip_url, subtotal, delivery_fee, total, total_pieces, source, created_at, order_items(id, product_name, package_label, piece_count, box_qty, unit_price, addons, line_total)',
     )
     .order('created_at', { ascending: false })
 
@@ -67,5 +71,12 @@ export async function fetchOrders(filters: OrderFilters = {}): Promise<AdminOrde
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<void> {
   const { error } = await supabase.from('orders').update({ status }).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+// Mark a bank-transfer order's payment as confirmed after the admin has
+// checked the slip. Setting payment_status='paid' releases it to the kitchen.
+export async function confirmOrderPayment(id: string): Promise<void> {
+  const { error } = await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', id)
   if (error) throw new Error(error.message)
 }

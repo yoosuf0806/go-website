@@ -133,6 +133,9 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
       (settingsMap.get('features') as Catalog['settings']['features']) ?? seed.settings.features,
     business:
       (settingsMap.get('business') as Catalog['settings']['business']) ?? seed.settings.business,
+    bankTransfer:
+      (settingsMap.get('bank_transfer') as Catalog['settings']['bankTransfer']) ??
+      seed.settings.bankTransfer,
   }
   const content = mergeContent(settingsMap.get('content') ?? seed.content)
 

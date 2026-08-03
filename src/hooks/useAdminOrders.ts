@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchOrders, updateOrderStatus, type OrderFilters } from '../lib/adminOrders'
+import { fetchOrders, updateOrderStatus, confirmOrderPayment, type OrderFilters } from '../lib/adminOrders'
 import type { OrderStatus } from '../lib/orderStatus'
 
 // Admin order list, live from Supabase with a short staleTime (spec §8). Status
@@ -29,6 +29,21 @@ export function useUpdateOrderStatus() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+      qc.invalidateQueries({ queryKey: ['kitchen-orders'] })
+    },
+  })
+}
+
+// Confirm a bank-transfer payment (admin verified the slip). Invalidates the
+// kitchen board too, since confirming payment is what surfaces the job there.
+export function useConfirmOrderPayment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => confirmOrderPayment(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+      qc.invalidateQueries({ queryKey: ['kitchen-orders'] })
     },
   })
 }
