@@ -10,9 +10,10 @@ import { useCartStore } from '../stores/cart'
 // mount and swaps in current data — so admin changes appear on next page load
 // with no Publish/rebuild. If the live fetch fails, the seed stays (fail-safe).
 
+const rawSeed = catalogJson as unknown as Catalog
 const seed: Catalog = {
-  ...(catalogJson as Catalog),
-  content: mergeContent((catalogJson as Catalog).content),
+  ...rawSeed,
+  content: mergeContent(rawSeed.content),
 }
 
 interface CatalogContextValue {

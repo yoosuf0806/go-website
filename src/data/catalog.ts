@@ -8,7 +8,7 @@ import catalogJson from './catalog.json'
 import type { Catalog } from '../types/catalog'
 import { mergeContent } from '../types/content'
 
-export const catalog = catalogJson as Catalog
+export const catalog = catalogJson as unknown as Catalog
 
 export const categories = catalog.categories
 export const products = catalog.products
