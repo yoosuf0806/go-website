@@ -76,11 +76,15 @@ export default function StorefrontLayout() {
       {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} />}
 
       {showMiniCart && (
-        <div className="fixed inset-x-3.5 bottom-3.5 z-30 lg:hidden">
+        // Full-width pill on mobile; on desktop a centered floating pill (so
+        // it doesn't stretch edge-to-edge and clears the bottom-right WhatsApp
+        // float). Visible on every viewport now — the header cart icon is easy
+        // to miss while browsing.
+        <div className="fixed inset-x-3.5 bottom-3.5 z-30 lg:inset-x-auto lg:bottom-6 lg:left-1/2 lg:w-[min(440px,90vw)] lg:-translate-x-1/2">
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl bg-pink px-4 py-3.5 text-white shadow-[0_12px_24px_-10px_rgba(217,45,86,0.7)]"
+            className="flex w-full items-center justify-between rounded-2xl bg-pink px-4 py-3.5 text-white shadow-[0_12px_24px_-10px_rgba(217,45,86,0.7)] lg:px-6"
           >
             <span className="text-sm opacity-90">
               {cartCount} {cartCount === 1 ? 'item' : 'items'} · {formatLKR(cartSubtotal)}
