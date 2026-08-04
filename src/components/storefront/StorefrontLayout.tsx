@@ -146,12 +146,15 @@ function Header({
     >
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
         <Link to="/" aria-label="Golden Oven — home" className="flex items-center">
-          {/* The uploaded logo is a 1080² square with heavy padding around the
-              wordmark; frame it in a wider box and zoom via object-cover so the
-              "golden oven" wordmark reads large instead of a tiny square. */}
-          <span className="block h-14 w-28 overflow-hidden rounded-lg">
-            <img src="/logo.png" alt="Golden Oven" className="h-full w-full scale-[1.45] object-cover" />
-          </span>
+          {/* The uploaded logo is a 1080×1350 canvas with the pink wordmark
+              centered in lots of whitespace; frame + zoom via object-cover so
+              "golden oven" reads large in the header. */}
+          <span
+            className="block h-14 w-[104px] bg-no-repeat"
+            style={{ backgroundImage: 'url(/logo.png)', backgroundSize: '167%', backgroundPosition: '44% 50%' }}
+            role="img"
+            aria-label="Golden Oven"
+          />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -239,10 +242,15 @@ function Footer() {
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
-            <Link to="/" aria-label="Golden Oven — home" className="inline-flex">
-              <span className="block h-16 w-32 overflow-hidden rounded-lg">
-                <img src="/logo.png" alt="Golden Oven" className="h-full w-full scale-[1.45] object-cover" />
-              </span>
+            <Link
+              to="/"
+              aria-label="Golden Oven — home"
+              className="inline-block font-display text-2xl font-bold lowercase leading-[0.85] text-pink"
+            >
+              {/* The logo image has a solid white background (no alpha), so it
+                  can't sit on the navy footer — use the pink text wordmark here. */}
+              <span className="block">golden</span>
+              <span className="block">oven</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-white/70">
               Celebrate your little wins. Premium brownies baked fresh to order. Islandwide delivery
