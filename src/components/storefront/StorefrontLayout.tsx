@@ -25,19 +25,19 @@ const NAV = [
 // WhatsApp float.
 export default function StorefrontLayout() {
   const { catalog } = useCatalog()
-  const { settings, content } = catalog
+  const { settings } = catalog
   const { pathname } = useLocation()
   const cartOpen = useCartUI((s) => s.open)
   const setCartOpen = useCartUI((s) => s.setOpen)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const waNumber = toWhatsAppNumber(settings.business.whatsapp_number)
-  // Transparent-over-hero only makes sense over a dark full-bleed image — i.e.
-  // when the admin has uploaded hero slides (rendered by HeroCarousel). The
-  // default Home hero is the light blush block, which needs a solid header
-  // (navy on blush) to stay legible, matching the mockup.
-  const isHome = pathname === '/'
-  const overDarkHero = isHome && content.heroSlides.length > 0
+  // The header is always solid. It's a sticky bar that takes its own layout
+  // space (it never actually overlays the hero image), so the old
+  // "transparent white text over the hero" mode just rendered white logo/nav
+  // on the white page band above the hero — invisible until you scrolled and
+  // it went solid. Keeping it solid makes the menu visible immediately.
+  const overDarkHero = false
 
   // Global "keep shopping" shortcut: a persistent bar so a customer browsing
   // from page to page can jump to the cart without hunting for the header
