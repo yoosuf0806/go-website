@@ -145,13 +145,14 @@ function Header({
       style={{ height: HEADER_HEIGHT }}
     >
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
-        <Link
-          to="/"
-          aria-label="Golden Oven — home"
-          className={`font-display text-[21px] font-bold lowercase leading-[0.82] ${solid ? 'text-pink' : 'text-white'}`}
-        >
-          <span className="block">golden</span>
-          <span className="block">oven</span>
+        <Link to="/" aria-label="Golden Oven — home" className="flex items-center">
+          <img
+            src="/logo.png"
+            alt="Golden Oven"
+            width="48"
+            height="48"
+            className="h-12 w-12 rounded-xl object-cover"
+          />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -239,8 +240,8 @@ function Footer() {
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
-            <Link to="/" className="font-display text-2xl lowercase text-pink">
-              golden oven
+            <Link to="/" aria-label="Golden Oven — home" className="inline-flex">
+              <img src="/logo.png" alt="Golden Oven" width="56" height="56" className="h-14 w-14 rounded-xl object-cover" />
             </Link>
             <p className="mt-4 max-w-xs text-sm text-white/70">
               Celebrate your little wins. Premium brownies baked fresh to order. Islandwide delivery
