@@ -50,7 +50,7 @@ export default function StorefrontLayout() {
   const showMiniCart = cartCount > 0 && !cartOpen && !checkoutOpen && !onProductDetail
 
   return (
-    <div className="flex min-h-screen flex-col bg-blush-50 text-navy">
+    <div className="flex min-h-screen flex-col bg-white text-navy">
       <PromoTicker />
       <BannerBar banner={settings.banner} />
       <Header
@@ -140,13 +140,18 @@ function Header({
   return (
     <header
       className={`sticky top-0 z-30 transition-colors duration-300 ${
-        solid ? 'border-b border-blush-200 bg-blush-100 shadow-sm' : 'bg-white/10 backdrop-blur-md'
+        solid ? 'border-b border-blush-200 bg-white shadow-sm' : 'bg-white/10 backdrop-blur-md'
       }`}
       style={{ height: HEADER_HEIGHT }}
     >
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
-        <Link to="/" className={`font-display text-2xl font-extrabold text-pink`}>
-          Golden Oven
+        <Link
+          to="/"
+          aria-label="Golden Oven — home"
+          className={`font-display text-[21px] font-bold lowercase leading-[0.82] ${solid ? 'text-pink' : 'text-white'}`}
+        >
+          <span className="block">golden</span>
+          <span className="block">oven</span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -164,10 +169,10 @@ function Header({
         </nav>
 
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onCartClick} aria-label="Open cart" className={`relative text-2xl ${fg}`}>
-            🛒
+          <button type="button" onClick={onCartClick} aria-label="Open cart" className={`relative ${fg}`}>
+            <BagIcon className="h-6 w-6" />
             {itemCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink px-1 text-[10px] font-bold text-white">
+              <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pink px-1 text-[10px] font-bold text-white">
                 {itemCount}
               </span>
             )}
@@ -303,6 +308,17 @@ function Footer() {
         </div>
       </div>
     </footer>
+  )
+}
+
+// Shopping-bag icon (matches the reference header) — inline SVG so it renders
+// identically everywhere, unlike the previous 🛒 emoji whose glyph varied by OS.
+function BagIcon({ className = 'h-6 w-6' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M6 8h12l-.9 11.1A2 2 0 0 1 15.1 21H8.9a2 2 0 0 1-2-1.9L6 8Z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
   )
 }
 

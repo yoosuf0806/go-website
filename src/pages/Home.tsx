@@ -93,9 +93,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* HOT PICKS — mobile carousel, desktop grid */}
+      {/* HOT PICKS — mobile carousel, desktop grid (white band) */}
       {vis.hotPicks !== false && hotPicks.length > 0 && (
-        <section className="pb-1 pt-6 md:py-14">
+        <section className="bg-white pb-8 pt-8 md:py-14">
           <div className="mx-auto max-w-6xl md:px-8">
             <div className="flex items-baseline justify-between px-[22px] pb-3.5 md:px-0 md:pb-6">
               <h2 className="font-display text-[25px] text-navy md:text-[32px]">Hot Picks</h2>
@@ -115,8 +115,8 @@ export default function Home() {
       )}
 
       {/* BUILD YOUR OWN SLAB + IT ARRIVES GIFT-READY — stacked on mobile,
-          side by side on desktop */}
-      <section className="pt-6 md:py-14">
+          side by side on desktop (pink band for vibrant white↔pink rhythm) */}
+      <section className="bg-blush-100 py-8 md:py-14">
         <div className="mx-auto grid max-w-6xl gap-6 px-[22px] md:grid-cols-2 md:gap-8 md:px-8">
           {/* Build your own slab */}
           <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
@@ -155,9 +155,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* THE FLAVOURS — list rows (2-col on desktop) */}
+      {/* THE FLAVOURS — list rows (2-col on desktop) (white band) */}
       {flavours.length > 0 && (
-        <section className="px-[22px] pt-6 md:py-14">
+        <section className="bg-white px-[22px] py-8 md:py-14">
           <div className="mx-auto max-w-6xl md:px-8">
             <h2 className="font-display text-[25px] text-navy md:text-[32px]">The flavours</h2>
             <div className="mt-1 md:mt-4 md:grid md:grid-cols-2 md:gap-x-10">
@@ -207,9 +207,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* TESTIMONIALS — below the fold, admin-toggleable (3-col on desktop) */}
+      {/* TESTIMONIALS — below the fold, admin-toggleable (3-col on desktop) (white band) */}
       {vis.testimonials !== false && reviews_section && featuredReviews.length > 0 && (
-        <section className="px-[22px] pt-7 md:py-14">
+        <section className="bg-white px-[22px] py-8 md:py-14">
           <div className="mx-auto max-w-6xl md:px-8">
             <h2 className="font-display text-[25px] text-navy md:text-[32px]">{testimonialsHeading.title}</h2>
             <div className="mt-3.5 flex flex-col gap-3 md:mt-6 md:grid md:grid-cols-3 md:gap-5">
@@ -227,9 +227,9 @@ export default function Home() {
         </section>
       )}
 
-      {/* FAQ — admin add/edit/delete; hidden when empty */}
+      {/* FAQ — admin add/edit/delete; hidden when empty (pink band) */}
       {homeFaq.length > 0 && (
-        <section className="px-[22px] pt-7 md:py-14">
+        <section className="bg-blush-100 px-[22px] py-8 md:py-14">
           <div className="mx-auto max-w-3xl md:px-8">
             <h2 className="font-display text-[25px] text-navy md:text-center md:text-[32px]">Questions, answered</h2>
             <div className="mt-3.5 flex flex-col gap-2.5 md:mt-8">
@@ -241,9 +241,9 @@ export default function Home() {
         </section>
       )}
 
-      {/* FINAL WHATSAPP CTA */}
+      {/* FINAL WHATSAPP CTA (white band) */}
       {waNumber && (
-        <section className="px-[22px] pb-9 pt-7 md:pb-16 md:pt-14">
+        <section className="bg-white px-[22px] pb-9 pt-7 md:pb-16 md:pt-14">
           <a
             href={`https://wa.me/${waNumber}?text=${encodeURIComponent("Hi! I'd like to place an order.")}`}
             target="_blank"
