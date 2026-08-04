@@ -165,10 +165,10 @@ export default function Home() {
                 <Link
                   key={f.id}
                   to={`/shop/${f.slug}`}
-                  className="flex items-center gap-3 border-b border-blush-200 py-3.5 transition-colors hover:bg-blush-50/60"
+                  className="flex items-center gap-4 border-b border-blush-200 py-4 transition-colors hover:bg-blush-50/60"
                 >
                   <span className="w-5 text-[13px] font-medium text-berry">{String(i + 1).padStart(2, '0')}</span>
-                  <div className="h-14 w-14 flex-none overflow-hidden rounded-xl bg-white">
+                  <div className="h-20 w-20 flex-none overflow-hidden rounded-2xl bg-white sm:h-24 sm:w-24">
                     {f.imageUrl && <BrownieImage src={f.imageUrl} alt={f.name} className="h-full w-full" />}
                   </div>
                   <div className="min-w-0 flex-1">

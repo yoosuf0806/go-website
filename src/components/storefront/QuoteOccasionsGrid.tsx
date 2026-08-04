@@ -9,7 +9,7 @@ export default function QuoteOccasionsGrid({ heading, occasions }: { heading: st
   const hasImages = occasions.some((o) => o.imageUrl)
 
   return (
-    <section className="px-6 pt-10 sm:px-10">
+    <section className="px-6 pb-12 pt-10 sm:px-10">
       <h2 className="pb-4 font-display text-2xl text-navy sm:text-[28px]">{heading}</h2>
 
       {hasImages ? (

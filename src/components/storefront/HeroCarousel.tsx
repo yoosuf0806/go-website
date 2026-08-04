@@ -42,8 +42,8 @@ export default function HeroCarousel({ slides, primaryCta, secondaryCta }: HeroC
             />
             {/* Dark scrim so overlaid text stays readable over any image. */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/20" />
-            <div className="absolute inset-0 flex items-center">
-              <div className="mx-auto flex w-full max-w-[1400px] px-6">
+            <div className="absolute inset-0 flex items-end">
+              <div className="mx-auto flex w-full max-w-[1400px] px-6 pb-16 sm:pb-20">
                 <div className="max-w-xl text-white">
                   <h1 className="text-[clamp(2.1rem,6vw,4rem)] leading-[1.15] drop-shadow">
                     {slide.title} <em className="not-italic text-pink-light">{slide.highlight}</em>{' '}

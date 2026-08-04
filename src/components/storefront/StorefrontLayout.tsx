@@ -146,13 +146,12 @@ function Header({
     >
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
         <Link to="/" aria-label="Golden Oven — home" className="flex items-center">
-          <img
-            src="/logo.png"
-            alt="Golden Oven"
-            width="48"
-            height="48"
-            className="h-12 w-12 rounded-xl object-cover"
-          />
+          {/* The uploaded logo is a 1080² square with heavy padding around the
+              wordmark; frame it in a wider box and zoom via object-cover so the
+              "golden oven" wordmark reads large instead of a tiny square. */}
+          <span className="block h-14 w-28 overflow-hidden rounded-lg">
+            <img src="/logo.png" alt="Golden Oven" className="h-full w-full scale-[1.45] object-cover" />
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -238,10 +237,12 @@ function Footer() {
   return (
     <footer className="bg-navy px-6 pb-8 pt-16 text-white">
       <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
             <Link to="/" aria-label="Golden Oven — home" className="inline-flex">
-              <img src="/logo.png" alt="Golden Oven" width="56" height="56" className="h-14 w-14 rounded-xl object-cover" />
+              <span className="block h-16 w-32 overflow-hidden rounded-lg">
+                <img src="/logo.png" alt="Golden Oven" className="h-full w-full scale-[1.45] object-cover" />
+              </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm text-white/70">
               Celebrate your little wins. Premium brownies baked fresh to order. Islandwide delivery
@@ -285,13 +286,6 @@ function Footer() {
             links={[
               { to: '/', label: 'Our Story' },
               { to: '/corporate', label: 'Contact Us' },
-            ]}
-          />
-          <FooterCol
-            title="Delivery"
-            links={[
-              { to: '/shop', label: 'Delivery Zones' },
-              { to: '/shop', label: 'How It Works' },
             ]}
           />
           <FooterCol
