@@ -3,7 +3,8 @@ import { Outlet, Link, NavLink, useLocation } from 'react-router-dom'
 import { useCatalog } from '../../contexts/CatalogContext'
 import { useCartStore } from '../../stores/cart'
 import { useCartUI } from '../../stores/cartUI'
-import { toWhatsAppNumber } from '../../lib/format'
+import { lineTotal } from '../../lib/pricing'
+import { toWhatsAppNumber, formatLKR } from '../../lib/format'
 import WhatsAppIcon from '../ui/WhatsAppIcon'
 import BannerBar from './BannerBar'
 import PromoTicker from './PromoTicker'
@@ -38,6 +39,16 @@ export default function StorefrontLayout() {
   const isHome = pathname === '/'
   const overDarkHero = isHome && content.heroSlides.length > 0
 
+  // Global "keep shopping" shortcut: a persistent bar so a customer browsing
+  // from page to page can jump to the cart without hunting for the header
+  // icon. Suppressed on Product Detail (/shop/:slug), which has its own fixed
+  // Add-to-Cart bar (ProductConfigurator) that this would visually stack with.
+  const items = useCartStore((s) => s.items)
+  const cartCount = items.reduce((n, item) => n + item.boxQty, 0)
+  const cartSubtotal = items.reduce((n, item) => n + lineTotal(item), 0)
+  const onProductDetail = pathname.startsWith('/shop/') && pathname !== '/shop/'
+  const showMiniCart = cartCount > 0 && !cartOpen && !checkoutOpen && !onProductDetail
+
   return (
     <div className="flex min-h-screen flex-col bg-blush-50 text-navy">
       <PromoTicker />
@@ -64,13 +75,33 @@ export default function StorefrontLayout() {
       )}
       {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} />}
 
+      {showMiniCart && (
+        <div className="fixed inset-x-3.5 bottom-3.5 z-30 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="flex w-full items-center justify-between rounded-2xl bg-pink px-4 py-3.5 text-white shadow-[0_12px_24px_-10px_rgba(217,45,86,0.7)]"
+          >
+            <span className="text-sm opacity-90">
+              {cartCount} {cartCount === 1 ? 'item' : 'items'} · {formatLKR(cartSubtotal)}
+            </span>
+            <span className="text-[15px] font-bold">View cart →</span>
+          </button>
+        </div>
+      )}
+
       {waNumber && (
         <a
           href={`https://wa.me/${waNumber}?text=${encodeURIComponent("Hi! I'd like to place an order.")}`}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on WhatsApp"
-          className="fixed bottom-safe right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
+          className="fixed right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
+          style={{
+            bottom: showMiniCart
+              ? 'calc(env(safe-area-inset-bottom) + 76px)'
+              : 'max(1.75rem, env(safe-area-inset-bottom))',
+          }}
         >
           <WhatsAppIcon className="h-7 w-7" />
         </a>

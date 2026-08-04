@@ -2,10 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCatalog } from '../contexts/CatalogContext'
 import ProductTile from '../components/storefront/ProductTile'
 import Seo from '../components/Seo'
-import { useCartStore } from '../stores/cart'
-import { useCartUI } from '../stores/cartUI'
-import { lineTotal } from '../lib/pricing'
-import { formatLKR } from '../lib/format'
 
 type SortKey = 'featured' | 'low' | 'high'
 // null = All; 'slab' = slab-available filter; otherwise a category id.
@@ -21,10 +17,10 @@ const SORT_LABEL: Record<SortKey, string> = {
 // showing a full screen or two before the customer has to tap Load more.
 const PAGE_SIZE = 8
 
-// Shop — chips, a sort bottom-sheet (not a dropdown — fiddly on touch),
-// incremental "Load more" over full pagination, and a sticky View Cart bar
-// once something's in the basket. Reads the live catalogue (seeded from the
-// snapshot for first paint).
+// Shop — chips, a sort bottom-sheet (not a dropdown — fiddly on touch), and
+// incremental "Load more" over full pagination. The sticky View Cart bar is
+// global (StorefrontLayout), not page-local. Reads the live catalogue (seeded
+// from the snapshot for first paint).
 export default function Shop() {
   const { catalog, loading } = useCatalog()
   const { categories, products, packages, content } = catalog
@@ -32,11 +28,6 @@ export default function Shop() {
   const [sort, setSort] = useState<SortKey>('featured')
   const [sortOpen, setSortOpen] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-
-  const cartItems = useCartStore((s) => s.items)
-  const setCartOpen = useCartUI((s) => s.setOpen)
-  const cartCount = cartItems.reduce((n, i) => n + i.boxQty, 0)
-  const subtotal = cartItems.reduce((n, i) => n + lineTotal(i), 0)
 
   // Is the Brownie Slab package offered at all? Only show the slab chip if so.
   const hasSlab = useMemo(() => packages.some((p) => p.isSlab), [packages])
@@ -166,24 +157,6 @@ export default function Shop() {
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Sticky View Cart bar — appears once anything's in the basket, stays
-          out of the way (and out of the fixed Add-to-Cart bar's territory,
-          which only exists on Product Detail) otherwise. */}
-      {cartCount > 0 && (
-        <div className="fixed inset-x-3.5 bottom-3.5 z-30 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setCartOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl bg-pink px-4 py-3.5 text-white shadow-[0_12px_24px_-10px_rgba(217,45,86,0.7)]"
-          >
-            <span className="text-sm opacity-90">
-              {cartCount} {cartCount === 1 ? 'item' : 'items'} · {formatLKR(subtotal)}
-            </span>
-            <span className="text-[15px] font-bold">View cart →</span>
-          </button>
         </div>
       )}
     </div>
