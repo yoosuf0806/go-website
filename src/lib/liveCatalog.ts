@@ -131,8 +131,12 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     banner: (settingsMap.get('banner') as Catalog['settings']['banner']) ?? seed.settings.banner,
     features:
       (settingsMap.get('features') as Catalog['settings']['features']) ?? seed.settings.features,
-    business:
-      (settingsMap.get('business') as Catalog['settings']['business']) ?? seed.settings.business,
+    // Merge per-key so newer fields (instagram_url/facebook_url) fall back to
+    // the seed defaults even when the stored business row predates them.
+    business: {
+      ...seed.settings.business,
+      ...((settingsMap.get('business') as Partial<Catalog['settings']['business']>) ?? {}),
+    },
     bankTransfer:
       (settingsMap.get('bank_transfer') as Catalog['settings']['bankTransfer']) ??
       seed.settings.bankTransfer,

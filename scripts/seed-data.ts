@@ -285,7 +285,12 @@ export const seedData: SeedData = {
   settings: {
     banner: { enabled: false, text: '', starts_at: null, ends_at: null },
     features: { corporate_section: true, wedding_section: true, reviews_section: true },
-    business: { whatsapp_number: '94771234567', google_business_url: 'https://g.page/golden-oven' },
+    business: {
+      whatsapp_number: '94771234567',
+      google_business_url: 'https://g.page/golden-oven',
+      instagram_url: 'https://www.instagram.com/golden_ovens',
+      facebook_url: 'https://www.facebook.com/goldenovenbrownies',
+    },
     bankTransfer: {
       bank_name: 'Nations Trust Bank',
       account_name: 'M N AHAMED',
