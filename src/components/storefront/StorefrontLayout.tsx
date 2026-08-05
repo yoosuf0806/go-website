@@ -146,15 +146,10 @@ function Header({
     >
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
         <Link to="/" aria-label="Golden Oven — home" className="flex items-center">
-          {/* The uploaded logo is a 1080×1350 canvas with the pink wordmark
-              centered in lots of whitespace; frame + zoom via object-cover so
-              "golden oven" reads large in the header. */}
-          <span
-            className="block h-14 w-[104px] bg-no-repeat"
-            style={{ backgroundImage: 'url(/logo.png)', backgroundSize: '167%', backgroundPosition: '44% 50%' }}
-            role="img"
-            aria-label="Golden Oven"
-          />
+          {/* logo-mark.png is the uploaded logo with its whitespace trimmed to
+              the wordmark (see scripts/trim-logo), so a plain object-contain
+              img aligns cleanly — no background-position framing needed. */}
+          <img src="/logo-mark.png" alt="Golden Oven" className="h-12 w-auto" />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
