@@ -188,6 +188,26 @@ function BusinessSection({ initial, onSaved }: { initial: BusinessSetting; onSav
             className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
           />
         </label>
+        <label className="text-sm">
+          <span className="block text-neutral-600">Instagram URL</span>
+          <input
+            type="url"
+            placeholder="https://instagram.com/goldenoven"
+            value={business.instagram_url ?? ''}
+            onChange={(e) => setBusiness({ ...business, instagram_url: e.target.value })}
+            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          <span className="block text-neutral-600">Facebook URL</span>
+          <input
+            type="url"
+            placeholder="https://facebook.com/goldenoven"
+            value={business.facebook_url ?? ''}
+            onChange={(e) => setBusiness({ ...business, facebook_url: e.target.value })}
+            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+        </label>
         <SaveButton pending={update.isPending} error={update.error?.message} />
       </Section>
     </form>

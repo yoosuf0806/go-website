@@ -6,6 +6,7 @@ import { formatLKR } from '../lib/format'
 import HeroCarousel from '../components/storefront/HeroCarousel'
 import ProductTile from '../components/storefront/ProductTile'
 import BrownieImage from '../components/storefront/BrownieImage'
+import GallerySection from '../components/storefront/GallerySection'
 import Seo, { organizationJsonLd } from '../components/Seo'
 
 // Home — Blush & Ink direction. Mobile matches the mockup (screen 01) exactly:
@@ -240,6 +241,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* GALLERY — admin-uploaded photos, toggleable */}
+      <GallerySection />
 
       {/* FINAL WHATSAPP CTA (white band) */}
       {waNumber && (

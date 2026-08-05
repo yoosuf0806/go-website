@@ -273,6 +273,28 @@ function Footer() {
                   <WhatsAppIcon className="h-5 w-5" />
                 </a>
               )}
+              {business.instagram_url && (
+                <a
+                  href={business.instagram_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-pink"
+                  aria-label="Instagram"
+                >
+                  <InstagramIcon className="h-5 w-5" />
+                </a>
+              )}
+              {business.facebook_url && (
+                <a
+                  href={business.facebook_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-pink"
+                  aria-label="Facebook"
+                >
+                  <FacebookIcon className="h-5 w-5" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -316,6 +338,24 @@ function BagIcon({ className = 'h-6 w-6' }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <path d="M6 8h12l-.9 11.1A2 2 0 0 1 15.1 21H8.9a2 2 0 0 1-2-1.9L6 8Z" />
       <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
+  )
+}
+
+function InstagramIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function FacebookIcon({ className = 'h-5 w-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M14 8.5V11h2.5l-.4 2.6H14V21h-2.7v-7.4H9.2V11h2.1V8.1c0-2 1.2-3.1 3-3.1.9 0 1.7.06 1.9.09v2.2h-1.3c-1 0-1.2.5-1.2 1.2Z" />
     </svg>
   )
 }

@@ -134,7 +134,12 @@ export interface SiteContent {
     ctaBanner?: boolean
     howItWorks?: boolean
     testimonials?: boolean
+    gallery?: boolean
   }
+  /** Shared photo gallery shown on Home, Wedding, and Corporate. Admin-uploaded
+   *  image URLs; empty (or gallery visibility off) hides the section. */
+  gallery: string[]
+  galleryHeading: string
   trust: IconCard[]
   categories: OccasionCard[]
   ctaBanner: CtaBanner
@@ -214,7 +219,10 @@ export const DEFAULT_CONTENT: SiteContent = {
     ctaBanner: true,
     howItWorks: true,
     testimonials: true,
+    gallery: true,
   },
+  gallery: [],
+  galleryHeading: 'View our Gallery',
   trust: [
     { icon: '🍫', title: 'Freshly Baked', body: 'Baked to order, never pre-made' },
     { icon: '🚚', title: 'Islandwide Delivery', body: 'Next day delivery available' },
@@ -505,6 +513,10 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     // emoji hero), so keep whatever the DB has rather than substituting defaults.
     heroSlides: partial.heroSlides ?? DEFAULT_CONTENT.heroSlides,
     promoSlides: partial.promoSlides ?? DEFAULT_CONTENT.promoSlides,
+    // gallery: an empty array is a valid "hide the gallery" state, so keep the
+    // DB value as-is rather than substituting defaults.
+    gallery: partial.gallery ?? DEFAULT_CONTENT.gallery,
+    galleryHeading: partial.galleryHeading || DEFAULT_CONTENT.galleryHeading,
     sectionVisibility: { ...DEFAULT_CONTENT.sectionVisibility, ...partial.sectionVisibility },
     corporate: mergeQuoteLanding(DEFAULT_CONTENT.corporate, partial.corporate),
     wedding: mergeQuoteLanding(DEFAULT_CONTENT.wedding, partial.wedding),

@@ -12,6 +12,7 @@ import QuoteStatsBar from '../components/storefront/QuoteStatsBar'
 import QuoteOccasionsGrid from '../components/storefront/QuoteOccasionsGrid'
 import QuoteHandledSection from '../components/storefront/QuoteHandledSection'
 import QuotePricingSection from '../components/storefront/QuotePricingSection'
+import GallerySection from '../components/storefront/GallerySection'
 import Toast from '../components/ui/Toast'
 import Seo from '../components/Seo'
 
@@ -131,6 +132,7 @@ export default function QuoteLandingPage({
         ctaHref={`#${FORM_ANCHOR_ID}`}
       />
       <QuotePricingSection title={content.pricingTitle} tiers={content.pricingTiers} />
+      <GallerySection />
 
       {/* Quote form / success */}
       <div id={FORM_ANCHOR_ID} className="scroll-mt-20 px-6 pb-16 pt-8 sm:px-10">
@@ -140,12 +142,12 @@ export default function QuoteLandingPage({
           ) : (
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className={`rounded-[18px] p-6 sm:p-7 ${isCorporate ? 'bg-navy' : 'border border-blush-200 bg-blush-50'}`}
+              className="rounded-[18px] border border-blush-200 bg-blush-50 p-6 sm:p-7"
             >
-              <h3 className={`font-display text-2xl ${isCorporate ? 'text-white' : 'text-navy'}`}>
+              <h3 className="font-display text-2xl text-navy">
                 {isCorporate ? 'Request a quote' : 'Get a wedding quote'}
               </h3>
-              <p className={`mt-1.5 text-[14px] leading-relaxed ${isCorporate ? 'text-white/65' : 'text-[#7a5c64]'}`}>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-[#7a5c64]">
                 {isCorporate
                   ? 'Six fields. We reply with a formal quotation within one working day.'
                   : 'We reply within one working day, with options.'}
@@ -153,57 +155,57 @@ export default function QuoteLandingPage({
 
               {isCorporate ? (
                 <>
-                  <GroupLabel dark>Contact</GroupLabel>
+                  <GroupLabel>Contact</GroupLabel>
                   <div className="flex flex-col gap-2.5 pb-5">
-                    <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company" className={inputCls(false, true)} />
-                    <FieldError error={errors.name?.message} dark>
-                      <input {...register('name')} placeholder="Your name" className={inputCls(!!errors.name, true)} />
+                    <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company" className={inputCls(false, false)} />
+                    <FieldError error={errors.name?.message}>
+                      <input {...register('name')} placeholder="Your name" className={inputCls(!!errors.name, false)} />
                     </FieldError>
                     <div className="flex gap-2.5">
-                      <FieldError error={errors.phone?.message} dark className="flex-1">
-                        <input {...register('phone')} type="tel" placeholder="Mobile" className={inputCls(!!errors.phone, true)} />
+                      <FieldError error={errors.phone?.message} className="flex-1">
+                        <input {...register('phone')} type="tel" placeholder="Mobile" className={inputCls(!!errors.phone, false)} />
                       </FieldError>
-                      <FieldError error={errors.email?.message} dark className="flex-1">
-                        <input {...register('email')} type="email" placeholder="Work email" className={inputCls(!!errors.email, true)} />
+                      <FieldError error={errors.email?.message} className="flex-1">
+                        <input {...register('email')} type="email" placeholder="Work email" className={inputCls(!!errors.email, false)} />
                       </FieldError>
                     </div>
                   </div>
 
-                  <GroupLabel dark>Order details</GroupLabel>
-                  <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} onAdjust={(d) => adjustQty(d * BOX_STEP)} dark />
+                  <GroupLabel>Order details</GroupLabel>
+                  <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} onAdjust={(d) => adjustQty(d * BOX_STEP)} />
                   <div className="mt-3 flex flex-col gap-2.5 pb-5">
-                    <select value={occasion} onChange={(e) => setOccasion(e.target.value)} className={inputCls(false, true)}>
+                    <select value={occasion} onChange={(e) => setOccasion(e.target.value)} className={inputCls(false, false)}>
                       {OCCASION_OPTIONS.map((o) => (
                         <option key={o}>{o}</option>
                       ))}
                     </select>
-                    {flavors.length > 0 && <FlavorChips flavors={flavors} selectedId={selectedId} onPick={pickFlavor} dark />}
-                    <label className="flex items-center gap-2.5 text-[15px] text-white/85">
+                    {flavors.length > 0 && <FlavorChips flavors={flavors} selectedId={selectedId} onPick={pickFlavor} />}
+                    <label className="flex items-center gap-2.5 text-[15px] text-[#5c4450]">
                       <input
                         type="checkbox"
                         checked={wantsToppers}
                         onChange={(e) => setWantsToppers(e.target.checked)}
-                        className="h-[22px] w-[22px] rounded-md border-white/35 bg-transparent accent-pink"
+                        className="h-[22px] w-[22px] rounded-md border-blush-200 accent-pink"
                       />
                       I'd like branded toppers
                     </label>
                   </div>
 
-                  <GroupLabel dark>Timing</GroupLabel>
+                  <GroupLabel>Timing</GroupLabel>
                   <div className="flex flex-col gap-2.5">
-                    <FieldError error={errors.deliveryDate?.message} dark>
+                    <FieldError error={errors.deliveryDate?.message}>
                       <input
                         {...register('deliveryDate')}
                         type="date"
                         min={new Date().toISOString().split('T')[0]}
-                        className={inputCls(!!errors.deliveryDate, true)}
+                        className={inputCls(!!errors.deliveryDate, false)}
                       />
                     </FieldError>
                     <textarea
                       {...register('message')}
                       rows={3}
                       placeholder="Anything else we should know? (optional)"
-                      className={`${inputCls(false, true)} resize-none`}
+                      className={`${inputCls(false, false)} resize-none`}
                     />
                   </div>
                 </>
@@ -255,7 +257,7 @@ export default function QuoteLandingPage({
               )}
 
               {mutation.error && (
-                <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${isCorporate ? 'bg-white/10 text-white' : 'bg-red-50 text-red-700'}`}>
+                <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
                   {mutation.error.message}
                 </p>
               )}
@@ -269,11 +271,11 @@ export default function QuoteLandingPage({
               </button>
 
               {content.preOrderNote && (
-                <p className={`mt-4 rounded-xl px-4 py-3 text-sm ${isCorporate ? 'bg-white/10 text-white/80' : 'bg-blush-100 text-neutral-700'}`}>
+                <p className="mt-4 rounded-xl bg-blush-100 px-4 py-3 text-sm text-neutral-700">
                   <span className="font-semibold text-pink">Heads up:</span> {content.preOrderNote}
                 </p>
               )}
-              <p className={`mt-3 text-center text-xs ${isCorporate ? 'text-white/40' : 'text-neutral-400'}`}>
+              <p className="mt-3 text-center text-xs text-neutral-400">
                 By submitting you agree to be contacted about your quote.
               </p>
             </form>

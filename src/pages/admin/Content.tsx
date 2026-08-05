@@ -61,6 +61,7 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
             ['trust', 'Trust bar'],
             ['ctaBanner', 'Promo strip'],
             ['testimonials', 'Testimonials'],
+            ['gallery', 'Gallery'],
           ] as const).map(([key, label]) => (
             <label key={key} className="flex items-center gap-2 text-sm">
               <input
@@ -111,6 +112,15 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
 
       <Section title="Trust bar">
         <IconCards items={form.trust} onChange={(v) => set('trust', v)} />
+      </Section>
+
+      <Section title="Gallery">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          Shown on Home, Wedding, and Corporate as a photo grid. Toggle it on/off above
+          ("Gallery"). Empty = hidden.
+        </p>
+        <Text label="Heading" value={form.galleryHeading} onChange={(v) => set('galleryHeading', v)} />
+        <GalleryEditor images={form.gallery} onChange={(v) => set('gallery', v)} />
       </Section>
 
       <Section title="Homepage · Build your slab">
