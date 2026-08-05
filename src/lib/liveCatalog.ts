@@ -158,6 +158,9 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     addons: mappedAddons.length > 0 ? mappedAddons : seed.addons,
     deliveryTiers: mappedTiers.length > 0 ? mappedTiers : seed.deliveryTiers,
     reviews: mappedReviews,
+    // Google reviews are baked at build time (API key is server-only) — carry
+    // the snapshot value through; the browser can't refetch them.
+    google: seed.google,
     settings,
     content,
     productPackageStock,

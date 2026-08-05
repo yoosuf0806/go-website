@@ -110,6 +110,19 @@ export interface CatalogReview {
   source: string
 }
 
+/** Live Google reviews, fetched from the Google Places API at BUILD time
+ *  (scripts/snapshot.ts) and baked into the snapshot — the API key never
+ *  reaches the browser. null when not configured (falls back to curated). */
+export interface GooglePlaceReviews {
+  /** Overall place rating (e.g. 4.9). */
+  rating: number
+  /** Total number of Google ratings. */
+  total: number
+  /** A link to the place's Google reviews. */
+  url: string
+  reviews: CatalogReview[]
+}
+
 export interface BannerSetting {
   enabled: boolean
   text: string
@@ -153,6 +166,8 @@ export interface Catalog {
   addons: CatalogAddon[]
   deliveryTiers: CatalogDeliveryTier[]
   reviews: CatalogReview[]
+  /** Live Google reviews (build-time), or null when not configured. */
+  google: GooglePlaceReviews | null
   settings: CatalogSettings
   /** Editable storefront copy + SEO (admin Content module). */
   content: SiteContent

@@ -160,9 +160,70 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
     addons: mapAddons(data.addons),
     deliveryTiers: mapDeliveryTiers(data.deliveryTiers),
     reviews: mapReviews(data.reviews),
+    google: null, // filled in main() from the Google Places API when configured
     settings: mapSettings(data.settings),
     content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
     productPackageStock: mapProductPackageStock(data.productPackageStock),
+  }
+}
+
+// ── Google reviews (build-time) ─────────────────────────────────────────────────
+// Fetch live reviews from the Google Places API (New) at build time and bake
+// them into the snapshot, so the API key never reaches the browser. Enabled
+// only when both env vars are set; otherwise returns null and the storefront
+// falls back to the curated reviews.
+//   GOOGLE_PLACES_API_KEY   — a Google Cloud key with the Places API (New) enabled
+//   GOOGLE_PLACES_PLACE_ID  — the business's Place ID (e.g. ChIJ...)
+async function fetchGoogleReviews(): Promise<Catalog['google']> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY
+  const placeId = process.env.GOOGLE_PLACES_PLACE_ID
+  if (!apiKey || !placeId) return null
+
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?languageCode=en`, {
+      headers: {
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'id,rating,userRatingCount,googleMapsUri,reviews',
+      },
+    })
+    if (!res.ok) {
+      console.warn(`[snapshot] Google Places fetch failed (${res.status}) — using curated reviews.`)
+      return null
+    }
+    const data = (await res.json()) as {
+      rating?: number
+      userRatingCount?: number
+      googleMapsUri?: string
+      reviews?: Array<{
+        name?: string
+        rating?: number
+        text?: { text?: string }
+        originalText?: { text?: string }
+        authorAttribution?: { displayName?: string }
+      }>
+    }
+
+    const reviews: Catalog['reviews'] = (data.reviews ?? [])
+      .map((r, i) => ({
+        id: r.name ?? `google-${i}`,
+        author: r.authorAttribution?.displayName ?? 'Google reviewer',
+        rating: r.rating ?? 5,
+        body: r.text?.text ?? r.originalText?.text ?? '',
+        source: 'google',
+      }))
+      .filter((r) => r.body.trim() !== '')
+
+    if (reviews.length === 0) return null
+
+    return {
+      rating: data.rating ?? 0,
+      total: data.userRatingCount ?? 0,
+      url: data.googleMapsUri ?? '',
+      reviews,
+    }
+  } catch (err) {
+    console.warn('[snapshot] Google Places fetch errored — using curated reviews:', err)
+    return null
   }
 }
 
@@ -246,6 +307,12 @@ async function main() {
         'Set SUPABASE_URL + SUPABASE_SERVICE_KEY for a live snapshot.',
     )
     catalog = buildCatalog(seedData, 'seed')
+  }
+
+  const google = await fetchGoogleReviews()
+  if (google) {
+    catalog.google = google
+    console.log(`[snapshot] Google reviews: ${google.reviews.length} (rating ${google.rating}, ${google.total} total).`)
   }
 
   mkdirSync(dirname(OUT_PATH), { recursive: true })

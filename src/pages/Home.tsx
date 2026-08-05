@@ -208,25 +208,48 @@ export default function Home() {
         </div>
       )}
 
-      {/* TESTIMONIALS — below the fold, admin-toggleable (3-col on desktop) (white band) */}
-      {vis.testimonials !== false && reviews_section && featuredReviews.length > 0 && (
-        <section className="bg-white px-[22px] py-8 md:py-14">
-          <div className="mx-auto max-w-6xl md:px-8">
-            <h2 className="font-display text-[25px] text-navy md:text-[32px]">{testimonialsHeading.title}</h2>
-            <div className="mt-3.5 flex flex-col gap-3 md:mt-6 md:grid md:grid-cols-3 md:gap-5">
-              {featuredReviews.slice(0, 3).map((review) => (
-                <figure key={review.id} className="rounded-2xl border border-blush-200 bg-white p-4 md:p-6">
-                  <div className="text-sm text-berry">{'★'.repeat(review.rating)}</div>
-                  <blockquote className="mt-2 text-[14px] leading-relaxed text-neutral-600 md:text-[15px]">
-                    “{review.body}”
-                  </blockquote>
-                  <figcaption className="mt-2 text-[13px] font-medium text-navy md:mt-3">{review.author}</figcaption>
-                </figure>
-              ))}
+      {/* TESTIMONIALS — real Google reviews when configured, else curated
+          (admin-toggleable, 3-col on desktop, white band) */}
+      {(() => {
+        const google = catalog.google
+        const shownReviews = (google && google.reviews.length > 0 ? google.reviews : featuredReviews).slice(0, 3)
+        if (vis.testimonials === false || !reviews_section || shownReviews.length === 0) return null
+        return (
+          <section className="bg-white px-[22px] py-8 md:py-14">
+            <div className="mx-auto max-w-6xl md:px-8">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="font-display text-[25px] text-navy md:text-[32px]">{testimonialsHeading.title}</h2>
+                {google && (
+                  <a
+                    href={google.url || settings.business.google_business_url || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-600 hover:text-navy"
+                  >
+                    <span className="text-[15px] font-bold text-navy">{google.rating.toFixed(1)}</span>
+                    <span className="text-[#f4a100]">★★★★★</span>
+                    <span>on Google · {google.total} reviews</span>
+                  </a>
+                )}
+              </div>
+              <div className="mt-3.5 flex flex-col gap-3 md:mt-6 md:grid md:grid-cols-3 md:gap-5">
+                {shownReviews.map((review) => (
+                  <figure key={review.id} className="rounded-2xl border border-blush-200 bg-white p-4 md:p-6">
+                    <div className="text-sm text-berry">{'★'.repeat(review.rating)}</div>
+                    <blockquote className="mt-2 text-[14px] leading-relaxed text-neutral-600 md:text-[15px]">
+                      “{review.body}”
+                    </blockquote>
+                    <figcaption className="mt-2 text-[13px] font-medium text-navy md:mt-3">{review.author}</figcaption>
+                  </figure>
+                ))}
+              </div>
+              {google && (
+                <p className="mt-4 text-[11px] text-neutral-400">Reviews from Google</p>
+              )}
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )
+      })()}
 
       {/* FAQ — admin add/edit/delete; hidden when empty (pink band) */}
       {homeFaq.length > 0 && (
