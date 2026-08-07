@@ -124,7 +124,11 @@ export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenO
   })[]).filter(kitchenVisible)
 }
 
+// Kitchen accounts have no direct UPDATE on orders (RLS, migration 027) — the
+// admin/kitchen split is enforced in the database, not just the UI. Status
+// advances go through the advance_order_status() SECURITY DEFINER RPC, which
+// only allows the board's forward transitions (baking / ready / completed).
 export async function advanceKitchenStatus(id: string, to: OrderStatus): Promise<void> {
-  const { error } = await supabase.from('orders').update({ status: to }).eq('id', id)
+  const { error } = await supabase.rpc('advance_order_status', { p_id: id, p_to: to })
   if (error) throw new Error(error.message)
 }

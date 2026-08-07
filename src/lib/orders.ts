@@ -93,6 +93,12 @@ export async function createOrder({ items, totals, details, voucher, payment }: 
     if (error?.message.includes('VOUCHER_INVALID')) {
       throw new Error('This voucher is no longer valid. Remove it to continue.')
     }
+    // create_order() recomputes every price server-side and raises PRICE_MISMATCH
+    // when the total doesn't match — a tampered request, or a page still showing
+    // an out-of-date catalogue after a price change.
+    if (error?.message.includes('PRICE_MISMATCH')) {
+      throw new Error('Prices have changed since this page loaded. Please refresh and try again.')
+    }
     throw new Error(error?.message ?? 'Failed to create order')
   }
 

@@ -35,6 +35,24 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: 'Not authorised' }, 401)
   }
 
+  // Authentication is not enough — kitchen accounts are signed-in users too, and
+  // must not be able to trigger production rebuilds. Check the caller's role in
+  // profiles (readable via their own token thanks to profiles_select_own). No
+  // row == a legacy admin account (mirrors is_admin() in migration 027).
+  const user = (await userRes.json()) as { id?: string } | null
+  if (!user?.id) {
+    return json({ error: 'Not authorised' }, 401)
+  }
+  const profRes = await fetch(
+    `${supabaseUrl}/rest/v1/profiles?id=eq.${user.id}&select=role`,
+    { headers: { apikey: anonKey, Authorization: `Bearer ${token}` } },
+  )
+  const rows = profRes.ok ? ((await profRes.json()) as Array<{ role?: string }>) : []
+  const role = rows[0]?.role
+  if (role && role !== 'admin') {
+    return json({ error: 'Admin only' }, 403)
+  }
+
   // Trigger the rebuild.
   const hookRes = await fetch(deployHook, { method: 'POST' })
   if (!hookRes.ok) {
