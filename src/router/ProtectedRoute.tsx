@@ -32,8 +32,11 @@ export default function ProtectedRoute({ children, requireRole }: Props) {
   }
 
   if (requireRole && role !== requireRole) {
-    const redirectPath = role === 'kitchen' ? '/kitchen' : '/admin'
-    return <Navigate to={redirectPath} replace />
+    // Send them to the login for the role they're MISSING, so they can sign in
+    // with the right account — rather than bouncing to their current dashboard
+    // (which hid the kitchen login when an admin opened /kitchen).
+    const loginPath = requireRole === 'kitchen' ? '/kitchen/login' : '/admin/login'
+    return <Navigate to={loginPath} replace />
   }
 
   return <>{children}</>
