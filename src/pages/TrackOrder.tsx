@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useCatalog } from '../contexts/CatalogContext'
 import { lookupOrder, type TrackedOrder } from '../lib/trackOrder'
 import { toWhatsAppNumber, formatDate } from '../lib/format'
+import { whatsAppLink, buildOrderInquiryMessage } from '../lib/whatsapp'
 import WhatsAppIcon from '../components/ui/WhatsAppIcon'
 
 // Customer-friendly status labels — the internal enum is hidden behind plain
@@ -27,6 +28,7 @@ export default function TrackOrder() {
   const { catalog } = useCatalog()
   const wa = toWhatsAppNumber(catalog.settings.business.whatsapp_number)
   const [value, setValue] = useState('')
+  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // undefined = nothing searched yet, null = searched but not found.
@@ -39,10 +41,14 @@ export default function TrackOrder() {
       setError('Enter a valid order number.')
       return
     }
+    if (!phone.trim()) {
+      setError('Enter the delivery contact number used for the order.')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
-      const result = await lookupOrder(n)
+      const result = await lookupOrder(n, phone)
       setOrder(result)
     } catch {
       setError('Something went wrong. Please try again.')
@@ -51,6 +57,23 @@ export default function TrackOrder() {
     }
   }
 
+  // Care link carries the found order's details so support has context; falls
+  // back to a plain opener before anything is looked up.
+  const careHref = wa
+    ? order
+      ? whatsAppLink(
+          catalog.settings.business.whatsapp_number,
+          buildOrderInquiryMessage({
+            orderNo: order.order_no,
+            deliveryDate: order.delivery_date,
+            address: order.address,
+            phone: order.phone,
+            items: order.items,
+          }),
+        )
+      : `https://wa.me/${wa}?text=${encodeURIComponent("Hi! I'd like to inquire about my order.")}`
+    : null
+
   return (
     <div className="min-h-screen bg-white">
       {/* Slightly left of dead-centre: the column is centred within a max width
@@ -58,18 +81,29 @@ export default function TrackOrder() {
       <div className="mx-auto max-w-2xl px-6 py-16 lg:ml-[max(1.5rem,calc((100vw-72rem)/2))] lg:mr-0">
         <h1 className="font-display text-3xl font-bold text-navy sm:text-4xl">Track your order</h1>
         <p className="mt-2 text-neutral-600">
-          Enter your order number to see its status and details.
+          Enter your order number and the delivery contact number to see its status and details.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-6">
+        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
           <div className="flex items-center gap-2 rounded-full border border-blush-200 bg-white p-1.5 shadow-sm focus-within:border-pink">
             <input
               type="text"
               inputMode="numeric"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="e.g. 1024"
+              placeholder="Order number, e.g. 1024"
               aria-label="Order number"
+              className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-2.5 text-navy outline-none placeholder:text-neutral-400"
+            />
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-blush-200 bg-white p-1.5 shadow-sm focus-within:border-pink">
+            <input
+              type="tel"
+              inputMode="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Delivery contact number, e.g. 077 123 4567"
+              aria-label="Delivery contact number"
               className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-2.5 text-navy outline-none placeholder:text-neutral-400"
             />
             <button
@@ -80,14 +114,15 @@ export default function TrackOrder() {
               {loading ? 'Searching…' : 'Search'}
             </button>
           </div>
-          {error && <p className="mt-2 px-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-1 px-2 text-sm text-red-600">{error}</p>}
         </form>
 
         {order === null && !error && (
           <div className="mt-8 rounded-2xl border border-blush-200 bg-blush-50 px-5 py-6 text-center">
             <p className="font-medium text-navy">We couldn't find that order.</p>
             <p className="mt-1 text-sm text-neutral-600">
-              Double-check the number from your confirmation, or contact us below.
+              Check that the order number and delivery contact number match your confirmation, or
+              contact us below.
             </p>
           </div>
         )}
@@ -95,11 +130,9 @@ export default function TrackOrder() {
         {order && <OrderDetails order={order} />}
 
         <div className="mt-16 border-t border-blush-200 pt-8 text-center">
-          {wa && (
+          {careHref && (
             <a
-              href={`https://wa.me/${wa}?text=${encodeURIComponent(
-                "Hi! I'd like to ask about my order.",
-              )}`}
+              href={careHref}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full bg-[#25d366] px-6 py-3 text-sm font-bold text-white shadow-sm transition-transform hover:scale-105"

@@ -1,10 +1,16 @@
 -- Public order tracking ("Track your order", customer-facing).
 -- Anon has NO SELECT on orders (RLS, migration 010/027), so tracking can't read
 -- the table directly. This SECURITY DEFINER function returns only the safe,
--- customer-entered fields for ONE order number — no listing, no totals, no
--- payment refs / slip paths, nothing beyond what the customer themselves gave
--- us for that order. Returns null when the number doesn't exist.
-create or replace function lookup_order(p_order_no int)
+-- customer-entered fields for ONE order — and ONLY when the delivery contact
+-- number matches, so an order number alone can't reveal anyone's details.
+-- Returns null when the number/phone pair doesn't match. Phone is compared in
+-- E.164 form (the client normalises before calling; create_order stores it
+-- normalised too), so formats can't cause a false miss.
+
+-- Drop the earlier single-arg version if it was applied before this change.
+drop function if exists lookup_order(int);
+
+create or replace function lookup_order(p_order_no int, p_phone text)
 returns jsonb
 language plpgsql
 security definer
@@ -14,7 +20,9 @@ declare
   v_order orders%rowtype;
   v_items jsonb;
 begin
-  select * into v_order from orders where order_no = p_order_no;
+  select * into v_order
+  from orders
+  where order_no = p_order_no and phone = p_phone;
   if not found then
     return null;
   end if;
@@ -51,4 +59,4 @@ begin
 end;
 $$;
 
-grant execute on function lookup_order(int) to anon, authenticated;
+grant execute on function lookup_order(int, text) to anon, authenticated;

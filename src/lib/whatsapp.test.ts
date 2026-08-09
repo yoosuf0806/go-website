@@ -4,6 +4,7 @@ import {
   buildInquiryMessage,
   buildDeliveryConfirmationMessage,
   deliveryConfirmationWaLink,
+  buildOrderInquiryMessage,
   orderWhatsAppLink,
   type OrderMessageInput,
 } from './whatsapp'
@@ -155,6 +156,24 @@ describe('buildDeliveryConfirmationMessage', () => {
     const link = deliveryConfirmationWaLink(base)
     expect(link.startsWith('https://wa.me/94771234567?text=')).toBe(true)
     expect(decodeURIComponent(link.split('text=')[1])).toContain('Order #1024')
+  })
+})
+
+describe('buildOrderInquiryMessage', () => {
+  it('opens with the inquiry line then the order details, no emojis', () => {
+    const msg = buildOrderInquiryMessage({
+      orderNo: 1024,
+      deliveryDate: '2026-07-05',
+      address: '12 Galle Rd, Colombo 03',
+      phone: '+94771234567',
+      items: [{ product_name: 'Cashew Brownie', package_label: 'Slab (12 pcs)', box_qty: 1 }],
+    })
+    expect(msg.startsWith("Hi! I'd like to inquire about my order.")).toBe(true)
+    expect(/\p{Extended_Pictographic}/u.test(msg)).toBe(false)
+    expect(msg).toContain('Order #1024')
+    expect(msg).toContain('- Cashew Brownie — Slab (12 pcs) x 1')
+    expect(msg).toContain('Delivery date: 5 Jul 2026')
+    expect(msg).toContain('Contact number: +94771234567')
   })
 })
 

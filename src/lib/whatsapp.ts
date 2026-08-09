@@ -159,6 +159,34 @@ export function deliveryConfirmationWaLink(input: DeliveryConfirmationInput): st
   return whatsAppLink(input.phone, buildDeliveryConfirmationMessage(input))
 }
 
+export interface OrderInquiryInput {
+  orderNo: number | string
+  deliveryDate?: string | null
+  address?: string | null
+  phone: string
+  items: ConfirmationItem[]
+}
+
+/**
+ * Message a customer sends to care from the "Track your order" page: a friendly
+ * opener followed by their order details (pulled from the system) so support
+ * has the context immediately. Plain text, no emojis.
+ */
+export function buildOrderInquiryMessage(input: OrderInquiryInput): string {
+  const lines: string[] = []
+  lines.push("Hi! I'd like to inquire about my order.")
+  lines.push('')
+  lines.push(`Order #${input.orderNo}`)
+  lines.push('Items:')
+  for (const item of input.items) {
+    lines.push(`- ${item.product_name} — ${item.package_label} x ${item.box_qty}`)
+  }
+  if (input.deliveryDate) lines.push(`Delivery date: ${formatDate(input.deliveryDate)}`)
+  if (input.address) lines.push(`Delivery address: ${input.address}`)
+  lines.push(`Contact number: ${input.phone}`)
+  return lines.join('\n')
+}
+
 /** Build the corporate/wedding inquiry message body (spec §6.5 inquiry template). */
 export function buildInquiryMessage(input: InquiryMessageInput): string {
   const label = input.category === 'wedding' ? 'Wedding' : 'Corporate'
