@@ -213,8 +213,8 @@ export const seedData: SeedData = {
   ],
 
   packages: [
-    { id: 'slab-12', label: 'Brownie Slab (12 pcs)', piece_count: 12, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 1 },
-    { id: 'slab-15', label: 'Brownie Slab (15 pcs)', piece_count: 15, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 2 },
+    { id: 'slab-12', label: 'Brownie Slab (Mini Box)', piece_count: 12, is_slab: true, is_active: true, letter_max_chars: 4, sort_order: 1 },
+    { id: 'slab-15', label: 'Brownie Slab (Standard)', piece_count: 15, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 2 },
     { id: 'box-9', label: '9 Pieces', piece_count: 9, is_slab: false, is_active: true, letter_max_chars: 0, sort_order: 3 },
     { id: 'box-12', label: '12 Pieces', piece_count: 12, is_slab: false, is_active: true, letter_max_chars: 4, sort_order: 4 },
     { id: 'box-15', label: '15 Pieces', piece_count: 15, is_slab: false, is_active: true, letter_max_chars: 5, sort_order: 5 },

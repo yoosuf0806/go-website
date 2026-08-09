@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { CartAddon, CartItem } from '../lib/pricing'
 import type { Catalog } from '../types/catalog'
+import { toast } from './toast'
 
 // Zustand cart store, persisted to localStorage under a versioned key. Items
 // are keyed by productId + packageId + hash(addons) so identical configs
@@ -80,7 +81,7 @@ export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       items: [],
-      addItem: (item) =>
+      addItem: (item) => {
         set((state) => {
           const key = cartLineKey(item.productId, item.packageId, item.addons)
           const existing = state.items.find((line) => line.key === key)
@@ -92,7 +93,10 @@ export const useCartStore = create<CartState>()(
             }
           }
           return { items: [...state.items, { ...item, key }] }
-        }),
+        })
+        // Transient confirmation, shown bottom-centre by <Toaster/> for 2s.
+        toast('Added to cart')
+      },
       incrementBoxQty: (key, delta) =>
         set((state) => ({
           items: state.items

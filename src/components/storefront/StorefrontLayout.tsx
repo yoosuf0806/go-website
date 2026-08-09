@@ -10,6 +10,7 @@ import BannerBar from './BannerBar'
 import PromoTicker from './PromoTicker'
 import CartDrawer from './CartDrawer'
 import CheckoutModal from './CheckoutModal'
+import Toaster from './Toaster'
 
 const HEADER_HEIGHT = 68
 
@@ -75,6 +76,8 @@ export default function StorefrontLayout() {
         />
       )}
       {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} />}
+
+      <Toaster />
 
       {showMiniCart && (
         // Full-width pill on mobile; on desktop a centered floating pill (so
