@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
+import PwaManifest from './components/PwaManifest'
 import StorefrontLayout from './components/storefront/StorefrontLayout'
 import ProtectedRoute from './router/ProtectedRoute'
 import Home from './pages/Home'
@@ -42,6 +43,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <PwaManifest />
       <Routes>
       {/* Storefront */}
       <Route element={<StorefrontLayout />}>

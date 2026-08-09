@@ -1,0 +1,17 @@
+{
+  "id": "/kitchen",
+  "name": "Golden Oven Kitchen",
+  "short_name": "GO Kitchen",
+  "description": "Kitchen order board for Golden Oven.",
+  "start_url": "/kitchen",
+  "scope": "/kitchen",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#d92d56",
+  "icons": [
+    { "src": "/icons/kitchen-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/kitchen-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/kitchen-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -35,3 +35,14 @@ const app = (
 const container = document.getElementById('root')!
 container.textContent = ''
 createRoot(container).render(app)
+
+// Register the service worker (installable Kitchen/Admin PWAs + offline shell).
+// Production only — a SW in dev would cache Vite's module graph and fight HMR.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Non-fatal: the app works without offline support.
+    })
+  })
+}
+

@@ -244,6 +244,17 @@ function OrderRow({
         </td>
         <td className="px-3 py-3">
           <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={onToggle}
+              className={`rounded border px-2 py-1 text-xs ${
+                expanded
+                  ? 'border-pink bg-pink-light font-semibold text-pink'
+                  : 'border-neutral-300 hover:bg-neutral-100'
+              }`}
+            >
+              {expanded ? 'Close' : 'Review'}
+            </button>
             {next && (
               <button
                 type="button"
