@@ -5,7 +5,6 @@ import type {
   HeroSlide,
   IconCard,
   OccasionCard,
-  PricingTier,
   QuoteLandingContent,
   SeoMeta,
   SiteContent,
@@ -547,10 +546,6 @@ function QuoteLandingEditor({
         />
       ))}
 
-      <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Pricing</p>
-      <Text label="Section title" value={content.pricingTitle} onChange={(v) => onChange({ ...content, pricingTitle: v })} />
-      <PricingTiersEditor tiers={content.pricingTiers} onChange={(v) => onChange({ ...content, pricingTiers: v })} />
-
       <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Quote request form</p>
       <Text label="Heading" value={content.heading} onChange={(v) => onChange({ ...content, heading: v })} />
       <Area label="Intro" value={content.intro} onChange={(v) => onChange({ ...content, intro: v })} />
@@ -569,30 +564,6 @@ function QuoteLandingEditor({
         <FaqEditor items={content.faq} onChange={(v) => onChange({ ...content, faq: v })} />
       </div>
     </Section>
-  )
-}
-
-// Manage a simple list of pricing tiers (label + price/description text).
-function PricingTiersEditor({ tiers, onChange }: { tiers: PricingTier[]; onChange: (v: PricingTier[]) => void }) {
-  const update = (i: number, patch: Partial<PricingTier>) => onChange(tiers.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-  const remove = (i: number) => onChange(tiers.filter((_, j) => j !== i))
-  const add = () => onChange([...tiers, { label: 'New tier', price: '' }])
-
-  return (
-    <div className="flex flex-col gap-3">
-      {tiers.map((t, i) => (
-        <div key={i} className="grid grid-cols-1 gap-2 rounded border border-neutral-100 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <Text label="Label (e.g. 100 – 249 pcs)" value={t.label} onChange={(v) => update(i, { label: v })} />
-          <Text label="Price / description" value={t.price} onChange={(v) => update(i, { price: v })} />
-          <button type="button" onClick={() => remove(i)} className="h-fit rounded border border-neutral-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50">
-            Remove
-          </button>
-        </div>
-      ))}
-      <button type="button" onClick={add} className="self-start rounded-full border-2 border-navy px-4 py-2 text-sm font-bold text-navy hover:bg-navy hover:text-white">
-        + Add tier
-      </button>
-    </div>
   )
 }
 

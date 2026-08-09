@@ -21,30 +21,32 @@ export default function Slab() {
     <div className="bg-blush-50">
       <Seo title={slab.banner.title} description={content.seo.slab.description} path="/slab" />
 
-      {/* ── BANNER ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-navy text-white">
-        {slab.banner.imageUrl && (
-          <div className="absolute inset-0">
-            <BrownieImage src={slab.banner.imageUrl} alt="" className="h-full w-full opacity-40" priority />
-            <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/40" />
+      {/* ── BANNER — same light two-column format as the Home hero, so the
+          uploaded image shows at full opacity instead of a dimmed backdrop. */}
+      <section className="bg-blush-100 px-[22px] pb-7 pt-[72px] md:px-8 md:py-16 lg:py-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-2 md:gap-12">
+          <div className="md:order-1">
+            <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-berry">
+              {slab.banner.eyebrow}
+            </span>
+            <h1 className="mt-3 font-display text-[40px] leading-[1.02] tracking-[-0.015em] text-navy md:text-[clamp(2.6rem,4.5vw,4rem)]">
+              {slab.banner.title}
+            </h1>
+            <p className="mt-3 max-w-[290px] text-[15px] leading-relaxed text-[#6b4450] md:max-w-md md:text-lg">
+              {slab.banner.subtitle}
+            </p>
+            <a
+              href="#flavours"
+              className="mt-5 inline-block rounded-2xl bg-pink px-8 py-4 text-center text-base font-bold text-white transition-colors hover:bg-pink-dark md:mt-8"
+            >
+              {slab.banner.cta}
+            </a>
           </div>
-        )}
-        <div className="relative mx-auto max-w-5xl px-6 py-16 md:py-24">
-          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#f4b9c8]">
-            {slab.banner.eyebrow}
-          </span>
-          <h1 className="mt-3 max-w-2xl font-display text-[34px] leading-[1.08] md:text-[52px]">
-            {slab.banner.title}
-          </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-white/75 md:text-lg">
-            {slab.banner.subtitle}
-          </p>
-          <a
-            href="#flavours"
-            className="mt-7 inline-block rounded-2xl bg-pink px-7 py-4 text-base font-bold text-white transition-transform hover:-translate-y-0.5"
-          >
-            {slab.banner.cta}
-          </a>
+          <div className="aspect-[290/250] overflow-hidden rounded-[18px] bg-navy md:order-2 md:aspect-[4/3]">
+            {slab.banner.imageUrl && (
+              <BrownieImage src={slab.banner.imageUrl} alt="" className="h-full w-full" priority />
+            )}
+          </div>
         </div>
       </section>
 

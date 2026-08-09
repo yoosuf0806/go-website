@@ -11,7 +11,6 @@ import QuoteHero from '../components/storefront/QuoteHero'
 import QuoteStatsBar from '../components/storefront/QuoteStatsBar'
 import QuoteOccasionsGrid from '../components/storefront/QuoteOccasionsGrid'
 import QuoteHandledSection from '../components/storefront/QuoteHandledSection'
-import QuotePricingSection from '../components/storefront/QuotePricingSection'
 import GallerySection from '../components/storefront/GallerySection'
 import Toast from '../components/ui/Toast'
 import Seo from '../components/Seo'
@@ -131,7 +130,6 @@ export default function QuoteLandingPage({
         cta={content.handledCta}
         ctaHref={`#${FORM_ANCHOR_ID}`}
       />
-      <QuotePricingSection title={content.pricingTitle} tiers={content.pricingTiers} />
       <GallerySection />
 
       {/* Quote form / success */}
