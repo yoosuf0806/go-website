@@ -221,14 +221,14 @@ begin
   loop
     select price_per_piece into v_pp
       from products
-      where id = nullif(v_item->>'product_id', '')::uuid and is_visible = true;
+      where products.id = nullif(v_item->>'product_id', '')::uuid and is_visible = true;
     if v_pp is null then
       raise exception 'PRICE_MISMATCH';
     end if;
 
     select piece_count into v_pc
       from packages
-      where id = v_item->>'package_id' and is_active = true;
+      where packages.id = v_item->>'package_id' and is_active = true;
     if v_pc is null then
       raise exception 'PRICE_MISMATCH';
     end if;
