@@ -54,8 +54,7 @@ export default function Slab() {
           <div className="grid gap-4 md:grid-cols-3 md:gap-6">
             {slab.howItWorks.map((step, i) => (
               <div key={i} className="rounded-2xl border border-blush-200 bg-white p-5 text-center md:p-6">
-                <div className="text-3xl">{step.icon}</div>
-                <div className="mt-2 font-display text-lg text-navy">{step.title}</div>
+                <div className="font-display text-lg text-navy">{step.title}</div>
                 <p className="mt-1 text-sm leading-relaxed text-[#5c4450]">{step.body}</p>
               </div>
             ))}

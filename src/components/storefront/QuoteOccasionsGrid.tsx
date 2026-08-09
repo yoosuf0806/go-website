@@ -10,7 +10,7 @@ export default function QuoteOccasionsGrid({ heading, occasions }: { heading: st
 
   return (
     <section className="px-6 pb-12 pt-10 sm:px-10">
-      <h2 className="pb-4 font-display text-2xl text-navy sm:text-[28px]">{heading}</h2>
+      <h2 className="pb-4 text-2xl font-semibold text-navy sm:text-[28px]">{heading}</h2>
 
       {hasImages ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
