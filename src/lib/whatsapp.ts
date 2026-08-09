@@ -102,6 +102,63 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   return lines.join('\n')
 }
 
+/**
+ * One line item on the delivery-confirmation message, e.g.
+ * "- Cashew Brownie — Brownie Slab (12 pcs) x 1".
+ */
+export interface ConfirmationItem {
+  product_name: string
+  package_label: string
+  box_qty: number
+}
+
+export interface DeliveryConfirmationInput {
+  orderNo: number | string
+  /** Customer's phone (E.164 or local) — this is where the message is sent. */
+  phone: string
+  address?: string | null
+  deliveryDate?: string | null
+  isGift?: boolean
+  recipientName?: string | null
+  recipientPhone?: string | null
+  items: ConfirmationItem[]
+}
+
+/**
+ * Order-confirmed message the admin sends to the CUSTOMER after verifying their
+ * bank-transfer payment. Deliberately plain, professional text — no emojis or
+ * icons — every field pulled from the order so it can't diverge from the system.
+ */
+export function buildDeliveryConfirmationMessage(input: DeliveryConfirmationInput): string {
+  const lines: string[] = []
+  lines.push('Dear Customer,')
+  lines.push('')
+  lines.push('Your payment has been verified and your order has been placed for delivery.')
+  lines.push('')
+  lines.push(`Order #${input.orderNo}`)
+  lines.push('')
+  lines.push('Items:')
+  for (const item of input.items) {
+    lines.push(`- ${item.product_name} — ${item.package_label} x ${item.box_qty}`)
+  }
+  lines.push('')
+  if (input.deliveryDate) lines.push(`Delivery date: ${formatDate(input.deliveryDate)}`)
+  if (input.address) lines.push(`Delivery address: ${input.address}`)
+  lines.push(`Contact number: ${input.phone}`)
+  if (input.isGift && input.recipientName) {
+    const rp = input.recipientPhone ? ` (${input.recipientPhone})` : ''
+    lines.push(`Gift recipient: ${input.recipientName}${rp}`)
+  }
+  lines.push('')
+  lines.push('Thank you for ordering with Golden Oven.')
+  return lines.join('\n')
+}
+
+/** wa.me deep link to the customer's number carrying the confirmation message. */
+export function deliveryConfirmationWaLink(input: DeliveryConfirmationInput): string {
+  return whatsAppLink(input.phone, buildDeliveryConfirmationMessage(input))
+}
+
 /** Build the corporate/wedding inquiry message body (spec §6.5 inquiry template). */
 export function buildInquiryMessage(input: InquiryMessageInput): string {
   const label = input.category === 'wedding' ? 'Wedding' : 'Corporate'

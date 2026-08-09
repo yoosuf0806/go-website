@@ -18,6 +18,7 @@ const NAV = [
   { to: '/wedding', label: 'Wedding Orders' },
   { to: '/corporate', label: 'Corporate Orders' },
   { to: '/shop', label: 'Shop All' },
+  { to: '/track-order', label: 'Track your order' },
 ]
 
 // Shared storefront chrome: pink promo marquee, fixed header (transparent over

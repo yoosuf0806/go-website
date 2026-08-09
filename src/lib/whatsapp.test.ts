@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   buildOrderMessage,
   buildInquiryMessage,
+  buildDeliveryConfirmationMessage,
+  deliveryConfirmationWaLink,
   orderWhatsAppLink,
   type OrderMessageInput,
 } from './whatsapp'
@@ -111,6 +113,48 @@ describe('buildInquiryMessage', () => {
     expect(msg).toContain('Wedding Inquiry')
     expect(msg).not.toContain('✉️')
     expect(msg).not.toContain('👥')
+  })
+})
+
+describe('buildDeliveryConfirmationMessage', () => {
+  const base = {
+    orderNo: 1024,
+    phone: '+94771234567',
+    address: '12 Galle Rd, Colombo 03',
+    deliveryDate: '2026-07-05',
+    items: [
+      { product_name: 'Cashew Brownie', package_label: 'Brownie Slab (12 pcs)', box_qty: 2 },
+    ],
+  }
+
+  it('is plain professional text with no emojis or icons', () => {
+    const msg = buildDeliveryConfirmationMessage(base)
+    // No emoji/pictographs anywhere in the body.
+    expect(/\p{Extended_Pictographic}/u.test(msg)).toBe(false)
+    expect(msg).toContain('Your payment has been verified')
+    expect(msg).toContain('Order #1024')
+    expect(msg).toContain('- Cashew Brownie — Brownie Slab (12 pcs) x 2')
+    expect(msg).toContain('Delivery date: 5 Jul 2026')
+    expect(msg).toContain('Delivery address: 12 Galle Rd, Colombo 03')
+    expect(msg).toContain('Contact number: +94771234567')
+    expect(msg).toContain('Thank you for ordering with Golden Oven.')
+  })
+
+  it('adds a recipient line only for gift orders', () => {
+    expect(buildDeliveryConfirmationMessage(base)).not.toContain('Gift recipient')
+    const gift = buildDeliveryConfirmationMessage({
+      ...base,
+      isGift: true,
+      recipientName: 'Jane Doe',
+      recipientPhone: '+94712223344',
+    })
+    expect(gift).toContain('Gift recipient: Jane Doe (+94712223344)')
+  })
+
+  it('links to the customer number with an encoded body', () => {
+    const link = deliveryConfirmationWaLink(base)
+    expect(link.startsWith('https://wa.me/94771234567?text=')).toBe(true)
+    expect(decodeURIComponent(link.split('text=')[1])).toContain('Order #1024')
   })
 })
 

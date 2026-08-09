@@ -15,8 +15,27 @@ import { findTier } from '../../lib/pricing'
 import { formatLKR, formatDate, toWhatsAppNumber } from '../../lib/format'
 import { printOrderSlip } from '../../lib/orderSlip'
 import { useCatalog } from '../../contexts/CatalogContext'
-import { addonSummary } from '../../lib/whatsapp'
+import { addonSummary, deliveryConfirmationWaLink } from '../../lib/whatsapp'
 import StatusBadge from '../../components/admin/StatusBadge'
+
+// wa.me link to the CUSTOMER carrying the order-confirmed message, built
+// entirely from the order so the text can't diverge from the system.
+function confirmationLink(order: AdminOrder): string {
+  return deliveryConfirmationWaLink({
+    orderNo: order.order_no,
+    phone: order.phone,
+    address: order.address,
+    deliveryDate: order.delivery_date,
+    isGift: order.is_gift,
+    recipientName: order.recipient_name,
+    recipientPhone: order.recipient_phone,
+    items: order.order_items.map((it) => ({
+      product_name: it.product_name,
+      package_label: it.package_label,
+      box_qty: it.box_qty,
+    })),
+  })
+}
 
 const TABS: { id: OrderTab; label: string }[] = [
   { id: 'baking_today', label: 'Baking today' },
@@ -122,7 +141,14 @@ export default function Orders() {
                   onToggle={() => setExpanded((cur) => (cur === order.id ? null : order.id))}
                   onAdvance={(to) => updateStatus.mutate({ id: order.id, status: to })}
                   busy={updateStatus.isPending}
-                  onConfirmPayment={() => confirmPayment.mutate(order.id)}
+                  onConfirmPayment={() =>
+                    confirmPayment.mutate(order.id, {
+                      // Verifying payment releases the order to the kitchen AND
+                      // opens a WhatsApp compose window to the customer with the
+                      // order-confirmed message ready to send.
+                      onSuccess: () => window.open(confirmationLink(order), '_blank', 'noopener'),
+                    })
+                  }
                   confirmingPayment={confirmPayment.isPending}
                 />
               ))}
@@ -346,9 +372,26 @@ function OrderRow({
                             disabled={confirmingPayment}
                             className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700 disabled:opacity-50"
                           >
-                            {confirmingPayment ? 'Confirming…' : '✓ Confirm payment received'}
+                            {confirmingPayment ? 'Confirming…' : '✓ Confirm & verified'}
                           </button>
-                          <p className="mt-1 text-[11px] text-neutral-400">Sends this order to the kitchen board.</p>
+                          <p className="mt-1 text-[11px] text-neutral-400">
+                            Sends this order to the kitchen and opens a WhatsApp confirmation to the customer.
+                          </p>
+                        </div>
+                      )}
+                      {order.payment_status === 'paid' && (
+                        <div className="mt-2">
+                          <a
+                            href={confirmationLink(order)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block rounded-lg border border-green-300 px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-50"
+                          >
+                            Send confirmation on WhatsApp
+                          </a>
+                          <p className="mt-1 text-[11px] text-neutral-400">
+                            Re-open the order-confirmed message to the customer.
+                          </p>
                         </div>
                       )}
                     </div>
