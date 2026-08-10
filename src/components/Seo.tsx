@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async'
 import { content } from '../data/catalog'
+import { imageUrl } from '../lib/images'
 
 // Per-page <head> (title, description, canonical, Open Graph, Twitter) plus
 // optional JSON-LD structured data. Read by react-helmet-async both in the
@@ -14,11 +15,18 @@ interface SeoProps {
   description: string
   path: string
   image?: string
+  /**
+   * URL of the page's LCP image (e.g. the Home hero). When set, a
+   * `<link rel="preload" as="image">` is emitted into the prerendered <head> so
+   * the browser starts fetching it immediately, before the JS bundle parses —
+   * the biggest lever on how fast the first image paints.
+   */
+  preloadImage?: string | null
   /** JSON-LD objects to embed (Product, BreadcrumbList, …). */
   jsonLd?: Record<string, unknown>[]
 }
 
-export default function Seo({ title, description, path, image, jsonLd }: SeoProps) {
+export default function Seo({ title, description, path, image, preloadImage, jsonLd }: SeoProps) {
   const url = `${SITE_URL}${path}`
   const ogImage = image ?? `${SITE_URL}/og-default.png`
 
@@ -27,6 +35,9 @@ export default function Seo({ title, description, path, image, jsonLd }: SeoProp
       <title>{title}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
+      {preloadImage && (
+        <link rel="preload" as="image" href={imageUrl(preloadImage, 1280)} fetchPriority="high" />
+      )}
 
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={content.seo.siteName} />
