@@ -161,14 +161,25 @@ export async function setProductPackageStock(
  * Upload a single image or video file to the public product-images bucket
  * and return its gallery entry ({ url, type }). Used for the product gallery
  * (multiple images/videos per product, shown as a carousel on the storefront).
+ *
+ * Images are downscaled + re-encoded (see resizeImage) before upload — product
+ * photos are the storefront's heaviest asset (tiles, detail, hero), and phone
+ * uploads run 3–5000px / several MB. Videos are passed through untouched.
  */
 export async function uploadProductMedia(file: File): Promise<ProductMedia> {
   const isVideo = file.type.startsWith('video/')
-  const ext = file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')
+  const blob = isVideo ? file : await resizeImage(file)
+  const isPassthrough = blob === file
+  const ext = isPassthrough
+    ? (file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg'))
+    : 'webp'
+  const contentType = isPassthrough ? file.type || undefined : 'image/webp'
   const path = `${crypto.randomUUID()}.${ext}`
-  const { error } = await supabase.storage.from('product-images').upload(path, file, {
-    cacheControl: '3600',
+  const { error } = await supabase.storage.from('product-images').upload(path, blob, {
+    // UUID filenames are never reused, so the object is safe to cache "forever".
+    cacheControl: `${ONE_YEAR}`,
     upsert: false,
+    contentType,
   })
   if (error) throw new Error(error.message)
   const { data } = supabase.storage.from('product-images').getPublicUrl(path)
@@ -183,10 +194,15 @@ export async function uploadProductMedia(file: File): Promise<ProductMedia> {
 // Downscale + re-encode an image before upload. Admin uploads are often
 // straight off a phone (3–5000px, several MB), which blew out mobile layout
 // and load times when served raw. We cap the longest edge at MAX_EDGE and
-// re-encode as compressed JPEG/WebP. SVGs and GIFs are passed through
-// untouched (vector / animation would be destroyed by canvas rasterisation).
+// re-encode as compressed WebP (~30% smaller than the equivalent JPEG at the
+// same visual quality). SVGs and GIFs are passed through untouched (vector /
+// animation would be destroyed by canvas rasterisation).
 const MAX_EDGE = 1600
-const JPEG_QUALITY = 0.82
+const WEBP_QUALITY = 0.8
+// Storage cache-control (seconds). Object paths are random UUIDs and never
+// reused, so a re-uploaded image is always a new URL — the old bytes can be
+// cached for a year. This is what makes repeat visits load instantly.
+const ONE_YEAR = 31536000
 
 async function resizeImage(file: File): Promise<Blob> {
   if (file.type === 'image/svg+xml' || file.type === 'image/gif') return file
@@ -203,11 +219,6 @@ async function resizeImage(file: File): Promise<Blob> {
 
   const { width, height } = bitmap
   const scale = Math.min(1, MAX_EDGE / Math.max(width, height))
-  // Nothing to do if it's already within bounds AND already a compressed type.
-  if (scale === 1 && (file.type === 'image/jpeg' || file.type === 'image/webp')) {
-    bitmap.close()
-    return file
-  }
 
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(width * scale)
@@ -221,7 +232,7 @@ async function resizeImage(file: File): Promise<Blob> {
   bitmap.close()
 
   const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY),
+    canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY),
   )
   // If re-encoding somehow produced nothing or a bigger file, keep the original.
   if (!blob || blob.size >= file.size) return file
@@ -230,15 +241,15 @@ async function resizeImage(file: File): Promise<Blob> {
 
 export async function uploadImage(file: File): Promise<string> {
   const resized = await resizeImage(file)
-  // After resize the bytes are JPEG (unless we passed through an SVG/GIF or the
-  // original was smaller). Extension follows the actual output type so the
-  // stored object and its content-type agree.
+  // After resize the bytes are WebP (unless we passed through an SVG/GIF or the
+  // original was already smaller). Extension follows the actual output type so
+  // the stored object and its content-type agree.
   const isPassthrough = resized === file
-  const ext = isPassthrough ? (file.name.split('.').pop() ?? 'jpg') : 'jpg'
-  const contentType = isPassthrough ? file.type || 'image/jpeg' : 'image/jpeg'
+  const ext = isPassthrough ? (file.name.split('.').pop() ?? 'jpg') : 'webp'
+  const contentType = isPassthrough ? file.type || 'image/jpeg' : 'image/webp'
   const path = `content/${crypto.randomUUID()}.${ext}`
   const { error } = await supabase.storage.from('product-images').upload(path, resized, {
-    cacheControl: '3600',
+    cacheControl: `${ONE_YEAR}`,
     upsert: false,
     contentType,
   })

@@ -61,6 +61,7 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
         <BrownieImage
           src={product.imageUrl}
           alt={product.name}
+          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 45vw"
           className="h-full w-full transition-transform duration-500 group-hover:scale-105"
         />
         {soldOut ? (

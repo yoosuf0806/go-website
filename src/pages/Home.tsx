@@ -36,6 +36,7 @@ export default function Home() {
         title={content.seo.home.title}
         description={content.seo.home.description}
         path="/"
+        preloadImage={content.heroSlides[0]?.imageUrl ?? heroImage}
         jsonLd={[organizationJsonLd()]}
       />
 
