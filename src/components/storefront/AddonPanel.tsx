@@ -1,8 +1,12 @@
 import { useState } from 'react'
-import type { CatalogAddon, GiftRibbonConfig } from '../../types/catalog'
+import type { CatalogAddon } from '../../types/catalog'
 import type { CartAddon } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { TOPPER_LINES, GIFT_MESSAGE_MAX, isValidTopperLine } from '../../schemas/addon'
+
+// The gift ribbon is always a white satin ribbon now — the customer only
+// chooses whether to add it, not a colour (previous colour picker removed).
+const RIBBON_COLOR = 'White'
 
 // Add-on selection state, independent of the catalogue shape so it can be
 // driven by controlled inputs. Letter topper is a free, built-in option (PR
@@ -79,7 +83,7 @@ interface AddonPanelProps {
   disabled?: boolean
 }
 
-type OpenSection = 'topper' | 'message' | 'ribbon' | null
+type OpenSection = 'topper' | 'message' | null
 
 // Accordion row shell — one section, collapsed by default. Matches the
 // mockup's toggle-row pattern: label + summary on the left, a small sign
@@ -132,12 +136,6 @@ export default function AddonPanel({
 
   const message = addons.find((a) => a.id === 'gift_message')
   const ribbon = addons.find((a) => a.id === 'gift_ribbon')
-
-  // config is admin-editable JSON, so never trust its shape — a malformed
-  // `colors` (non-array) would crash the storefront on .map (PR review).
-  const ribbonColors = ribbon && Array.isArray((ribbon.config as GiftRibbonConfig).colors)
-    ? (ribbon.config as GiftRibbonConfig).colors
-    : []
 
   // Shown only when this package offers a topper (max chars > 0) AND the
   // product allows it. Package qualification comes from letter_max_chars,
@@ -234,34 +232,46 @@ export default function AddonPanel({
       )}
 
       {ribbon && (
-        <Row
-          label="Gift ribbon"
-          summary={value.giftRibbon.enabled && value.giftRibbon.color ? value.giftRibbon.color : 'Choose a colour'}
-          sign={value.giftRibbon.enabled ? '−' : '+'}
-          open={open === 'ribbon'}
-          onToggle={() => toggle('ribbon')}
-        >
-          <div className="flex flex-wrap gap-2.5">
-            {ribbonColors.map((color) => {
-              const selected = value.giftRibbon.enabled && value.giftRibbon.color === color
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onChange({ ...value, giftRibbon: { enabled: true, color } })}
-                  className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selected ? 'border-pink bg-pink-light text-pink' : 'border-blush-200 bg-white text-navy hover:border-pink'
-                  }`}
-                >
-                  <span className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ backgroundColor: color.toLowerCase() }} />
-                  {color}
-                </button>
-              )
-            })}
-          </div>
-          {ribbon.price > 0 && <p className="pt-2 text-xs text-neutral-500">Adds {formatLKR(ribbon.price)}</p>}
-        </Row>
+        // Gift ribbon is now a simple yes/no: a hand-tied white satin ribbon the
+        // customer can add or leave off — no colour choice.
+        <div className="border-t border-blush-200">
+          <button
+            type="button"
+            disabled={disabled}
+            aria-pressed={value.giftRibbon.enabled}
+            onClick={() =>
+              onChange({
+                ...value,
+                giftRibbon: value.giftRibbon.enabled
+                  ? { enabled: false, color: null }
+                  : { enabled: true, color: RIBBON_COLOR },
+              })
+            }
+            className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className="h-6 w-6 shrink-0 rounded-full border border-blush-200 bg-white shadow-[inset_0_0_5px_rgba(0,0,0,0.12)]"
+                aria-hidden
+              />
+              <div>
+                <div className="text-base font-medium text-navy">Gift ribbon</div>
+                <div className="mt-0.5 text-[13px] text-neutral-500">
+                  Hand-tied white satin ribbon
+                  {ribbon.price > 0 ? ` · adds ${formatLKR(ribbon.price)}` : ''}
+                </div>
+              </div>
+            </div>
+            {/* iOS-style switch — the customer just picks whether they want it */}
+            <span
+              className={`flex h-7 w-12 shrink-0 items-center rounded-full px-0.5 transition-colors ${
+                value.giftRibbon.enabled ? 'justify-end bg-pink' : 'justify-start bg-blush-200'
+              }`}
+            >
+              <span className="h-6 w-6 rounded-full bg-white shadow" />
+            </span>
+          </button>
+        </div>
       )}
     </div>
   )

@@ -1,6 +1,7 @@
 import { useCatalog } from '../contexts/CatalogContext'
 import ProductTile from '../components/storefront/ProductTile'
 import BrownieImage from '../components/storefront/BrownieImage'
+import HeroBanner from '../components/storefront/HeroBanner'
 import Accordion from '../components/storefront/Accordion'
 import Seo from '../components/Seo'
 
@@ -21,34 +22,16 @@ export default function Slab() {
     <div className="bg-blush-50">
       <Seo title={slab.banner.title} description={content.seo.slab.description} path="/slab" />
 
-      {/* ── BANNER — same light two-column format as the Home hero, so the
-          uploaded image shows at full opacity instead of a dimmed backdrop. */}
-      <section className="bg-blush-100 px-[22px] pb-7 pt-[72px] md:px-8 md:py-16 lg:py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-2 md:gap-12">
-          <div className="md:order-1">
-            <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-berry">
-              {slab.banner.eyebrow}
-            </span>
-            <h1 className="mt-3 font-display text-[40px] leading-[1.02] tracking-[-0.015em] text-navy md:text-[clamp(2.6rem,4.5vw,4rem)]">
-              {slab.banner.title}
-            </h1>
-            <p className="mt-3 max-w-[290px] text-[15px] leading-relaxed text-[#6b4450] md:max-w-md md:text-lg">
-              {slab.banner.subtitle}
-            </p>
-            <a
-              href="#flavours"
-              className="mt-5 inline-block rounded-2xl bg-pink px-8 py-4 text-center text-base font-bold text-white transition-colors hover:bg-pink-dark md:mt-8"
-            >
-              {slab.banner.cta}
-            </a>
-          </div>
-          <div className="aspect-[290/250] overflow-hidden rounded-[18px] bg-navy md:order-2 md:aspect-[4/3]">
-            {slab.banner.imageUrl && (
-              <BrownieImage src={slab.banner.imageUrl} alt="" className="h-full w-full" priority />
-            )}
-          </div>
-        </div>
-      </section>
+      {/* ── BANNER — same full-bleed hero template as the Home landing banner:
+          the uploaded image full-width with the copy overlaid bottom-left. */}
+      <HeroBanner
+        eyebrow={slab.banner.eyebrow}
+        title={slab.banner.title}
+        subtitle={slab.banner.subtitle}
+        imageUrl={slab.banner.imageUrl}
+        primaryCta={{ label: slab.banner.cta, href: '#flavours' }}
+        priority
+      />
 
       {/* ── HOW IT WORKS ───────────────────────────────────── */}
       {slab.howItWorks.length > 0 && (
