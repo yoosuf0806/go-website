@@ -11,7 +11,6 @@ import QuoteHero from '../components/storefront/QuoteHero'
 import QuoteStatsBar from '../components/storefront/QuoteStatsBar'
 import QuoteOccasionsGrid from '../components/storefront/QuoteOccasionsGrid'
 import QuoteHandledSection from '../components/storefront/QuoteHandledSection'
-import GallerySection from '../components/storefront/GallerySection'
 import Toast from '../components/ui/Toast'
 import Seo from '../components/Seo'
 
@@ -130,7 +129,6 @@ export default function QuoteLandingPage({
         cta={content.handledCta}
         ctaHref={`#${FORM_ANCHOR_ID}`}
       />
-      <GallerySection />
 
       {/* Quote form / success */}
       <div id={FORM_ANCHOR_ID} className="scroll-mt-20 px-6 pb-16 pt-8 sm:px-10">
