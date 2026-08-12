@@ -9,7 +9,6 @@ export interface HeroContent {
   titleAfter: string
   subtitle: string
   primaryCta: string
-  secondaryCta: string
 }
 
 // Admin-managed hero banner slide: a background image with its own text
@@ -207,7 +206,6 @@ export const DEFAULT_CONTENT: SiteContent = {
     subtitle:
       'Freshly baked brownies. Islandwide delivery. Made to order — for every little celebration worth sharing.',
     primaryCta: 'Shop All Brownies',
-    secondaryCta: 'Corporate Gifting',
   },
   heroSlides: [],
   promoSlides: [],
