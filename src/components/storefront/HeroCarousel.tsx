@@ -16,14 +16,13 @@ function dropSrcSet(e: React.SyntheticEvent<HTMLImageElement>) {
 interface HeroCarouselProps {
   slides: HeroSlide[]
   primaryCta: string
-  secondaryCta: string
 }
 
 // Admin-managed hero banner: full-width image slides with the slide's own text
-// overlaid, plus the shared primary/secondary CTAs. Auto-advances; arrows and
-// dots appear only when there's more than one slide. Rendered by Home only when
+// overlaid, plus the shared primary CTA. Auto-advances; arrows and dots appear
+// only when there's more than one slide. Rendered by Home only when
 // content.heroSlides is non-empty (otherwise the emoji-tile hero shows).
-export default function HeroCarousel({ slides, primaryCta, secondaryCta }: HeroCarouselProps) {
+export default function HeroCarousel({ slides, primaryCta }: HeroCarouselProps) {
   const [index, setIndex] = useState(0)
   const count = slides.length
 
@@ -59,29 +58,23 @@ export default function HeroCarousel({ slides, primaryCta, secondaryCta }: HeroC
             {/* Dark scrim so overlaid text stays readable over any image. */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/20" />
             <div className="absolute inset-0 flex items-end">
-              <div className="mx-auto flex w-full max-w-[1400px] px-6 pb-16 sm:pb-20">
+              <div className="mx-auto flex w-full max-w-[1400px] px-5 pb-10 sm:px-6 sm:pb-20">
                 <div className="max-w-xl text-white">
-                  <h1 className="text-[clamp(2.1rem,6vw,4rem)] leading-[1.15] drop-shadow">
+                  <h1 className="text-[clamp(1.85rem,6vw,4rem)] leading-[1.12] drop-shadow sm:leading-[1.15]">
                     {slide.title} <em className="not-italic text-pink-light">{slide.highlight}</em>{' '}
                     {slide.titleAfter}
                   </h1>
                   {slide.subtitle && (
-                    <p className="mt-4 max-w-md text-lg leading-relaxed text-white/90 drop-shadow">
+                    <p className="mt-3 max-w-md text-base leading-relaxed text-white/90 drop-shadow sm:mt-4 sm:text-lg">
                       {slide.subtitle}
                     </p>
                   )}
-                  <div className="mt-7 flex flex-wrap gap-4">
+                  <div className="mt-5 flex flex-wrap gap-3 sm:mt-7 sm:gap-4">
                     <Link
                       to="/shop"
                       className="rounded-full bg-pink px-8 py-3.5 text-[15px] font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-pink-dark"
                     >
                       {primaryCta}
-                    </Link>
-                    <Link
-                      to="/corporate"
-                      className="rounded-full bg-navy px-7 py-3 text-[15px] font-bold text-white transition-transform hover:-translate-y-0.5"
-                    >
-                      {secondaryCta}
                     </Link>
                   </div>
                 </div>

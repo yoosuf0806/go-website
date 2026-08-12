@@ -42,7 +42,7 @@ export default function Home() {
 
       {/* HERO — admin image carousel if slides exist, else the blush hero */}
       {content.heroSlides.length > 0 ? (
-        <HeroCarousel slides={content.heroSlides} primaryCta={hero.primaryCta} secondaryCta={hero.secondaryCta} />
+        <HeroCarousel slides={content.heroSlides} primaryCta={hero.primaryCta} />
       ) : (
         <section className="bg-blush-100 px-[22px] pb-7 pt-[72px] md:px-8 md:py-16 lg:py-20">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-2 md:gap-12">
@@ -60,12 +60,6 @@ export default function Home() {
                   className="rounded-2xl bg-pink px-8 py-4 text-center text-base font-bold text-white transition-colors hover:bg-pink-dark"
                 >
                   {hero.primaryCta}
-                </Link>
-                <Link
-                  to="/corporate"
-                  className="hidden rounded-2xl bg-navy px-8 py-4 text-center text-base font-bold text-white transition-transform hover:-translate-y-0.5 sm:block"
-                >
-                  {hero.secondaryCta}
                 </Link>
               </div>
             </div>

@@ -99,7 +99,6 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         <Area label="Subtitle" value={form.hero.subtitle} onChange={(v) => set('hero', { ...form.hero, subtitle: v })} />
         <Row>
           <Text label="Primary button" value={form.hero.primaryCta} onChange={(v) => set('hero', { ...form.hero, primaryCta: v })} />
-          <Text label="Secondary button" value={form.hero.secondaryCta} onChange={(v) => set('hero', { ...form.hero, secondaryCta: v })} />
         </Row>
       </Section>
 

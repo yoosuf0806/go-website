@@ -92,22 +92,22 @@ export default function HeroBanner({
       )}
 
       <div className="absolute inset-0 flex items-end">
-        <div className="mx-auto flex w-full max-w-[1400px] px-6 pb-16 sm:pb-20">
+        <div className="mx-auto flex w-full max-w-[1400px] px-5 pb-10 sm:px-6 sm:pb-20">
           <div className="max-w-xl text-white">
             {eyebrow && (
               <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-pink-light drop-shadow">
                 {eyebrow}
               </p>
             )}
-            <h1 className="mt-2 font-display text-[clamp(2.1rem,6vw,4rem)] leading-[1.15] drop-shadow">
+            <h1 className="mt-2 font-display text-[clamp(1.85rem,6vw,4rem)] leading-[1.12] drop-shadow sm:leading-[1.15]">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-4 max-w-md text-lg leading-relaxed text-white/90 drop-shadow">
+              <p className="mt-3 max-w-md text-base leading-relaxed text-white/90 drop-shadow sm:mt-4 sm:text-lg">
                 {subtitle}
               </p>
             )}
-            <div className="mt-7 flex flex-wrap gap-4">
+            <div className="mt-5 flex flex-wrap gap-3 sm:mt-7 sm:gap-4">
               <CtaButton cta={primaryCta} variant="primary" />
               {secondaryCta && <CtaButton cta={secondaryCta} variant="secondary" />}
             </div>
