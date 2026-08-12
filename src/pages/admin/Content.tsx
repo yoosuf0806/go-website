@@ -13,7 +13,7 @@ import type {
 import { uploadImage } from '../../lib/adminProducts'
 import Toast from '../../components/ui/Toast'
 import ImageCropModal from '../../components/admin/ImageCropModal'
-import { isCroppable } from '../../lib/cropImage'
+import { isCroppable, recommendedSizeLabel } from '../../lib/cropImage'
 
 // Admin Content & SEO — edit every storefront section's copy + per-page SEO.
 // Saved to the `content` settings blob; goes live on the next Publish.
@@ -362,6 +362,9 @@ function ImageField({
   return (
     <div>
       <span className="block text-sm text-neutral-600">{label}</span>
+      <span className="block text-xs text-neutral-400">
+        Recommended: {recommendedSizeLabel(aspect)}
+      </span>
       <div className="mt-1 flex items-center gap-3">
         {value && (
           <img
@@ -507,6 +510,7 @@ function HeroSlidesEditor({
           {uploading ? 'Uploading…' : '+ Add slide (upload image)'}
           <input type="file" accept="image/*" onChange={addSlide} disabled={uploading} className="hidden" />
         </label>
+        <p className="mt-1 text-xs text-neutral-400">Recommended: {recommendedSizeLabel(16 / 9)}</p>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
 
