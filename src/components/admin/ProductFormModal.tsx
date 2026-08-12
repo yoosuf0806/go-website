@@ -6,6 +6,8 @@ import {
   type ProductInput,
   type ProductMedia,
 } from '../../lib/adminProducts'
+import ImageCropModal from './ImageCropModal'
+import { isCroppable } from '../../lib/cropImage'
 
 interface ProductFormModalProps {
   /** The product to edit, or null to create a new one. */
@@ -57,31 +59,60 @@ export default function ProductFormModal({
   const [form, setForm] = useState<ProductInput>(() => initialInput(product, categories))
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  // The image currently being framed in the crop modal, plus the files still
+  // waiting behind it. Images pause here one at a time; videos upload straight.
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropQueue, setCropQueue] = useState<File[]>([])
 
   function set<K extends keyof ProductInput>(key: K, value: ProductInput[K]) {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  // Uploads every selected file (images and/or videos), appending each to the
-  // gallery as it completes so the grid fills in progressively rather than
-  // blocking on the slowest upload. One failure doesn't drop the others.
-  async function handleMediaSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function uploadOne(file: File) {
+    setUploading(true)
+    try {
+      const item = await uploadProductMedia(file)
+      setForm((f) => ({ ...f, media: [...f.media, item] }))
+    } catch (err) {
+      const msg = `${file.name}: ${err instanceof Error ? err.message : 'Upload failed'}`
+      setUploadError((prev) => (prev ? `${prev}; ${msg}` : msg))
+    }
+    setUploading(false)
+  }
+
+  // Walk the picked files: videos (and SVG/GIF) upload immediately, but the
+  // first croppable image pauses to open the crop modal so the admin can frame
+  // it to the square product tile. Whatever remains is queued for after.
+  async function processFiles(files: File[]) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (isCroppable(file)) {
+        setCropFile(file)
+        setCropQueue(files.slice(i + 1))
+        return
+      }
+      await uploadOne(file)
+    }
+  }
+
+  function handleMediaSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     e.target.value = '' // allow re-selecting the same file(s) later
     if (files.length === 0) return
     setUploadError(null)
-    setUploading(true)
-    const failures: string[] = []
-    for (const file of files) {
-      try {
-        const item = await uploadProductMedia(file)
-        setForm((f) => ({ ...f, media: [...f.media, item] }))
-      } catch (err) {
-        failures.push(`${file.name}: ${err instanceof Error ? err.message : 'Upload failed'}`)
-      }
-    }
-    setUploading(false)
-    if (failures.length > 0) setUploadError(failures.join('; '))
+    void processFiles(files)
+  }
+
+  // Continue after the crop modal: upload the cropped image (or skip it on
+  // cancel), then resume with any files that were queued behind it.
+  function afterCrop(cropped: File | null) {
+    const rest = cropQueue
+    setCropFile(null)
+    setCropQueue([])
+    void (async () => {
+      if (cropped) await uploadOne(cropped)
+      await processFiles(rest)
+    })()
   }
 
   function removeMedia(index: number) {
@@ -365,6 +396,16 @@ export default function ProductFormModal({
           </button>
         </div>
       </form>
+
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          aspect={1}
+          aspectLabel="Product tile"
+          onCancel={() => afterCrop(null)}
+          onConfirm={(cropped) => afterCrop(cropped)}
+        />
+      )}
     </div>
   )
 }

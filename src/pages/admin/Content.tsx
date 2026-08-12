@@ -12,6 +12,8 @@ import type {
 } from '../../types/content'
 import { uploadImage } from '../../lib/adminProducts'
 import Toast from '../../components/ui/Toast'
+import ImageCropModal from '../../components/admin/ImageCropModal'
+import { isCroppable } from '../../lib/cropImage'
 
 // Admin Content & SEO — edit every storefront section's copy + per-page SEO.
 // Saved to the `content` settings blob; goes live on the next Publish.
@@ -132,6 +134,8 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         <Text label="Button" value={form.homeSlab.cta} onChange={(v) => set('homeSlab', { ...form.homeSlab, cta: v })} />
         <ImageField
           label="Card image"
+          aspect={4 / 3}
+          aspectLabel="Card"
           value={form.homeSlab.imageUrl ?? undefined}
           onChange={(url) => set('homeSlab', { ...form.homeSlab, imageUrl: url ?? null })}
         />
@@ -304,6 +308,8 @@ function OccasionEditor({ card, onChange }: { card: OccasionCard; onChange: (c: 
       <div className="mt-2">
         <ImageField
           label="Card image (optional — replaces the emoji)"
+          aspect={3 / 2}
+          aspectLabel="Occasion card"
           value={card.imageUrl}
           onChange={(url) => onChange({ ...card, imageUrl: url })}
         />
@@ -313,23 +319,27 @@ function OccasionEditor({ card, onChange }: { card: OccasionCard; onChange: (c: 
 }
 
 // Reusable image upload + preview + clear, for content sections. Uploads to the
-// shared public bucket and stores the resulting URL.
+// shared public bucket and stores the resulting URL. `aspect` (width / height)
+// is the shape this image is shown in on the storefront — the admin frames the
+// crop to it before uploading so they control what stays visible.
 function ImageField({
   label,
   value,
   onChange,
+  aspect = 3 / 2,
+  aspectLabel,
 }: {
   label: string
   value?: string
   onChange: (url: string | undefined) => void
+  aspect?: number
+  aspectLabel?: string
 }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
 
-  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  async function upload(file: File) {
     setError(null)
     setUploading(true)
     try {
@@ -340,11 +350,27 @@ function ImageField({
     setUploading(false)
   }
 
+  function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    // Rasters go through the crop/preview step; SVGs and GIFs upload as-is.
+    if (isCroppable(file)) setCropFile(file)
+    else void upload(file)
+  }
+
   return (
     <div>
       <span className="block text-sm text-neutral-600">{label}</span>
       <div className="mt-1 flex items-center gap-3">
-        {value && <img src={value} alt="" className="h-14 w-20 rounded object-cover" />}
+        {value && (
+          <img
+            src={value}
+            alt=""
+            className="h-14 w-20 rounded object-cover"
+            style={{ aspectRatio: aspect }}
+          />
+        )}
         <label className="cursor-pointer rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:bg-neutral-100">
           {uploading ? 'Uploading…' : value ? 'Replace image' : 'Upload image'}
           <input type="file" accept="image/*" onChange={pick} disabled={uploading} className="hidden" />
@@ -360,6 +386,18 @@ function ImageField({
         )}
       </div>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          aspect={aspect}
+          aspectLabel={aspectLabel}
+          onCancel={() => setCropFile(null)}
+          onConfirm={(cropped) => {
+            setCropFile(null)
+            void upload(cropped)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -388,6 +426,7 @@ function HeroSlidesEditor({
 }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
 
   function update(i: number, patch: Partial<HeroSlide>) {
     onChange(slides.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
@@ -403,10 +442,7 @@ function HeroSlidesEditor({
     onChange(next)
   }
 
-  async function addSlide(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
+  async function upload(file: File) {
     setError(null)
     setUploading(true)
     try {
@@ -419,6 +455,15 @@ function HeroSlidesEditor({
       setError(err instanceof Error ? err.message : 'Upload failed')
     }
     setUploading(false)
+  }
+
+  function addSlide(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    // Hero slides are full-bleed — frame the crop to the banner before upload.
+    if (isCroppable(file)) setCropFile(file)
+    else void upload(file)
   }
 
   return (
@@ -464,6 +509,19 @@ function HeroSlidesEditor({
         </label>
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
+
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          aspect={16 / 9}
+          aspectLabel="Hero slide"
+          onCancel={() => setCropFile(null)}
+          onConfirm={(cropped) => {
+            setCropFile(null)
+            void upload(cropped)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -515,7 +573,7 @@ function QuoteLandingEditor({
       <Text label="Title" value={content.hero.title} onChange={(v) => onChange({ ...content, hero: { ...content.hero, title: v } })} />
       <Area label="Subtitle" value={content.hero.subtitle} onChange={(v) => onChange({ ...content, hero: { ...content.hero, subtitle: v } })} />
       <Text label="Button text" value={content.hero.cta} onChange={(v) => onChange({ ...content, hero: { ...content.hero, cta: v } })} />
-      <ImageField label="Background image (optional)" value={content.hero.imageUrl} onChange={(url) => onChange({ ...content, hero: { ...content.hero, imageUrl: url } })} />
+      <ImageField label="Background image (optional)" aspect={16 / 9} aspectLabel="Hero banner" value={content.hero.imageUrl} onChange={(url) => onChange({ ...content, hero: { ...content.hero, imageUrl: url } })} />
 
       <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
         Feature bullets (shown below the hero — icon, title, body)
@@ -524,7 +582,7 @@ function QuoteLandingEditor({
 
       <p className="-mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">Everything handled for you</p>
       <Text label="Heading" value={content.handledHeading} onChange={(v) => onChange({ ...content, handledHeading: v })} />
-      <ImageField label="Image (optional)" value={content.handledImageUrl} onChange={(url) => onChange({ ...content, handledImageUrl: url })} />
+      <ImageField label="Image (optional)" aspect={4 / 3} aspectLabel="Section image" value={content.handledImageUrl} onChange={(url) => onChange({ ...content, handledImageUrl: url })} />
       <label className="block text-sm">
         <span className="text-neutral-600">Checklist items (one per line)</span>
         <textarea
@@ -591,7 +649,7 @@ function SlabPageEditor({
           <Text label="Title" value={content.banner.title} onChange={(v) => onChange({ ...content, banner: { ...content.banner, title: v } })} />
           <Area label="Subtitle" value={content.banner.subtitle} onChange={(v) => onChange({ ...content, banner: { ...content.banner, subtitle: v } })} />
           <Text label="Button" value={content.banner.cta} onChange={(v) => onChange({ ...content, banner: { ...content.banner, cta: v } })} />
-          <ImageField label="Banner image (optional)" value={content.banner.imageUrl} onChange={(url) => onChange({ ...content, banner: { ...content.banner, imageUrl: url } })} />
+          <ImageField label="Banner image (optional)" aspect={16 / 9} aspectLabel="Banner" value={content.banner.imageUrl} onChange={(url) => onChange({ ...content, banner: { ...content.banner, imageUrl: url } })} />
         </div>
       </div>
 
@@ -651,7 +709,7 @@ function GalleryEditor({ images, onChange }: { images: string[]; onChange: (v: s
           ))}
         </div>
       )}
-      <ImageField label="Add a gallery image" value={undefined} onChange={addImage} />
+      <ImageField label="Add a gallery image" aspect={4 / 3} aspectLabel="Gallery" value={undefined} onChange={addImage} />
     </div>
   )
 }
