@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCatalog } from '../contexts/CatalogContext'
@@ -15,12 +15,12 @@ import Toast from '../components/ui/Toast'
 import Seo from '../components/Seo'
 
 const FORM_ANCHOR_ID = 'quote-form'
-const MIN_BOXES = 25
-const BOX_STEP = 25
+// Corporate orders are counted in brownie pieces, added a box (9 pieces) at a time.
+const MIN_PIECES = 9
+const PIECE_STEP = 9
 const DEFAULT_GUESTS = 50
 
 const OCCASION_OPTIONS = ['Staff appreciation', 'Client gifting', 'Event / conference favours', "Season's greetings", 'Other']
-const BUDGET_OPTIONS = ['Under Rs. 100,000', 'Rs. 100,000 – 250,000', 'Rs. 250,000+']
 
 // Shared landing page for /corporate and /wedding: hero, feature bullets,
 // "Popular for" occasions strip, "everything handled" + pricing (bonus
@@ -50,15 +50,12 @@ export default function QuoteLandingPage({
   const [toast, setToast] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const initialQty = isCorporate ? MIN_BOXES : DEFAULT_GUESTS
+  const initialQty = isCorporate ? MIN_PIECES : DEFAULT_GUESTS
   const [qty, setQty] = useState(initialQty)
   // Fields the schema/DB don't have dedicated columns for — folded into the
   // `message` note at submit time rather than adding a migration for them.
   const [company, setCompany] = useState('')
   const [occasion, setOccasion] = useState(OCCASION_OPTIONS[0])
-  const [wantsToppers, setWantsToppers] = useState(false)
-  const [lettering, setLettering] = useState('')
-  const [budget, setBudget] = useState('')
 
   const mutation = useCreateQuote()
   const {
@@ -79,27 +76,30 @@ export default function QuoteLandingPage({
     setValue('flavorName', next?.name)
   }
 
-  function adjustQty(delta: number) {
-    const floor = isCorporate ? MIN_BOXES : 1
-    const next = Math.max(floor, qty + delta)
+  const qtyFloor = isCorporate ? MIN_PIECES : 1
+
+  // Set an exact piece count (from typing in the field). No clamping here so a
+  // multi-digit number can be typed even when its first digit is below the
+  // floor; the floor is enforced on blur (QtyStepper) and by the buttons.
+  function setQtyValue(value: number) {
+    const next = Number.isFinite(value) ? Math.round(value) : qtyFloor
     setQty(next)
     setValue('pieceCount', String(next))
+  }
+
+  function adjustQty(delta: number) {
+    setQtyValue(Math.max(qtyFloor, qty + delta))
   }
 
   function resetExtras() {
     setSelectedId(null)
     setCompany('')
     setOccasion(OCCASION_OPTIONS[0])
-    setWantsToppers(false)
-    setLettering('')
-    setBudget('')
     setQty(initialQty)
   }
 
   async function onSubmit(data: QuoteFormRaw) {
-    const extraLines = isCorporate
-      ? [`Occasion: ${occasion}`, wantsToppers ? "Branded toppers requested." : null]
-      : [lettering.trim() ? `Lettering / names / colour theme: ${lettering.trim()}` : null, budget ? `Budget range: ${budget}` : null]
+    const extraLines = isCorporate ? [`Occasion: ${occasion}`] : []
     const message = [...extraLines, data.message].filter(Boolean).join('\n')
     const name = isCorporate && company.trim() ? `${data.name} (${company.trim()})` : data.name
     try {
@@ -112,8 +112,8 @@ export default function QuoteLandingPage({
     }
   }
 
-  const qtyLabel = isCorporate ? 'Boxes' : 'Guests'
-  const qtyHint = isCorporate ? `Minimum ${MIN_BOXES} · steps of ${BOX_STEP}` : 'One favour each'
+  const qtyLabel = 'Number of brownie pieces'
+  const qtyHint = isCorporate ? `Minimum ${MIN_PIECES} · in boxes of ${PIECE_STEP}` : 'Total brownie pieces'
 
   return (
     <div>
@@ -168,7 +168,7 @@ export default function QuoteLandingPage({
                   </div>
 
                   <GroupLabel>Order details</GroupLabel>
-                  <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} onAdjust={(d) => adjustQty(d * BOX_STEP)} />
+                  <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} min={qtyFloor} onAdjust={(d) => adjustQty(d * PIECE_STEP)} onSet={setQtyValue} />
                   <div className="mt-3 flex flex-col gap-2.5 pb-5">
                     <select value={occasion} onChange={(e) => setOccasion(e.target.value)} className={inputCls(false, false)}>
                       {OCCASION_OPTIONS.map((o) => (
@@ -176,18 +176,9 @@ export default function QuoteLandingPage({
                       ))}
                     </select>
                     {flavors.length > 0 && <FlavorChips flavors={flavors} selectedId={selectedId} onPick={pickFlavor} />}
-                    <label className="flex items-center gap-2.5 text-[15px] text-[#5c4450]">
-                      <input
-                        type="checkbox"
-                        checked={wantsToppers}
-                        onChange={(e) => setWantsToppers(e.target.checked)}
-                        className="h-[22px] w-[22px] rounded-md border-blush-200 accent-pink"
-                      />
-                      I'd like branded toppers
-                    </label>
                   </div>
 
-                  <GroupLabel>Timing</GroupLabel>
+                  <GroupLabel>Delivery date</GroupLabel>
                   <div className="flex flex-col gap-2.5">
                     <FieldError error={errors.deliveryDate?.message}>
                       <input
@@ -219,7 +210,7 @@ export default function QuoteLandingPage({
                     </FieldError>
                   </div>
                   <div>
-                    <label className="block pb-1.5 text-[13px] font-medium text-[#7a5c64]">Wedding date</label>
+                    <label className="block pb-1.5 text-[13px] font-medium text-[#7a5c64]">Delivery date</label>
                     <FieldError error={errors.deliveryDate?.message}>
                       <input
                         {...register('deliveryDate')}
@@ -229,20 +220,8 @@ export default function QuoteLandingPage({
                       />
                     </FieldError>
                   </div>
-                  <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} onAdjust={(d) => adjustQty(d)} />
+                  <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} min={qtyFloor} onAdjust={(d) => adjustQty(d)} onSet={setQtyValue} />
                   {flavors.length > 0 && <FlavorChips flavors={flavors} selectedId={selectedId} onPick={pickFlavor} />}
-                  <input
-                    value={lettering}
-                    onChange={(e) => setLettering(e.target.value)}
-                    placeholder="Lettering, names, colour theme"
-                    className={inputCls(false, false)}
-                  />
-                  <select value={budget} onChange={(e) => setBudget(e.target.value)} className={inputCls(false, false)}>
-                    <option value="">Budget range (optional)</option>
-                    {BUDGET_OPTIONS.map((b) => (
-                      <option key={b}>{b}</option>
-                    ))}
-                  </select>
                   <textarea
                     {...register('message')}
                     rows={3}
@@ -306,40 +285,76 @@ function QtyStepper({
   label,
   hint,
   qty,
+  min,
   onAdjust,
+  onSet,
   dark,
 }: {
   label: string
   hint: string
   qty: number
+  min: number
   onAdjust: (direction: 1 | -1) => void
+  /** Set an exact count typed into the field. */
+  onSet: (value: number) => void
   dark?: boolean
 }) {
+  // Local draft so the customer can freely type (incl. clearing the field)
+  // without the count snapping mid-edit; committed to the floor on blur.
+  const [draft, setDraft] = useState(String(qty))
+  useEffect(() => setDraft(String(qty)), [qty])
+
+  function commit() {
+    const n = parseInt(draft, 10)
+    const next = Number.isNaN(n) ? min : Math.max(min, n)
+    onSet(next)
+    setDraft(String(next))
+  }
+
   return (
     <div
-      className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 ${
+      className={`flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 ${
         dark ? 'border border-white/20' : 'border border-blush-200 bg-white'
       }`}
     >
-      <div>
+      <div className="min-w-0">
         <div className={`text-[15px] font-medium ${dark ? 'text-white' : 'text-navy'}`}>{label}</div>
         <div className={`text-xs ${dark ? 'text-white/55' : 'text-[#7a5c64]'}`}>{hint}</div>
       </div>
-      <div className="flex items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
           onClick={() => onAdjust(-1)}
-          className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-medium ${
+          aria-label="Decrease"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-medium ${
             dark ? 'bg-white/10 text-white' : 'bg-blush-50 text-navy'
           }`}
         >
           −
         </button>
-        <span className={`min-w-11 text-center text-[16px] font-bold ${dark ? 'text-white' : 'text-navy'}`}>{qty}</span>
+        {/* Tappable count — the customer can also type an exact number. Wide
+            enough that a 3–4 digit count stays fully visible on mobile. */}
+        <input
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          aria-label={label}
+          onChange={(e) => {
+            const v = e.target.value
+            if (!/^\d*$/.test(v)) return
+            setDraft(v)
+            if (v !== '') onSet(parseInt(v, 10))
+          }}
+          onBlur={commit}
+          className={`w-16 rounded-lg border bg-transparent px-1 py-1.5 text-center text-[16px] font-bold focus:outline-none focus:ring-2 focus:ring-pink/40 ${
+            dark ? 'border-white/25 text-white' : 'border-blush-200 text-navy'
+          }`}
+        />
         <button
           type="button"
           onClick={() => onAdjust(1)}
-          className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-medium ${
+          aria-label="Increase"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-medium ${
             dark ? 'bg-white/10 text-white' : 'bg-blush-50 text-navy'
           }`}
         >
