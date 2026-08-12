@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { cropToFile, type CropRect } from '../../lib/cropImage'
+import { cropToFile, recommendedSizeLabel, type CropRect } from '../../lib/cropImage'
 
 // Crop / preview dialog for admin image uploads. The picked file is shown behind
 // a fixed crop FRAME whose shape is the real display area for the slot the image
@@ -205,8 +205,13 @@ export default function ImageCropModal({
           })}
         </div>
 
+        <p className="mt-2 text-xs text-neutral-500">
+          Recommended size for this shape:{' '}
+          <span className="font-semibold text-neutral-700">{recommendedSizeLabel(ratio)}</span>
+        </p>
+
         {/* Crop stage */}
-        <div className="mt-4 flex justify-center">
+        <div className="mt-3 flex justify-center">
           {loadError ? (
             <p className="py-10 text-sm text-red-600">{loadError}</p>
           ) : !image ? (

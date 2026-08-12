@@ -7,7 +7,7 @@ import {
   type ProductMedia,
 } from '../../lib/adminProducts'
 import ImageCropModal from './ImageCropModal'
-import { isCroppable } from '../../lib/cropImage'
+import { isCroppable, recommendedSizeLabel } from '../../lib/cropImage'
 
 interface ProductFormModalProps {
   /** The product to edit, or null to create a new one. */
@@ -237,6 +237,9 @@ export default function ProductFormModal({
               <span className="ml-1 font-normal text-neutral-400">
                 — shown as a carousel; first item is the cover
               </span>
+            </span>
+            <span className="mt-0.5 block text-xs font-normal text-neutral-400">
+              Recommended: {recommendedSizeLabel(1)} (square)
             </span>
             <input
               type="file"

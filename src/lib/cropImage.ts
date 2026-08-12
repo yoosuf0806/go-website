@@ -20,6 +20,24 @@ export interface CropRect {
 const MAX_OUTPUT_EDGE = 1600
 const WEBP_QUALITY = 0.9
 
+/**
+ * Recommended upload dimensions for a slot of the given aspect (width / height).
+ * Uploads downscale the longest edge to MAX_OUTPUT_EDGE and re-encode, so a
+ * larger source just gets shrunk — the sweet spot is exactly the long edge at
+ * the slot's shape. Used to tell the admin the optimum size before they upload.
+ */
+export function recommendedSize(aspect: number): { width: number; height: number } {
+  return aspect >= 1
+    ? { width: MAX_OUTPUT_EDGE, height: Math.round(MAX_OUTPUT_EDGE / aspect) }
+    : { width: Math.round(MAX_OUTPUT_EDGE * aspect), height: MAX_OUTPUT_EDGE }
+}
+
+/** Human label for the recommended size, e.g. "1600 × 900 px". */
+export function recommendedSizeLabel(aspect: number): string {
+  const { width, height } = recommendedSize(aspect)
+  return `${width} × ${height} px`
+}
+
 /** True when the file is a raster image we can safely crop on a canvas. */
 export function isCroppable(file: File): boolean {
   return (
