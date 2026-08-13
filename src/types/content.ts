@@ -134,6 +134,7 @@ export interface SiteContent {
     howItWorks?: boolean
     testimonials?: boolean
     gallery?: boolean
+    giftReady?: boolean
   }
   /** Shared photo gallery shown on Home, Wedding, and Corporate. Admin-uploaded
    *  image URLs; empty (or gallery visibility off) hides the section. */
@@ -144,6 +145,9 @@ export interface SiteContent {
   ctaBanner: CtaBanner
   /** Homepage "Build your own slab" card. Admin-editable copy + image. */
   homeSlab: { eyebrow: string; title: string; body: string; cta: string; imageUrl: string | null }
+  /** Homepage "It arrives gift-ready" card. Admin-editable copy + its own image
+   *  list; empty images falls back to product photos so it never renders blank. */
+  homeGiftReady: { eyebrow: string; title: string; body: string; images: string[] }
   /** Homepage "Corporate" band (the navy strip). Admin-editable copy + CTA. */
   homeCorporate: { eyebrow: string; title: string; body: string; cta: string }
   /** Homepage FAQ — admin add/edit/delete; hidden when empty. */
@@ -249,6 +253,12 @@ export const DEFAULT_CONTENT: SiteContent = {
     body: '9, 12 or 15 pieces. Your flavours, their name on top.',
     cta: 'Build Your Slab',
     imageUrl: null,
+  },
+  homeGiftReady: {
+    eyebrow: 'Gift-ready',
+    title: 'It arrives gift-ready',
+    body: 'Red box, white satin ribbon, foil wordmark. Nothing to re-wrap.',
+    images: [],
   },
   homeFaq: [
     { q: 'How much notice do you need?', a: 'Most orders need 2–3 days. Slabs and bulk/corporate orders are best placed a week ahead, especially for a specific delivery date.' },
@@ -484,6 +494,13 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     ctaBanner: { ...DEFAULT_CONTENT.ctaBanner, ...partial.ctaBanner },
     homeCorporate: { ...DEFAULT_CONTENT.homeCorporate, ...partial.homeCorporate },
     homeSlab: { ...DEFAULT_CONTENT.homeSlab, ...partial.homeSlab },
+    homeGiftReady: {
+      ...DEFAULT_CONTENT.homeGiftReady,
+      ...partial.homeGiftReady,
+      // An empty list is a valid "use product photos as fallback" state, so keep
+      // whatever the admin saved rather than substituting defaults.
+      images: partial.homeGiftReady?.images ?? DEFAULT_CONTENT.homeGiftReady.images,
+    },
     // homeFaq: an empty array is a valid "hide the FAQ" state, so keep whatever
     // the admin saved rather than substituting defaults.
     homeFaq: partial.homeFaq ?? DEFAULT_CONTENT.homeFaq,

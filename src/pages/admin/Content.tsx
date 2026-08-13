@@ -63,6 +63,7 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
             ['ctaBanner', 'Promo strip'],
             ['testimonials', 'Testimonials'],
             ['gallery', 'Gallery'],
+            ['giftReady', 'Gift-ready card'],
           ] as const).map(([key, label]) => (
             <label key={key} className="flex items-center gap-2 text-sm">
               <input
@@ -138,6 +139,24 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
           value={form.homeSlab.imageUrl ?? undefined}
           onChange={(url) => set('homeSlab', { ...form.homeSlab, imageUrl: url ?? null })}
         />
+      </Section>
+
+      <Section title="Homepage · Gift-ready card">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          The white “It arrives gift-ready” card on the home page. Toggle it on/off above
+          (“Gift-ready card”). Leave the images empty to fall back to your product photos.
+        </p>
+        <Text label="Eyebrow" value={form.homeGiftReady.eyebrow} onChange={(v) => set('homeGiftReady', { ...form.homeGiftReady, eyebrow: v })} />
+        <Text label="Title" value={form.homeGiftReady.title} onChange={(v) => set('homeGiftReady', { ...form.homeGiftReady, title: v })} />
+        <Area label="Body" value={form.homeGiftReady.body} onChange={(v) => set('homeGiftReady', { ...form.homeGiftReady, body: v })} />
+        <div className="mt-2">
+          <span className="mb-1 block text-sm text-neutral-600">Images (2 shown side by side)</span>
+          <GalleryEditor
+            images={form.homeGiftReady.images}
+            onChange={(v) => set('homeGiftReady', { ...form.homeGiftReady, images: v })}
+            addLabel="Add a gift-ready image"
+          />
+        </div>
       </Section>
 
       <Section title="Homepage · Corporate band">
@@ -688,7 +707,15 @@ function SlabPageEditor({
 // Add/remove/reorder-free gallery editor: each row is an uploaded image with a
 // remove button; a trailing uploader appends. An empty gallery hides the
 // section on the storefront.
-function GalleryEditor({ images, onChange }: { images: string[]; onChange: (v: string[]) => void }) {
+function GalleryEditor({
+  images,
+  onChange,
+  addLabel = 'Add a gallery image',
+}: {
+  images: string[]
+  onChange: (v: string[]) => void
+  addLabel?: string
+}) {
   const removeAt = (i: number) => onChange(images.filter((_, j) => j !== i))
   const addImage = (url: string | undefined) => {
     if (url) onChange([...images, url])
@@ -712,7 +739,7 @@ function GalleryEditor({ images, onChange }: { images: string[]; onChange: (v: s
           ))}
         </div>
       )}
-      <ImageField label="Add a gallery image" aspect={4 / 3} aspectLabel="Gallery" value={undefined} onChange={addImage} />
+      <ImageField label={addLabel} aspect={4 / 3} aspectLabel="Gallery" value={undefined} onChange={addImage} />
     </div>
   )
 }
