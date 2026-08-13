@@ -19,7 +19,7 @@ export default function Home() {
   const { catalog } = useCatalog()
   const { reviews: featuredReviews, settings, content, products, packages } = catalog
   const { reviews_section } = settings.features
-  const { hero, trust, ctaBanner, testimonialsHeading, homeCorporate, homeFaq, homeSlab } = content
+  const { hero, trust, ctaBanner, testimonialsHeading, homeCorporate, homeFaq, homeSlab, homeGiftReady } = content
   const vis = content.sectionVisibility
 
   const hotPicks = products.filter((p) => p.isHotPick && p.inStock)
@@ -28,7 +28,14 @@ export default function Home() {
   const flavours = products.filter((p) => p.inStock).slice(0, 5)
   const waNumber = toWhatsAppNumber(settings.business.whatsapp_number)
   const promoText = content.promoMessages[0]
-  const giftImages = (hotPicks.length ? hotPicks : products).filter((p) => p.imageUrl).slice(0, 4)
+  // Gift-ready images: admin-set list if provided, else fall back to product
+  // photos so the card never renders blank on a fresh site.
+  const giftReadyImages = homeGiftReady.images.length
+    ? homeGiftReady.images
+    : (hotPicks.length ? hotPicks : products)
+        .map((p) => p.imageUrl)
+        .filter((url): url is string => !!url)
+        .slice(0, 4)
 
   return (
     <div>
@@ -130,24 +137,24 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* It arrives gift-ready */}
-          <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">Gift-ready</span>
-            <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">It arrives gift-ready</h2>
-            <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">
-              Red box, white satin ribbon, foil wordmark. Nothing to re-wrap.
-            </p>
-            <div className="no-scrollbar mt-4 flex gap-2.5 overflow-x-auto pb-1 md:mt-5 md:flex-1">
-              {giftImages.map((p) => (
-                <div
-                  key={p.id}
-                  className="aspect-[4/3] h-[150px] flex-none overflow-hidden rounded-[14px] bg-blush-100 md:h-auto md:w-1/2"
-                >
-                  <BrownieImage src={p.imageUrl} alt={p.name} className="h-full w-full" />
-                </div>
-              ))}
+          {/* It arrives gift-ready (admin-editable copy + images, toggleable) */}
+          {vis.giftReady !== false && giftReadyImages.length > 0 && (
+            <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">{homeGiftReady.eyebrow}</span>
+              <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">{homeGiftReady.title}</h2>
+              <p className="mt-2 text-[15px] leading-relaxed text-[#5c4450]">{homeGiftReady.body}</p>
+              <div className="no-scrollbar mt-4 flex gap-2.5 overflow-x-auto pb-1 md:mt-5 md:flex-1">
+                {giftReadyImages.map((url, i) => (
+                  <div
+                    key={i}
+                    className="aspect-[4/3] h-[150px] flex-none overflow-hidden rounded-[14px] bg-blush-100 md:h-auto md:w-1/2"
+                  >
+                    <BrownieImage src={url} alt={homeGiftReady.title} className="h-full w-full" />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
