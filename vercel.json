@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/app.html" }]
+  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/app.html" }],
+  "headers": [
+    {
+      "source": "/(favicon.ico|icon.svg|icon-32.png|icon-48.png|icon-96.png|icon-192.png|icon-512.png|apple-touch-icon.png)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, must-revalidate" }]
+    }
+  ]
 }
