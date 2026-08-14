@@ -45,8 +45,19 @@ npm install
 npm run dev               # http://localhost:5180
 ```
 
-Sign in with a storefront **admin** account (any Supabase auth user without a
-`profiles.role = 'kitchen'` row is treated as admin).
+Sign in with a **finance** or **admin** account. A dedicated finance login
+(migration `031_finance_role.sql`) can use this whole dashboard but is walled
+off from the storefront — no products, prices, orders or settings. To create
+one: add the user in Supabase → Authentication → Users, then
+
+```sql
+insert into profiles (id, role)
+select id, 'finance' from auth.users where email = 'finance@goldenoven.lk'
+on conflict (id) do update set role = 'finance';
+```
+
+Any admin account works too (a Supabase user without a `profiles` row, or with
+`role = 'admin'`, is treated as admin).
 
 ## Deploy
 

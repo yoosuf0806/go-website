@@ -46,7 +46,8 @@ export function Login() {
           </Button>
         </div>
         <p className="mt-4 text-center text-xs text-cocoa-400">
-          Use your storefront admin login. Access is restricted to admins.
+          Sign in with your finance or admin account. Access is restricted — finance
+          logins see only this dashboard, never the storefront.
         </p>
       </form>
     </div>
