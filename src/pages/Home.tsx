@@ -36,6 +36,7 @@ export default function Home() {
         .map((p) => p.imageUrl)
         .filter((url): url is string => !!url)
         .slice(0, 4)
+  const showGiftReady = vis.giftReady !== false && giftReadyImages.length > 0
 
   return (
     <div>
@@ -118,9 +119,16 @@ export default function Home() {
       )}
 
       {/* BUILD YOUR OWN SLAB + IT ARRIVES GIFT-READY — stacked on mobile,
-          side by side on desktop (pink band for vibrant white↔pink rhythm) */}
+          side by side on desktop (pink band for vibrant white↔pink rhythm).
+          When gift-ready is off, the slab card goes solo and the grid
+          collapses to a single centred column so there's no leftover blank
+          cell on desktop or mobile. */}
       <section className="bg-blush-100 py-8 md:py-14">
-        <div className="mx-auto grid max-w-6xl gap-6 px-[22px] md:grid-cols-2 md:gap-8 md:px-8">
+        <div
+          className={`mx-auto grid max-w-6xl gap-6 px-[22px] md:gap-8 md:px-8 ${
+            showGiftReady ? 'md:grid-cols-2' : 'md:max-w-xl'
+          }`}
+        >
           {/* Build your own slab */}
           <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
             <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">{homeSlab.eyebrow}</span>
@@ -138,7 +146,7 @@ export default function Home() {
           </div>
 
           {/* It arrives gift-ready (admin-editable copy + images, toggleable) */}
-          {vis.giftReady !== false && giftReadyImages.length > 0 && (
+          {showGiftReady && (
             <div className="flex min-w-0 flex-col rounded-[20px] border border-blush-200 bg-white p-5 md:p-7">
               <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-berry">{homeGiftReady.eyebrow}</span>
               <h2 className="mt-2 font-display text-[27px] leading-[1.14] text-navy md:text-[32px]">{homeGiftReady.title}</h2>
@@ -215,6 +223,7 @@ export default function Home() {
       {(() => {
         const google = catalog.google
         const shownReviews = (google && google.reviews.length > 0 ? google.reviews : featuredReviews).slice(0, 3)
+        const googleReviewUrl = google?.url || settings.business.google_business_url
         if (vis.testimonials === false || !reviews_section || shownReviews.length === 0) return null
         return (
           <section className="bg-white px-[22px] py-8 md:py-14">
@@ -245,8 +254,18 @@ export default function Home() {
                   </figure>
                 ))}
               </div>
-              {google && (
-                <p className="mt-4 text-[11px] text-neutral-400">Reviews from Google</p>
+              {googleReviewUrl && (
+                <div className="mt-6 flex flex-col items-center gap-2 text-center md:mt-8">
+                  <a
+                    href={googleReviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl border border-blush-200 bg-white px-6 py-3.5 text-[15px] font-bold text-navy transition-colors hover:border-berry hover:text-berry"
+                  >
+                    Check our Google Reviews
+                  </a>
+                  {google && <p className="text-[11px] text-neutral-400">Reviews from Google</p>}
+                </div>
               )}
             </div>
           </section>
