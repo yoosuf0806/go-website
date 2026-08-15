@@ -126,7 +126,7 @@ export default function Home() {
       <section className="bg-blush-100 py-8 md:py-14">
         <div
           className={`mx-auto grid max-w-6xl gap-6 px-[22px] md:gap-8 md:px-8 ${
-            showGiftReady ? 'md:grid-cols-2' : 'md:max-w-xl'
+            showGiftReady ? 'md:grid-cols-2' : 'md:max-w-2xl'
           }`}
         >
           {/* Build your own slab */}
@@ -260,7 +260,7 @@ export default function Home() {
                     href={googleReviewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-2xl border border-blush-200 bg-white px-6 py-3.5 text-[15px] font-bold text-navy transition-colors hover:border-berry hover:text-berry"
+                    className="rounded-2xl bg-navy px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-pink hover:shadow-md"
                   >
                     Check our Google Reviews
                   </a>
