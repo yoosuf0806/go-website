@@ -8,7 +8,7 @@ import { imageUrl } from '../lib/images'
 // crawlers get real metadata on every route.
 
 // Absolute site URL for canonical/OG. Set VITE_SITE_URL in the deploy env.
-export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://goldenoven.lk').replace(/\/$/, '')
+export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://www.goldenovenbrownies.com').replace(/\/$/, '')
 
 interface SeoProps {
   title: string
