@@ -120,7 +120,7 @@ Env vars (Settings → Environment Variables; tick **all** environments):
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — storefront + auth (build-time inlined)
 - `SUPABASE_SERVICE_KEY` — build-time snapshot read
 - `ADMIN_DEPLOY_HOOK_URL` — server-only; the Publish button (Settings → Git → Deploy Hooks)
-- `VITE_SITE_URL` — absolute site URL for canonical/sitemap/OG (e.g. https://goldenoven.lk)
+- `VITE_SITE_URL` — absolute site URL for canonical/sitemap/OG (e.g. https://www.goldenovenbrownies.com)
 
 ## 7. Supabase — run these once (SQL Editor)
 

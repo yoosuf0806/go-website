@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
 const DIST = resolve(ROOT, 'dist')
 
-const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://goldenoven.lk').replace(/\/$/, '')
+const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://www.goldenovenbrownies.com').replace(/\/$/, '')
 
 interface CatalogProduct {
   slug: string
