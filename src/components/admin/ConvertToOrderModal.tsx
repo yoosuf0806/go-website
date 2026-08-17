@@ -41,8 +41,11 @@ export default function ConvertToOrderModal({
     note: inquiry.message ?? '',
     isGift: false,
   })
+  // Slab products are priced per flavour, which this package-based converter
+  // doesn't model — offer only normal (package) products here.
+  const orderableProducts = products.filter((p) => !p.isSlabProduct)
   const [rows, setRows] = useState<LineRow[]>([
-    { productId: products[0]?.id ?? '', packageId: packages[0]?.id ?? '', boxQty: 1 },
+    { productId: orderableProducts[0]?.id ?? '', packageId: packages[0]?.id ?? '', boxQty: 1 },
   ])
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutDetails, string>>>({})
   const convert = useConvertInquiry()
@@ -148,8 +151,7 @@ export default function ConvertToOrderModal({
         <h3 className="mt-5 text-sm font-semibold">Order items</h3>
         <div className="mt-2 flex flex-col gap-2">
           {rows.map((row, i) => {
-            const product = products.find((p) => p.id === row.productId)
-            const availablePackages = packages.filter((p) => !p.isSlab || product?.isSlabAvailable)
+            const availablePackages = packages.filter((p) => !p.isSlab)
             return (
               <div key={i} className="flex flex-wrap items-center gap-2">
                 <select
@@ -157,7 +159,7 @@ export default function ConvertToOrderModal({
                   onChange={(e) => updateRow(setRows, i, { productId: e.target.value })}
                   className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
                 >
-                  {products.map((p) => (
+                  {orderableProducts.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -261,7 +263,8 @@ function buildLines(
   for (const row of rows) {
     const product = products.find((p) => p.id === row.productId)
     const pkg = packages.find((p) => p.id === row.packageId)
-    if (!product || !pkg) continue
+    // Slab products aren't orderable through this package-based converter.
+    if (!product || product.isSlabProduct || !pkg) continue
     const item: CartItem = {
       productId: product.id,
       packageId: pkg.id,

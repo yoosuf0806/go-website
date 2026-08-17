@@ -43,9 +43,17 @@ export default function ProductDetail() {
     .slice(0, RELATED_COUNT)
 
   const category = categories.find((c) => c.id === product.categoryId)
-  const categoryLabel = [category?.name, product.isSlabAvailable ? 'Customisable' : null]
+  const categoryLabel = [category?.name, product.isSlabAvailable || product.isSlabProduct ? 'Customisable' : null]
     .filter(Boolean)
     .join(' · ')
+
+  // Slab products are priced per product via flavours (each with its own flat
+  // price). The header shows the lowest flavour price as a "from" price; a
+  // normal product shows its per-piece price.
+  const slabPrices = product.flavors.map((f) => f.price)
+  const slabFromPrice = slabPrices.length ? Math.min(...slabPrices) : product.pricePerPiece
+  const slabPriceVaries = new Set(slabPrices).size > 1
+  const headlinePrice = product.isSlabProduct ? slabFromPrice : product.pricePerPiece
   const detailsText = [content.productInfo.freshness, content.productInfo.allergens]
     .filter(Boolean)
     .join(' ')
@@ -66,7 +74,7 @@ export default function ProductDetail() {
     offers: {
       '@type': 'Offer',
       priceCurrency: 'LKR',
-      price: product.pricePerPiece,
+      price: headlinePrice,
       availability: product.inStock
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
@@ -126,8 +134,11 @@ export default function ProductDetail() {
           )}
           <h1 className="mt-1.5 text-[clamp(1.8rem,3vw,2.5rem)] leading-tight text-navy">{product.name}</h1>
           <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="font-display text-[1.5rem] text-pink">{formatLKR(product.pricePerPiece)}</span>
-            <span className="text-sm text-neutral-500">per piece</span>
+            {product.isSlabProduct && slabPriceVaries && (
+              <span className="text-sm text-neutral-500">from</span>
+            )}
+            <span className="font-display text-[1.5rem] text-pink">{formatLKR(headlinePrice)}</span>
+            <span className="text-sm text-neutral-500">{product.isSlabProduct ? 'per slab' : 'per piece'}</span>
           </div>
 
           {product.description && (

@@ -55,6 +55,58 @@ describe('addonsTotal / lineTotal', () => {
   })
 })
 
+describe('lineTotal — slab (flat, per-product) pricing', () => {
+  // A slab line is priced per product (flat flavour price), NOT × pieceCount.
+  const slab = (overrides: Partial<CartItem> = {}): CartItem =>
+    item({
+      packageId: 'slab:Classic',
+      packageLabel: 'Classic',
+      pieceCount: 0,
+      unitPrice: 2300,
+      isSlab: true,
+      flavor: 'Classic',
+      ...overrides,
+    })
+
+  it('flat price × boxQty, ignoring pieceCount', () => {
+    expect(lineTotal(slab())).toBe(2300)
+    expect(lineTotal(slab({ boxQty: 3 }))).toBe(2300 * 3)
+  })
+
+  it('adds per-box add-on prices on top of the flat price', () => {
+    const withRibbon = slab({
+      boxQty: 2,
+      addons: [{ id: 'gift_ribbon', label: 'Gift Ribbon', price: 150, detail: { color: 'White' } }],
+    })
+    // (2300 + 150) × 2 = 4900
+    expect(lineTotal(withRibbon)).toBe(4900)
+  })
+})
+
+describe('cartTotals — slab lines and base delivery', () => {
+  const slab = (overrides: Partial<CartItem> = {}): CartItem =>
+    item({ packageId: 'slab:Classic', pieceCount: 0, unitPrice: 2300, isSlab: true, flavor: 'Classic', ...overrides })
+
+  it('slab-only cart: 0 pieces but still pays the base delivery tier', () => {
+    const totals = cartTotals([slab()], baseTiers)
+    expect(totals.totalPieces).toBe(0)
+    expect(totals.subtotal).toBe(2300)
+    expect(totals.deliveryFee).toBe(580) // base tier, even at 0 pieces
+    expect(totals.total).toBe(2300 + 580)
+  })
+
+  it('mixed cart: pieces come from boxes only; delivery is the higher of the two', () => {
+    const items = [
+      item({ pieceCount: 9, packageId: 'box-9', boxQty: 1, unitPrice: 150 }), // 9 pcs, Rs 1350
+      slab({ boxQty: 1 }), // 0 pcs, Rs 2300
+    ]
+    const totals = cartTotals(items, multiTiers)
+    expect(totals.totalPieces).toBe(9) // slab contributes 0
+    expect(totals.subtotal).toBe(150 * 9 + 2300)
+    expect(totals.deliveryFee).toBe(400) // tier for 9 pcs (400) > base (400) — same here
+  })
+})
+
 describe('findTier — boundaries', () => {
   it('matches the open-ended base tier for any positive count', () => {
     expect(findTier(1, baseTiers)?.fee).toBe(580)

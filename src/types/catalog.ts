@@ -22,6 +22,16 @@ export interface CatalogMedia {
   type: 'image' | 'video'
 }
 
+/**
+ * One selectable flavour of a slab product (is_slab_product). Slabs are priced
+ * per product, not per piece: each flavour carries its own flat price, and the
+ * customer picks one on the product page ("Choose your flavour").
+ */
+export interface CatalogFlavor {
+  name: string
+  price: number
+}
+
 export interface CatalogProduct {
   id: string
   categoryId: string | null
@@ -38,6 +48,14 @@ export interface CatalogProduct {
   isSlabAvailable: boolean
   /** Can be ordered as the 15pc Brownie Slab (slab-15); independent of isSlabAvailable (12pc). */
   isSlab15Available: boolean
+  /**
+   * A standalone Brownie Slab product (its own listing). Priced per product via
+   * `flavors` rather than per piece, and configured on the storefront with a
+   * "Choose your flavour" selector instead of a package picker.
+   */
+  isSlabProduct: boolean
+  /** Selectable flavours for a slab product (each with its own flat price). Empty for non-slab products. */
+  flavors: CatalogFlavor[]
   allowsLetterTopper: boolean
   /** Featured in the homepage Hot Picks section. */
   isHotPick: boolean

@@ -29,13 +29,13 @@ export default function Shop() {
   const [sortOpen, setSortOpen] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  // Is the Brownie Slab package offered at all? Only show the slab chip if so.
-  const hasSlab = useMemo(() => packages.some((p) => p.isSlab), [packages])
+  // Are there any standalone slab products? Only show the slab chip if so.
+  const hasSlab = useMemo(() => products.some((p) => p.isSlabProduct), [products])
 
   const filtered = useMemo(() => {
     let list =
       filter === 'slab'
-        ? products.filter((p) => p.isSlabAvailable || p.isSlab15Available)
+        ? products.filter((p) => p.isSlabProduct)
         : filter
           ? products.filter((p) => p.categoryId === filter)
           : products.slice()

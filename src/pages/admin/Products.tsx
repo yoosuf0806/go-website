@@ -228,6 +228,11 @@ export default function Products() {
                     <div className="flex flex-wrap gap-1 text-xs text-neutral-500">
                       {!product.is_visible && <span className="rounded bg-neutral-200 px-1.5">hidden</span>}
                       {!product.in_stock && <span className="rounded bg-red-100 px-1.5 text-red-700">sold out</span>}
+                      {product.is_slab_product && (
+                        <span className="rounded bg-pink-100 px-1.5 text-pink-700">
+                          slab · {product.flavors.length} flavour{product.flavors.length === 1 ? '' : 's'}
+                        </span>
+                      )}
                       {product.is_slab_available && <span className="rounded bg-neutral-100 px-1.5">slab-12</span>}
                       {product.is_slab_15_available && <span className="rounded bg-neutral-100 px-1.5">slab-15</span>}
                       {product.allows_letter_topper && <span className="rounded bg-neutral-100 px-1.5">topper</span>}

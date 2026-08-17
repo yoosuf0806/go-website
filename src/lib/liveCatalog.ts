@@ -47,6 +47,11 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
         stockQty: (r.stock_qty as number | null) ?? null,
         isSlabAvailable: r.is_slab_available as boolean,
         isSlab15Available: r.is_slab_15_available as boolean,
+        isSlabProduct: (r.is_slab_product as boolean) ?? false,
+        flavors: ((r.flavors as { name: string; price: number }[] | null) ?? []).map((f) => ({
+          name: f.name,
+          price: Number(f.price),
+        })),
         allowsLetterTopper: r.allows_letter_topper as boolean,
         isHotPick: (r.is_hot_pick as boolean) ?? false,
         isCorporate: (r.is_corporate as boolean) ?? false,

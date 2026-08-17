@@ -15,8 +15,8 @@ export default function Slab() {
   const { content, products, packages } = catalog
   const slab = content.slab
 
-  // Slab-enabled = orderable as the 12pc slab OR the 15pc slab.
-  const slabProducts = products.filter((p) => p.isSlabAvailable || p.isSlab15Available)
+  // Standalone Brownie Slab products (their own listings, priced per product).
+  const slabProducts = products.filter((p) => p.isSlabProduct)
 
   return (
     <div className="bg-blush-50">

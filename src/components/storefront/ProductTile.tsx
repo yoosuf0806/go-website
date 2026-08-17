@@ -22,6 +22,16 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
   const timer = useRef<number | undefined>(undefined)
   const addItem = useCartStore((s) => s.addItem)
 
+  const isSlab = product.isSlabProduct
+  // Slab: cheapest flavour drives the "from" price + quick-add. Normal: cheapest
+  // eligible package (price_per_piece × its piece count).
+  const cheapestFlavor = isSlab
+    ? product.flavors.reduce<{ name: string; price: number } | null>(
+        (min, f) => (!min || f.price < min.price ? f : min),
+        null,
+      )
+    : null
+
   const available = packages.filter((p) => {
     if (p.id === 'slab-15') return product.isSlab15Available
     if (p.isSlab) return product.isSlabAvailable
@@ -31,23 +41,52 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
     (min, p) => (!min || p.pieceCount < min.pieceCount ? p : min),
     null,
   )
-  const fromPrice = cheapest ? product.pricePerPiece * cheapest.pieceCount : product.pricePerPiece
+
+  const fromPrice = isSlab
+    ? (cheapestFlavor?.price ?? product.pricePerPiece)
+    : cheapest
+      ? product.pricePerPiece * cheapest.pieceCount
+      : product.pricePerPiece
   const soldOut = !product.inStock
-  const badge = product.isHotPick ? 'Hot Pick' : product.isSlabAvailable || product.isSlab15Available ? 'Slab' : null
+  const badge = product.isHotPick
+    ? 'Hot Pick'
+    : isSlab || product.isSlabAvailable || product.isSlab15Available
+      ? 'Slab'
+      : null
+  // Quick-add is only possible when there's something to add.
+  const quickAddable = isSlab ? Boolean(cheapestFlavor) : Boolean(cheapest)
 
   function quickAdd(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!cheapest || soldOut) return
-    const item: CartItem = {
-      productId: product.id,
-      packageId: cheapest.id,
-      productName: product.name,
-      packageLabel: cheapest.label,
-      pieceCount: cheapest.pieceCount,
-      boxQty: 1,
-      unitPrice: product.pricePerPiece,
-      addons: [],
+    if (soldOut) return
+    let item: CartItem
+    if (isSlab) {
+      if (!cheapestFlavor) return
+      item = {
+        productId: product.id,
+        packageId: `slab:${cheapestFlavor.name}`,
+        productName: product.name,
+        packageLabel: cheapestFlavor.name,
+        pieceCount: 0,
+        boxQty: 1,
+        unitPrice: cheapestFlavor.price,
+        addons: [],
+        isSlab: true,
+        flavor: cheapestFlavor.name,
+      }
+    } else {
+      if (!cheapest) return
+      item = {
+        productId: product.id,
+        packageId: cheapest.id,
+        productName: product.name,
+        packageLabel: cheapest.label,
+        pieceCount: cheapest.pieceCount,
+        boxQty: 1,
+        unitPrice: product.pricePerPiece,
+        addons: [],
+      }
     }
     addItem(item)
     setJustAdded(true)
@@ -80,7 +119,7 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
         <h3 className="truncate text-[14px] font-medium text-navy">{product.name}</h3>
         <div className="mt-1.5 flex items-center justify-between gap-2">
           <span className="text-[15px] font-bold text-[#c02249]">{formatLKR(fromPrice)}</span>
-          {!soldOut && cheapest && (
+          {!soldOut && quickAddable && (
             <button
               type="button"
               onClick={quickAdd}

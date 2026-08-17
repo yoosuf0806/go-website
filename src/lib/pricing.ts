@@ -28,9 +28,20 @@ export interface CartItem {
   packageLabel: string
   pieceCount: number
   boxQty: number
-  /** price_per_piece snapshot from the catalogue. */
+  /**
+   * For a normal line this is price_per_piece; for a slab line (isSlab) it is
+   * the chosen flavour's flat per-product price.
+   */
   unitPrice: number
   addons: CartAddon[]
+  /**
+   * True for a standalone slab product line. Slabs are priced per product (flat
+   * flavour price, NOT × pieceCount) and contribute 0 to the delivery piece
+   * count, but a cart containing any slab pays at least the base delivery tier.
+   */
+  isSlab?: boolean
+  /** The chosen flavour name, for slab lines (also mirrored to packageLabel). */
+  flavor?: string
 }
 
 export interface DeliveryTier {
@@ -56,13 +67,16 @@ export function addonsTotal(item: CartItem): number {
 /**
  * Line total for one cart line.
  *
- * `(price_per_piece × piece_count + add-on prices) × box_qty` (spec §6.1).
+ * Normal line: `(price_per_piece × piece_count + add-on prices) × box_qty`
+ * (spec §6.1). Slab line: `(flat flavour price + add-on prices) × box_qty` —
+ * a slab is priced per product, not per piece, so pieceCount is not a factor.
  * Add-ons are charged PER BOX: a line with box_qty = 3 and a ribbon carries
  * three ribbons, since identical (product + package + add-ons) configs merge
  * into one line via box_qty (spec §8). Confirmed with the owner.
  */
 export function lineTotal(item: CartItem): number {
-  return (item.unitPrice * item.pieceCount + addonsTotal(item)) * item.boxQty
+  const base = item.isSlab ? item.unitPrice : item.unitPrice * item.pieceCount
+  return (base + addonsTotal(item)) * item.boxQty
 }
 
 /**
@@ -84,16 +98,32 @@ export function findTier(totalPieces: number, tiers: DeliveryTier[]): DeliveryTi
  * (spec §6.3, the single most important rule).
  */
 export function cartTotals(items: CartItem[], tiers: DeliveryTier[]): CartTotals {
-  const totalPieces = items.reduce((n, i) => n + i.pieceCount * i.boxQty, 0)
+  // Slab lines contribute 0 pieces (they're priced per product, not per piece).
+  const totalPieces = items.reduce((n, i) => n + (i.isSlab ? 0 : i.pieceCount) * i.boxQty, 0)
   const subtotal = items.reduce((n, i) => n + lineTotal(i), 0)
-  const tier = findTier(totalPieces, tiers)
-  const deliveryFee = tier?.fee ?? 0
+  const pieceTier = findTier(totalPieces, tiers)
+  let deliveryFee = pieceTier?.fee ?? 0
+  let warnAdmin = pieceTier?.warnAdmin ?? false
+
+  // A cart containing any slab always pays at least the base delivery tier,
+  // even if the piece-based tiers would charge nothing (e.g. a slab-only cart
+  // has 0 delivery pieces). Mirrors the create_order() RPC.
+  const hasSlab = items.some((i) => i.isSlab)
+  if (hasSlab) {
+    const baseTier = findTier(1, tiers)
+    if (baseTier && baseTier.fee > deliveryFee) {
+      deliveryFee = baseTier.fee
+      // only adopt the base tier's warn flag when it's the one actually charged
+      if (!pieceTier) warnAdmin = baseTier.warnAdmin
+    }
+  }
+
   return {
     totalPieces,
     subtotal,
     deliveryFee,
     total: subtotal + deliveryFee,
-    warnAdmin: tier?.warnAdmin ?? false,
+    warnAdmin,
   }
 }
 
