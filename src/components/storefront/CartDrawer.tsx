@@ -1,6 +1,6 @@
 import { useCartStore } from '../../stores/cart'
 import { useVoucherStore } from '../../stores/voucher'
-import { cartTotals, lineTotal, totalAfterVoucher, findTier } from '../../lib/pricing'
+import { cartTotals, lineTotal, totalAfterVoucher, voucherDiscount } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { addonSummary } from '../../lib/whatsapp'
 import { useCatalog } from '../../contexts/CatalogContext'
@@ -22,21 +22,27 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
   const removeItem = useCartStore((s) => s.removeItem)
   const totals = cartTotals(items, catalog.deliveryTiers)
   const voucher = useVoucherStore()
-  const finalTotal = totalAfterVoucher(totals.total, voucher.status === 'ok' ? voucher.discount : 0)
+  const appliedDiscount =
+    voucher.status === 'ok' ? voucherDiscount(totals.total, voucher.discountType, voucher.value) : 0
+  const finalTotal = totalAfterVoucher(totals.total, appliedDiscount)
   const itemCount = items.reduce((n, i) => n + i.boxQty, 0)
 
-  // Free-delivery nudge: only shown when the delivery data actually has a
-  // zero-fee tier the customer hasn't reached yet (never hardcoded — some
-  // catalogues are a single flat fee with no free tier at all).
+  // Whether delivery is actually free = the fee cartTotals() charges is 0. (Not
+  // "the piece tier is 0": a slab cart has 0 delivery pieces but still pays the
+  // base tier, so keying off the tier alone would wrongly read as free.)
+  const deliveryIsFree = totals.deliveryFee === 0
+
+  // Free-delivery nudge: only when the catalogue actually has a zero-fee tier the
+  // customer hasn't reached — and not for slab carts, which always pay the base
+  // fee regardless of piece count.
+  const hasSlab = items.some((i) => i.isSlab)
   const freeTier = catalog.deliveryTiers
     .filter((t) => t.fee === 0)
     .sort((a, b) => a.minPieces - b.minPieces)[0]
-  const currentTier = findTier(totals.totalPieces, catalog.deliveryTiers)
-  const deliveryIsFree = (currentTier?.fee ?? 0) === 0
   const piecesToFree = freeTier ? freeTier.minPieces - totals.totalPieces : 0
   const freeNote = deliveryIsFree
     ? 'Free delivery unlocked!'
-    : freeTier && piecesToFree > 0
+    : freeTier && piecesToFree > 0 && !hasSlab
       ? `Add ${piecesToFree} more ${piecesToFree === 1 ? 'piece' : 'pieces'} for free delivery`
       : ''
 
@@ -186,10 +192,10 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
                 <span>Delivery</span>
                 <span>{deliveryIsFree ? 'Free' : formatLKR(totals.deliveryFee)}</span>
               </div>
-              {voucher.status === 'ok' && voucher.discount > 0 && (
+              {voucher.status === 'ok' && appliedDiscount > 0 && (
                 <div className="mt-1.5 flex justify-between text-[15px] text-green-700">
-                  <span>Voucher discount</span>
-                  <span>−{formatLKR(voucher.discount)}</span>
+                  <span>Voucher discount{voucher.discountType === 'percent' ? ` (${voucher.value}%)` : ''}</span>
+                  <span>−{formatLKR(appliedDiscount)}</span>
                 </div>
               )}
               {freeNote && <div className="pt-2 text-[13px] font-medium text-berry">{freeNote}</div>}

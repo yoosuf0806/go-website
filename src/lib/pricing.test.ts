@@ -5,6 +5,7 @@ import {
   findTier,
   cartTotals,
   totalAfterVoucher,
+  voucherDiscount,
   type CartItem,
   type DeliveryTier,
 } from './pricing'
@@ -159,6 +160,27 @@ describe('cartTotals — combined delivery rule (spec §6.3)', () => {
       total: 0,
       warnAdmin: false,
     })
+  })
+})
+
+describe('voucherDiscount', () => {
+  it('fixed voucher: the value is the discount', () => {
+    expect(voucherDiscount(3000, 'fixed', 500)).toBe(500)
+  })
+
+  it('fixed voucher: never exceeds the total', () => {
+    expect(voucherDiscount(300, 'fixed', 500)).toBe(300)
+  })
+
+  it('percent voucher: rounds a percentage of the total to whole rupees', () => {
+    expect(voucherDiscount(3330, 'percent', 10)).toBe(333)
+    expect(voucherDiscount(2895, 'percent', 10)).toBe(290) // 289.5 → 290 (round half up)
+  })
+
+  it('percent voucher: 100% caps at the total, 0/negative value is no discount', () => {
+    expect(voucherDiscount(2000, 'percent', 100)).toBe(2000)
+    expect(voucherDiscount(2000, 'percent', 0)).toBe(0)
+    expect(voucherDiscount(2000, 'fixed', -5)).toBe(0)
   })
 })
 

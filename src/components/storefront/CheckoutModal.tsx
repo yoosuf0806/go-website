@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useCartStore } from '../../stores/cart'
 import { useVoucherStore } from '../../stores/voucher'
-import { cartTotals, lineTotal, totalAfterVoucher } from '../../lib/pricing'
+import { cartTotals, lineTotal, totalAfterVoucher, voucherDiscount } from '../../lib/pricing'
 import { formatLKR, normalizePhone, toWhatsAppNumber } from '../../lib/format'
 import { addonSummary, buildOrderMessage, orderWhatsAppLink } from '../../lib/whatsapp'
 import { checkoutDetailsSchema, paymentSchema, type CheckoutDetails, type PaymentMethod } from '../../schemas/checkout'
@@ -75,7 +75,10 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   // The voucher code is entered in the Cart Drawer (shared store) — this step
   // only reflects the already-applied discount in the totals.
   const voucher = useVoucherStore()
-  const appliedDiscount = voucher.status === 'ok' ? voucher.discount : 0
+  // A percentage voucher's LKR discount depends on this cart's total, so compute
+  // it here (voucherDiscount) rather than storing a fixed number in the store.
+  const appliedDiscount =
+    voucher.status === 'ok' ? voucherDiscount(totals.total, voucher.discountType, voucher.value) : 0
   const finalTotal = totalAfterVoucher(totals.total, appliedDiscount)
   const itemCount = items.reduce((n, i) => n + i.boxQty, 0)
   const waFallback = toWhatsAppNumber(settings.business.whatsapp_number)
@@ -152,7 +155,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
 
     const isBank = payMethod === 'bank_transfer'
     const appliedVoucher =
-      voucher.status === 'ok' ? { code: voucher.code.trim(), discount: voucher.discount } : null
+      voucher.status === 'ok' ? { code: voucher.code.trim(), discount: appliedDiscount } : null
     try {
       const { orderNo, phone } = await mutation.mutateAsync({
         items,
@@ -624,10 +627,15 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                 {mutation.isError && (
                   <div className="rounded-2xl border border-pink bg-white p-4 animate-tin">
                     <div className="pb-1.5 font-bold text-pink">We couldn't place that order</div>
-                    <p className="pb-3 text-sm leading-relaxed text-neutral-600">
+                    <p className="pb-2 text-sm leading-relaxed text-neutral-600">
                       Nothing was lost — your details and slip are still here. Try again, or message us and we'll take
                       it from there.
                     </p>
+                    {mutation.error instanceof Error && mutation.error.message && (
+                      <p className="pb-3 text-[13px] leading-relaxed text-neutral-500">
+                        Reason: {mutation.error.message}
+                      </p>
+                    )}
                     <div className="flex gap-2.5">
                       <button
                         type="button"

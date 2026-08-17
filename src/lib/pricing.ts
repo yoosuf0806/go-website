@@ -131,3 +131,20 @@ export function cartTotals(items: CartItem[], tiers: DeliveryTier[]): CartTotals
 export function totalAfterVoucher(total: number, discount: number): number {
   return Math.max(0, total - discount)
 }
+
+/**
+ * The LKR discount a voucher applies to a given order total. A 'fixed' voucher's
+ * value is the discount directly; a 'percent' voucher takes that percentage of
+ * the total (rounded to whole rupees, clamped so it never exceeds the total).
+ * Mirrors the server-side computation in create_order() so the two never
+ * diverge (a divergence would trip the RPC's PRICE_MISMATCH guard).
+ */
+export function voucherDiscount(
+  total: number,
+  discountType: 'fixed' | 'percent',
+  value: number,
+): number {
+  if (value <= 0) return 0
+  const raw = discountType === 'percent' ? Math.round((total * value) / 100) : value
+  return Math.min(Math.max(0, raw), total)
+}
