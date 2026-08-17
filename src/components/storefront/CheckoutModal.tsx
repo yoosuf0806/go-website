@@ -84,7 +84,13 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
   const waFallback = toWhatsAppNumber(settings.business.whatsapp_number)
   const bank = settings.bankTransfer
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Earliest allowed delivery is TOMORROW — we don't bake same-day. This is the
+  // `min` on the date picker and is re-checked below in case a value is typed in.
+  const minDeliveryDate = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().slice(0, 10)
+  })()
   const set = (patch: Partial<CheckoutDetails>) => setForm((f) => ({ ...f, ...patch }))
 
   function handleContinue() {
@@ -96,6 +102,11 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
         if (!fieldErrors[key]) fieldErrors[key] = issue.message
       }
       setErrors(fieldErrors)
+      return
+    }
+    // Same-day (or earlier) delivery isn't offered — earliest is tomorrow.
+    if (result.data.deliveryDate < minDeliveryDate) {
+      setErrors({ deliveryDate: 'Earliest delivery is the next day — please pick a later date.' })
       return
     }
     setErrors({})
@@ -348,7 +359,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                   />
                 </Field>
                 <Field label="Delivery date" error={errors.deliveryDate}>
-                  <Input type="date" min={today} value={form.deliveryDate} invalid={!!errors.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} />
+                  <Input type="date" min={minDeliveryDate} value={form.deliveryDate} invalid={!!errors.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} />
                 </Field>
                 <Field label="Note" error={errors.note} optional>
                   <textarea
