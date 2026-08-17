@@ -1,5 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
-import type { CatalogProduct, CatalogPackage, CatalogAddon, ProductPackageStockMap } from '../../types/catalog'
+import type {
+  CatalogProduct,
+  CatalogPackage,
+  CatalogAddon,
+  ProductPackageStockMap,
+  ProductPackageAvailabilityMap,
+} from '../../types/catalog'
 import { stockKey } from '../../types/catalog'
 import { lineTotal, type CartItem } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
@@ -13,6 +19,8 @@ interface ProductConfiguratorProps {
   addons: CatalogAddon[]
   /** Out-of-stock product×package overrides; no entry = in stock. */
   productPackageStock?: ProductPackageStockMap
+  /** Hidden product×package overrides; no entry = available/shown. */
+  productPackageAvailability?: ProductPackageAvailabilityMap
   onAdded?: () => void
 }
 
@@ -24,18 +32,29 @@ export default function ProductConfigurator({
   packages,
   addons,
   productPackageStock = {},
+  productPackageAvailability = {},
   onAdded,
 }: ProductConfiguratorProps) {
-  // Product-level slab gates: each slab size (12pc / 15pc) has its own
-  // independent admin toggle. Non-slab boxes are always offered.
+  // Which packages this product actually offers:
+  //   1. Per-package availability — the admin can hide any package for this
+  //      product (product_package_availability); no entry = shown.
+  //   2. Slab gates — each slab size (12pc / 15pc) has its own independent
+  //      admin toggle. Non-slab boxes are offered unless hidden by (1).
   const eligiblePackages = useMemo(
     () =>
       packages.filter((p) => {
+        if (productPackageAvailability[stockKey(product.id, p.id)] === false) return false
         if (p.id === 'slab-15') return product.isSlab15Available
         if (p.isSlab) return product.isSlabAvailable
         return true
       }),
-    [packages, product.isSlabAvailable, product.isSlab15Available],
+    [
+      packages,
+      product.id,
+      product.isSlabAvailable,
+      product.isSlab15Available,
+      productPackageAvailability,
+    ],
   )
 
   // Per-product-per-package stock: a package combo can be individually sold

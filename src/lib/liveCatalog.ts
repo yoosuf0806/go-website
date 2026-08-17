@@ -18,6 +18,7 @@ import type {
   CatalogDeliveryTier,
   CatalogReview,
   ProductPackageStockMap,
+  ProductPackageAvailabilityMap,
 } from '../types/catalog'
 import { stockKey } from '../types/catalog'
 import { mergeContent } from '../types/content'
@@ -65,23 +66,46 @@ function mapProductPackageStock(rows: Record<string, unknown>[]): ProductPackage
   return map
 }
 
+/** No row = available; only hidden overrides need to appear in the map. */
+function mapProductPackageAvailability(
+  rows: Record<string, unknown>[],
+): ProductPackageAvailabilityMap {
+  const map: ProductPackageAvailabilityMap = {}
+  for (const r of rows) {
+    if (r.is_available === false) {
+      map[stockKey(r.product_id as string, r.package_id as string)] = false
+    }
+  }
+  return map
+}
+
 /**
  * Fetch the full catalogue from Supabase. Returns the same shape as the baked
  * snapshot. On any error, the caller keeps the snapshot seed (fail-safe: the
  * site still shows the last-built catalogue rather than going blank).
  */
 export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
-  const [products, packages, addons, categories, tiers, reviews, settingsRows, stockRows] =
-    await Promise.all([
-      supabase.from('products').select('*'),
-      supabase.from('packages').select('*').eq('is_active', true).order('sort_order'),
-      supabase.from('addons').select('*'),
-      supabase.from('categories').select('*').order('sort_order'),
-      supabase.from('delivery_tiers').select('*').order('sort_order'),
-      supabase.from('reviews').select('*').eq('is_featured', true),
-      supabase.from('site_settings').select('*'),
-      supabase.from('product_package_stock').select('*'),
-    ])
+  const [
+    products,
+    packages,
+    addons,
+    categories,
+    tiers,
+    reviews,
+    settingsRows,
+    stockRows,
+    availabilityRows,
+  ] = await Promise.all([
+    supabase.from('products').select('*'),
+    supabase.from('packages').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('addons').select('*'),
+    supabase.from('categories').select('*').order('sort_order'),
+    supabase.from('delivery_tiers').select('*').order('sort_order'),
+    supabase.from('reviews').select('*').eq('is_featured', true),
+    supabase.from('site_settings').select('*'),
+    supabase.from('product_package_stock').select('*'),
+    supabase.from('product_package_availability').select('*'),
+  ])
 
   // If the core product read failed, keep the seed rather than blanking the site.
   if (products.error) {
@@ -149,6 +173,12 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     ? seed.productPackageStock
     : mapProductPackageStock(stockRows.data ?? [])
 
+  // Fall back to the seed only if the table read itself failed (e.g. migration
+  // 033 not yet applied). An empty result set is the normal "all available" case.
+  const productPackageAvailability = availabilityRows.error
+    ? (seed.productPackageAvailability ?? {})
+    : mapProductPackageAvailability(availabilityRows.data ?? [])
+
   return {
     generatedAt: new Date().toISOString(),
     source: 'supabase',
@@ -164,5 +194,6 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     settings,
     content,
     productPackageStock,
+    productPackageAvailability,
   }
 }

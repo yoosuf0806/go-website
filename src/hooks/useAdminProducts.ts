@@ -5,6 +5,8 @@ import {
   fetchPackages,
   fetchProductPackageStock,
   setProductPackageStock,
+  fetchProductPackageAvailability,
+  setProductPackageAvailability,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -100,5 +102,30 @@ export function useSetProductPackageStock() {
       inStock: boolean
     }) => setProductPackageStock(productId, packageId, inStock),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'productPackageStock'] }),
+  })
+}
+
+/** All product_package_availability override rows. No row for a combo = available. */
+export function useAdminProductPackageAvailability() {
+  return useQuery({
+    queryKey: ['admin', 'productPackageAvailability'],
+    queryFn: fetchProductPackageAvailability,
+    staleTime: 15_000,
+  })
+}
+
+export function useSetProductPackageAvailability() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      productId,
+      packageId,
+      available,
+    }: {
+      productId: string
+      packageId: string
+      available: boolean
+    }) => setProductPackageAvailability(productId, packageId, available),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'productPackageAvailability'] }),
   })
 }

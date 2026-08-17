@@ -59,6 +59,13 @@ export interface RawProductPackageStock {
   in_stock: boolean
 }
 
+/** One row of `product_package_availability` — presence with is_available=false hides that package. */
+export interface RawProductPackageAvailability {
+  product_id: string
+  package_id: string
+  is_available: boolean
+}
+
 export interface RawAddon {
   id: string
   label: string
@@ -103,6 +110,7 @@ export interface SeedData {
   reviews: RawReview[]
   settings: RawSettings
   productPackageStock: RawProductPackageStock[]
+  productPackageAvailability: RawProductPackageAvailability[]
 }
 
 const CAT_CLASSIC = '11111111-1111-4111-8111-111111111111'
@@ -305,4 +313,8 @@ export const seedData: SeedData = {
   productPackageStock: [
     { product_id: 'a3333333-3333-4333-8333-333333333333', package_id: 'box-12', in_stock: false },
   ],
+
+  // No row = available. Empty by default: every product offers all its eligible
+  // packages until the admin explicitly hides one (product_package_availability).
+  productPackageAvailability: [],
 }
