@@ -156,7 +156,8 @@ create table if not exists order_items (
 create table if not exists gift_vouchers (
   id uuid primary key default uuid_generate_v4(),
   code text not null unique,
-  amount numeric(10,2) not null check (amount > 0),
+  amount numeric(10,2) not null check (amount > 0),   -- LKR for 'fixed', a percentage for 'percent'
+  discount_type text not null default 'fixed' check (discount_type in ('fixed', 'percent')),
   is_active boolean not null default true,
   used_at timestamptz,
   used_by_order_id uuid references orders(id) on delete set null,
@@ -447,20 +448,20 @@ grant execute on function create_order(
 -- Read-only "is this code valid?" check for the checkout Apply button.
 -- Actual redemption happens atomically inside create_order() above.
 create or replace function validate_gift_voucher(p_code text)
-returns table (status text, amount numeric)
+returns table (status text, amount numeric, discount_type text)
 language plpgsql security definer set search_path = public as $$
 declare v gift_vouchers%rowtype;
 begin
   select * into v from gift_vouchers where code = upper(trim(p_code));
   if not found or not v.is_active then
-    return query select 'invalid'::text, null::numeric;
+    return query select 'invalid'::text, null::numeric, null::text;
     return;
   end if;
   if v.used_at is not null then
-    return query select 'used'::text, null::numeric;
+    return query select 'used'::text, null::numeric, null::text;
     return;
   end if;
-  return query select 'ok'::text, v.amount;
+  return query select 'ok'::text, v.amount, v.discount_type;
 end; $$;
 
 grant execute on function validate_gift_voucher(text) to anon, authenticated;
