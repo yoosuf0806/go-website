@@ -16,6 +16,12 @@ export interface ProductMedia {
   type: 'image' | 'video'
 }
 
+/** One selectable flavour of a slab product (name + flat per-product price). */
+export interface ProductFlavor {
+  name: string
+  price: number
+}
+
 export interface AdminProduct {
   id: string
   category_id: string | null
@@ -34,6 +40,10 @@ export interface AdminProduct {
   is_slab_available: boolean
   /** Can be ordered as the 15pc Brownie Slab. Independent of is_slab_available. */
   is_slab_15_available: boolean
+  /** Standalone Brownie Slab product — priced per product via `flavors`, flavour selector on the PDP. */
+  is_slab_product: boolean
+  /** Selectable flavours (name + flat price) for a slab product; [] for non-slab products. */
+  flavors: ProductFlavor[]
   allows_letter_topper: boolean
   /** Featured on the homepage Hot Picks section. */
   is_hot_pick: boolean

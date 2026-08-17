@@ -41,9 +41,13 @@ export function orderItemsPayload(items: CartLine[]) {
   return items.map((item) => ({
     product_id: item.productId,
     product_name: item.productName,
-    package_id: item.packageId,
+    // Slab lines have no package — the cart carries a `slab:<flavour>` sentinel
+    // in packageId for keying, but the order stores package_id = null and the
+    // chosen flavour in package_label (the RPC recomputes a slab's price from
+    // the product's flavours, keyed by that label).
+    package_id: item.isSlab ? null : item.packageId,
     package_label: item.packageLabel,
-    piece_count: item.pieceCount,
+    piece_count: item.isSlab ? 0 : item.pieceCount,
     box_qty: item.boxQty,
     unit_price: item.unitPrice,
     addons: item.addons,

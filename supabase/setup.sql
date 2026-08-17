@@ -51,6 +51,8 @@ create table if not exists products (
   stock_qty int,
   is_slab_available boolean not null default false,
   is_slab_15_available boolean not null default false,
+  is_slab_product boolean not null default false,       -- standalone slab product (priced per product via flavors)
+  flavors jsonb not null default '[]'::jsonb,            -- slab flavours [{name, price}]; [] for non-slab products
   allows_letter_topper boolean not null default false,
   is_hot_pick boolean not null default false,
   sort_order int not null default 0,
@@ -138,7 +140,7 @@ create table if not exists order_items (
   order_id uuid not null references orders(id) on delete cascade,
   product_id uuid references products(id) on delete set null,
   product_name text not null,
-  package_id text not null references packages(id),
+  package_id text references packages(id),   -- NULL for slab-product lines (no package; flavour is in package_label)
   package_label text not null,
   piece_count int not null,
   box_qty int not null default 1 check (box_qty >= 1),

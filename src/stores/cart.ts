@@ -40,13 +40,36 @@ export function cartLineKey(productId: string, packageId: string, addons: CartAd
  */
 export function repriceLine(line: CartLine, catalog: Catalog): CartLine | null {
   const product = catalog.products.find((p) => p.id === line.productId)
-  const pkg = catalog.packages.find((p) => p.id === line.packageId)
-  if (!product || !pkg) return null
+  if (!product) return null
 
   const repricedAddons = line.addons.map((a) => {
     const current = catalog.addons.find((ca) => ca.id === a.id)
     return current ? { ...a, price: current.price, label: current.label } : a
   })
+
+  // Slab line: re-price from the product's flavours (flat per-product price),
+  // not the packages table. Drop it if the product is no longer a slab or the
+  // chosen flavour was removed.
+  if (line.isSlab) {
+    const flavor = product.isSlabProduct
+      ? product.flavors.find((f) => f.name === line.flavor)
+      : undefined
+    if (!flavor) return null
+    const item: CartItem = {
+      ...line,
+      productName: product.name,
+      packageLabel: flavor.name,
+      pieceCount: 0,
+      unitPrice: flavor.price,
+      isSlab: true,
+      flavor: flavor.name,
+      addons: repricedAddons,
+    }
+    return { ...item, key: cartLineKey(item.productId, item.packageId, item.addons) }
+  }
+
+  const pkg = catalog.packages.find((p) => p.id === line.packageId)
+  if (!pkg) return null
 
   const item: CartItem = {
     ...line,

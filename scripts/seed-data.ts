@@ -35,6 +35,10 @@ export interface RawProduct {
   stock_qty: number | null
   is_slab_available: boolean
   is_slab_15_available: boolean
+  /** Standalone slab product — priced per product via `flavors`, flavour selector on the PDP. */
+  is_slab_product: boolean
+  /** Selectable flavours (name + flat price) for a slab product; [] for non-slab products. */
+  flavors: { name: string; price: number }[]
   allows_letter_topper: boolean
   is_hot_pick: boolean
   is_corporate: boolean
@@ -140,6 +144,8 @@ export const seedData: SeedData = {
       allows_letter_topper: true,
       is_hot_pick: true,
       is_corporate: true,
+      is_slab_product: false,
+      flavors: [],
       sort_order: 1,
     },
     {
@@ -159,6 +165,8 @@ export const seedData: SeedData = {
       allows_letter_topper: false,
       is_hot_pick: false,
       is_corporate: false,
+      is_slab_product: false,
+      flavors: [],
       sort_order: 2,
     },
     {
@@ -178,6 +186,8 @@ export const seedData: SeedData = {
       allows_letter_topper: true,
       is_hot_pick: false,
       is_corporate: true,
+      is_slab_product: false,
+      flavors: [],
       sort_order: 3,
     },
     {
@@ -197,6 +207,8 @@ export const seedData: SeedData = {
       allows_letter_topper: true,
       is_hot_pick: true,
       is_corporate: false,
+      is_slab_product: false,
+      flavors: [],
       sort_order: 4,
     },
     {
@@ -216,13 +228,46 @@ export const seedData: SeedData = {
       allows_letter_topper: true,
       is_hot_pick: false,
       is_corporate: true,
+      is_slab_product: false,
+      flavors: [],
       sort_order: 5,
+    },
+    {
+      // A standalone Brownie Slab product (its own listing). Priced per product
+      // via flavours, not per piece; configured with a flavour selector.
+      id: 'a6666666-6666-4666-8666-666666666666',
+      category_id: CAT_PREMIUM,
+      name: 'Party Brownie Slab',
+      slug: 'party-brownie-slab',
+      description: 'The brownie slab weighs 650g and is perfect for mini celebrations.',
+      price_per_piece: 2300, // base/fallback price; per-flavour prices below drive the line
+      image_url: null,
+      media: [],
+      is_visible: true,
+      in_stock: true,
+      stock_qty: null,
+      is_slab_available: false,
+      is_slab_15_available: false,
+      is_slab_product: true,
+      flavors: [
+        { name: 'Classic Fudge', price: 2300 },
+        { name: 'Cashew', price: 2600 },
+        { name: 'Triple Chocolate', price: 2800 },
+      ],
+      allows_letter_topper: true,
+      is_hot_pick: false,
+      is_corporate: false,
+      sort_order: 6,
     },
   ],
 
+  // The old slab-as-package sizes are retired (is_active: false) now that slabs
+  // are their own products — they stay as rows so historical order_items that
+  // reference them still resolve, but they no longer appear as selectable
+  // packages in the storefront or the price-integrity RPC.
   packages: [
-    { id: 'slab-12', label: 'Brownie Slab (Mini Box)', piece_count: 12, is_slab: true, is_active: true, letter_max_chars: 4, sort_order: 1 },
-    { id: 'slab-15', label: 'Brownie Slab (Standard)', piece_count: 15, is_slab: true, is_active: true, letter_max_chars: 7, sort_order: 2 },
+    { id: 'slab-12', label: 'Brownie Slab (Mini Box)', piece_count: 12, is_slab: true, is_active: false, letter_max_chars: 4, sort_order: 1 },
+    { id: 'slab-15', label: 'Brownie Slab (Standard)', piece_count: 15, is_slab: true, is_active: false, letter_max_chars: 7, sort_order: 2 },
     { id: 'box-9', label: '9 Pieces', piece_count: 9, is_slab: false, is_active: true, letter_max_chars: 0, sort_order: 3 },
     { id: 'box-12', label: '12 Pieces', piece_count: 12, is_slab: false, is_active: true, letter_max_chars: 4, sort_order: 4 },
     { id: 'box-15', label: '15 Pieces', piece_count: 15, is_slab: false, is_active: true, letter_max_chars: 5, sort_order: 5 },

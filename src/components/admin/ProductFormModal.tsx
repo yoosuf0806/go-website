@@ -3,6 +3,7 @@ import {
   uploadProductMedia,
   type AdminCategory,
   type AdminProduct,
+  type ProductFlavor,
   type ProductInput,
   type ProductMedia,
 } from '../../lib/adminProducts'
@@ -38,6 +39,8 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     stock_qty: null,
     is_slab_available: false,
     is_slab_15_available: false,
+    is_slab_product: false,
+    flavors: [],
     allows_letter_topper: false,
     is_hot_pick: false,
     is_corporate: false,
@@ -131,13 +134,41 @@ export default function ProductFormModal({
     })
   }
 
+  // ── Flavour list editors (slab products only) ──────────────────────────────
+  function addFlavor() {
+    setForm((f) => ({ ...f, flavors: [...f.flavors, { name: '', price: 0 }] }))
+  }
+  function updateFlavor(index: number, patch: Partial<ProductFlavor>) {
+    setForm((f) => ({
+      ...f,
+      flavors: f.flavors.map((fl, i) => (i === index ? { ...fl, ...patch } : fl)),
+    }))
+  }
+  function removeFlavor(index: number) {
+    setForm((f) => ({ ...f, flavors: f.flavors.filter((_, i) => i !== index) }))
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // Letter topper only makes sense on slab-capable products — either size (spec §6.2, PR #2).
-    const slabCapable = form.is_slab_available || form.is_slab_15_available
+    const isSlabProduct = form.is_slab_product
+    // Slab products are standalone (their own listing) — they never carry the
+    // legacy per-product slab-package flags. Letter topper is offered on slab
+    // products and on slab-capable normal products; drop flavours (and trim
+    // blanks) for non-slab products so stray rows never reach the DB.
+    const cleanedFlavors = isSlabProduct
+      ? form.flavors
+          .map((fl) => ({ name: fl.name.trim(), price: Number(fl.price) || 0 }))
+          .filter((fl) => fl.name !== '')
+      : []
     const cleaned: ProductInput = {
       ...form,
-      allows_letter_topper: slabCapable ? form.allows_letter_topper : false,
+      is_slab_available: isSlabProduct ? false : form.is_slab_available,
+      is_slab_15_available: isSlabProduct ? false : form.is_slab_15_available,
+      flavors: cleanedFlavors,
+      allows_letter_topper:
+        isSlabProduct || form.is_slab_available || form.is_slab_15_available
+          ? form.allows_letter_topper
+          : false,
       // image_url is derived from the gallery cover so legacy readers
       // (SEO/JSON-LD/ProductTile) that only look at image_url keep working.
       image_url: form.media[0]?.url ?? null,
@@ -196,7 +227,9 @@ export default function ProductFormModal({
 
           <div className="flex flex-wrap gap-3">
             <label className="text-sm">
-              <span className="block text-neutral-600">Price / piece (Rs.)</span>
+              <span className="block text-neutral-600">
+                {form.is_slab_product ? 'Base price (Rs.)' : 'Price / piece (Rs.)'}
+              </span>
               <input
                 type="number"
                 min={0}
@@ -204,6 +237,11 @@ export default function ProductFormModal({
                 onChange={(e) => set('price_per_piece', Number(e.target.value))}
                 className="mt-1 w-32 rounded border border-neutral-300 px-3 py-2 text-sm"
               />
+              {form.is_slab_product && (
+                <span className="mt-0.5 block text-[11px] font-normal text-neutral-400">
+                  Fallback price; each flavour below sets its own price.
+                </span>
+              )}
             </label>
             <label className="text-sm">
               <span className="block text-neutral-600">Category</span>
@@ -343,20 +381,12 @@ export default function ProductFormModal({
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={form.is_slab_available}
-                onChange={(e) => set('is_slab_available', e.target.checked)}
+                checked={form.is_slab_product}
+                onChange={(e) => set('is_slab_product', e.target.checked)}
               />
-              12pc Slab available
+              Brownie Slab product (its own listing; priced per slab, choose-your-flavour)
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.is_slab_15_available}
-                onChange={(e) => set('is_slab_15_available', e.target.checked)}
-              />
-              15pc Slab available
-            </label>
-            {(form.is_slab_available || form.is_slab_15_available) && (
+            {(form.is_slab_product || form.is_slab_available || form.is_slab_15_available) && (
               <label className="flex items-center gap-2 pl-6 text-sm">
                 <input
                   type="checkbox"
@@ -367,6 +397,60 @@ export default function ProductFormModal({
               </label>
             )}
           </div>
+
+          {form.is_slab_product && (
+            <div className="rounded-lg border border-neutral-200 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-700">Flavours</span>
+                <button
+                  type="button"
+                  onClick={addFlavor}
+                  className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white hover:bg-neutral-800"
+                >
+                  + Add flavour
+                </button>
+              </div>
+              <p className="mt-0.5 text-xs text-neutral-400">
+                Shown as the “Choose your flavour” options on the storefront. Each flavour has its
+                own price.
+              </p>
+              {form.flavors.length === 0 ? (
+                <p className="mt-2 text-xs text-neutral-500">No flavours yet — add at least one.</p>
+              ) : (
+                <ul className="mt-2 flex flex-col gap-2">
+                  {form.flavors.map((fl, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={fl.name}
+                        placeholder="Flavour name"
+                        onChange={(e) => updateFlavor(i, { name: e.target.value })}
+                        className="flex-1 rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                      />
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-neutral-400">Rs.</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={fl.price}
+                          onChange={(e) => updateFlavor(i, { price: Number(e.target.value) })}
+                          className="w-24 rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFlavor(i)}
+                        aria-label="Remove flavour"
+                        className="rounded border border-neutral-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <label className="text-sm">
             <span className="block text-neutral-600">Daily stock qty (optional)</span>
