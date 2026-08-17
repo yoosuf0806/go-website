@@ -26,6 +26,10 @@ export default function PackageSelector({
       {packages.map((pkg) => {
         const selected = pkg.id === selectedId
         const inStock = isInStock(pkg.id)
+        // Slabs are sold as a slab, not by loose piece count — the label already
+        // says "(Mini Box)" / "(Standard)", so we drop the "N pcs" sublabel for
+        // them (only "Sold out" still shows). Boxes keep their piece count.
+        const sublabel = !inStock ? 'Sold out' : pkg.isSlab ? null : `${pkg.pieceCount} pcs`
         return (
           <button
             key={pkg.id}
@@ -43,9 +47,11 @@ export default function PackageSelector({
             }`}
           >
             <span className={!inStock ? 'line-through' : ''}>{pkg.label}</span>
-            <span className={`text-[11px] font-medium ${selected ? 'text-pink' : 'text-neutral-400'}`}>
-              {inStock ? `${pkg.pieceCount} pcs` : 'Sold out'}
-            </span>
+            {sublabel && (
+              <span className={`text-[11px] font-medium ${selected ? 'text-pink' : 'text-neutral-400'}`}>
+                {sublabel}
+              </span>
+            )}
           </button>
         )
       })}

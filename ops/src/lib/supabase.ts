@@ -13,7 +13,18 @@ if (!url || !anon) {
   )
 }
 
+// `storageKey` matches the storefront/admin client (src/lib/supabase.ts) so the
+// two apps share one auth session when served from the same origin: if the admin
+// UI is already signed in, this dashboard picks up that session and never shows
+// its own login screen (single sign-on). Keep this key in sync with the admin.
 export const supabase = createClient(
   url || 'https://placeholder.supabase.co',
   anon || 'placeholder-anon-key',
+  {
+    auth: {
+      storageKey: 'golden-oven-auth',
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  },
 )

@@ -28,6 +28,7 @@ import type {
   RawPackage,
   RawProduct,
   RawProductPackageStock,
+  RawProductPackageAvailability,
   RawReview,
   SeedData,
 } from './seed-data.ts'
@@ -39,6 +40,7 @@ import type {
   BusinessSetting,
   BankTransferSetting,
   ProductPackageStockMap,
+  ProductPackageAvailabilityMap,
 } from '../src/types/catalog.ts'
 import { stockKey } from '../src/types/catalog.ts'
 import { mergeContent, type SiteContent } from '../src/types/content.ts'
@@ -105,6 +107,17 @@ function mapProductPackageStock(rows: RawProductPackageStock[]): ProductPackageS
   return map
 }
 
+/** No row = available; only hidden overrides need to appear in the map. */
+function mapProductPackageAvailability(
+  rows: RawProductPackageAvailability[],
+): ProductPackageAvailabilityMap {
+  const map: ProductPackageAvailabilityMap = {}
+  for (const r of rows) {
+    if (!r.is_available) map[stockKey(r.product_id, r.package_id)] = false
+  }
+  return map
+}
+
 function mapAddons(rows: RawAddon[]): Catalog['addons'] {
   return rows
     .filter((r) => r.is_enabled)
@@ -164,6 +177,7 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
     settings: mapSettings(data.settings),
     content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
     productPackageStock: mapProductPackageStock(data.productPackageStock),
+    productPackageAvailability: mapProductPackageAvailability(data.productPackageAvailability),
   }
 }
 
@@ -233,17 +247,27 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     auth: { persistSession: false },
   })
 
-  const [categories, products, packages, addons, tiers, reviews, settings, productPackageStock] =
-    await Promise.all([
-      supabase.from('categories').select('*'),
-      supabase.from('products').select('*'),
-      supabase.from('packages').select('*'),
-      supabase.from('addons').select('*'),
-      supabase.from('delivery_tiers').select('*'),
-      supabase.from('reviews').select('*'),
-      supabase.from('site_settings').select('*'),
-      supabase.from('product_package_stock').select('*'),
-    ])
+  const [
+    categories,
+    products,
+    packages,
+    addons,
+    tiers,
+    reviews,
+    settings,
+    productPackageStock,
+    productPackageAvailability,
+  ] = await Promise.all([
+    supabase.from('categories').select('*'),
+    supabase.from('products').select('*'),
+    supabase.from('packages').select('*'),
+    supabase.from('addons').select('*'),
+    supabase.from('delivery_tiers').select('*'),
+    supabase.from('reviews').select('*'),
+    supabase.from('site_settings').select('*'),
+    supabase.from('product_package_stock').select('*'),
+    supabase.from('product_package_availability').select('*'),
+  ])
 
   for (const res of [
     categories,
@@ -258,6 +282,15 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     if (res.error) {
       throw new Error(`Supabase read failed: ${res.error.message}`)
     }
+  }
+
+  // Availability is read tolerantly: if migration 033 hasn't run yet the table
+  // won't exist, and a rebuild shouldn't hard-fail over it — treat it as "no
+  // overrides" (every package available) until the migration is applied.
+  if (productPackageAvailability.error) {
+    console.warn(
+      `[snapshot] product_package_availability read failed (${productPackageAvailability.error.message}) — treating all packages as available. Run migration 033.`,
+    )
   }
 
   const settingsByKey = Object.fromEntries(
@@ -279,6 +312,8 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
       content: (settingsByKey.content ?? undefined) as Record<string, unknown> | undefined,
     },
     productPackageStock: (productPackageStock.data ?? []) as RawProductPackageStock[],
+    productPackageAvailability: (productPackageAvailability.data ??
+      []) as RawProductPackageAvailability[],
   }
 }
 

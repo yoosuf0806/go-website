@@ -5,6 +5,8 @@ import {
   useAdminPackages,
   useAdminProductPackageStock,
   useSetProductPackageStock,
+  useAdminProductPackageAvailability,
+  useSetProductPackageAvailability,
   useProductMutations,
   useCategoryMutations,
 } from '../../hooks/useAdminProducts'
@@ -21,6 +23,8 @@ export default function Products() {
   const { data: packages } = useAdminPackages()
   const { data: stockRows } = useAdminProductPackageStock()
   const setStock = useSetProductPackageStock()
+  const { data: availabilityRows } = useAdminProductPackageAvailability()
+  const setAvailability = useSetProductPackageAvailability()
   const { create, update, remove } = useProductMutations()
   const categoryMutations = useCategoryMutations()
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -86,6 +90,14 @@ export default function Products() {
   function isInStock(productId: string, packageId: string): boolean {
     const row = stockRows?.find((r) => r.product_id === productId && r.package_id === packageId)
     return row ? row.in_stock : true
+  }
+
+  // No row for a product×package combo = available (shown on the storefront); a
+  // row with is_available=false is the only kind that should normally exist
+  // (spec: hide the packages a product doesn't sell, e.g. a slab-only product).
+  function isAvailable(productId: string, packageId: string): boolean {
+    const row = availabilityRows?.find((r) => r.product_id === productId && r.package_id === packageId)
+    return row ? row.is_available : true
   }
 
   return (
@@ -291,6 +303,63 @@ export default function Products() {
                           }`}
                         >
                           {inStock ? 'In stock' : 'Sold out'}
+                        </button>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {products && products.length > 0 && packages && packages.length > 0 && (
+        <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+          <div className="border-b border-neutral-100 px-4 py-3">
+            <h2 className="text-sm font-semibold">Package availability</h2>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Which package sizes each product offers on the storefront. Hide the ones a product
+              never sells — e.g. a slab-only product hides the 9/12/15 boxes. Click a package to flip
+              it. (Slab sizes also need their toggle enabled in the product’s Edit form to appear.)
+            </p>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-500">
+              <tr>
+                <th className="px-3 py-2 font-medium">Product</th>
+                {packages.map((pkg) => (
+                  <th key={pkg.id} className="px-3 py-2 text-center font-medium">
+                    {pkg.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id} className="border-t border-neutral-100">
+                  <td className="px-3 py-2">{product.name}</td>
+                  {packages.map((pkg) => {
+                    const available = isAvailable(product.id, pkg.id)
+                    return (
+                      <td key={pkg.id} className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          disabled={setAvailability.isPending}
+                          onClick={() =>
+                            setAvailability.mutate({
+                              productId: product.id,
+                              packageId: pkg.id,
+                              available: !available,
+                            })
+                          }
+                          className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
+                            available
+                              ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                              : 'border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200'
+                          }`}
+                        >
+                          {available ? 'Shown' : 'Hidden'}
                         </button>
                       </td>
                     )

@@ -64,6 +64,14 @@ export interface CatalogPackage {
  */
 export type ProductPackageStockMap = Record<string, boolean>
 
+/**
+ * Per product×package availability overrides (`product_package_availability`).
+ * No entry for a productId::packageId key means that package IS available for
+ * the product (the default). Only HIDDEN combos are recorded (value false), so
+ * the map stays small. Uses the same key format as stockKey.
+ */
+export type ProductPackageAvailabilityMap = Record<string, boolean>
+
 export function stockKey(productId: string, packageId: string): string {
   return `${productId}::${packageId}`
 }
@@ -173,4 +181,6 @@ export interface Catalog {
   content: SiteContent
   /** Out-of-stock product×package overrides; see stockKey/ProductPackageStockMap. */
   productPackageStock: ProductPackageStockMap
+  /** Hidden product×package overrides; see ProductPackageAvailabilityMap. No entry = available. */
+  productPackageAvailability: ProductPackageAvailabilityMap
 }

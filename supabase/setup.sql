@@ -75,6 +75,16 @@ create table if not exists product_package_stock (
   primary key (product_id, package_id)
 );
 
+-- Per product×package availability overrides. No row = available; a row with
+-- is_available=false hides that package for the product (e.g. a slab-only
+-- product hides the 9/12/15 boxes).
+create table if not exists product_package_availability (
+  product_id uuid not null references products(id) on delete cascade,
+  package_id text not null references packages(id) on delete cascade,
+  is_available boolean not null default true,
+  primary key (product_id, package_id)
+);
+
 create table if not exists addons (
   id text primary key,
   label text not null,
@@ -297,6 +307,13 @@ drop policy if exists "public read product package stock" on product_package_sto
 create policy "public read product package stock" on product_package_stock for select using (true);
 drop policy if exists "admin all product package stock" on product_package_stock;
 create policy "admin all product package stock" on product_package_stock for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+alter table product_package_availability enable row level security;
+drop policy if exists "public read product package availability" on product_package_availability;
+create policy "public read product package availability" on product_package_availability for select using (true);
+drop policy if exists "admin all product package availability" on product_package_availability;
+create policy "admin all product package availability" on product_package_availability for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 drop policy if exists "public read enabled addons" on addons;

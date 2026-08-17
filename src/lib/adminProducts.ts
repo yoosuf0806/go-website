@@ -49,6 +49,13 @@ export interface AdminProductPackageStock {
   in_stock: boolean
 }
 
+/** One row of `product_package_availability` — a per product×package hide override. No row = available. */
+export interface AdminProductPackageAvailability {
+  product_id: string
+  package_id: string
+  is_available: boolean
+}
+
 export interface AdminPackage {
   id: string
   label: string
@@ -154,6 +161,38 @@ export async function setProductPackageStock(
   const { error } = await supabase
     .from('product_package_stock')
     .upsert({ product_id: productId, package_id: packageId, in_stock: false })
+  if (error) throw new Error(error.message)
+}
+
+/** All product_package_availability rows. No row for a product×package = available. */
+export async function fetchProductPackageAvailability(): Promise<AdminProductPackageAvailability[]> {
+  const { data, error } = await supabase.from('product_package_availability').select('*')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as AdminProductPackageAvailability[]
+}
+
+/**
+ * Show/hide a single product×package combo. Setting available=true deletes the
+ * override row entirely (no row = available, keeping the table small); setting
+ * false upserts a row so the storefront hides that package for the product.
+ */
+export async function setProductPackageAvailability(
+  productId: string,
+  packageId: string,
+  available: boolean,
+): Promise<void> {
+  if (available) {
+    const { error } = await supabase
+      .from('product_package_availability')
+      .delete()
+      .eq('product_id', productId)
+      .eq('package_id', packageId)
+    if (error) throw new Error(error.message)
+    return
+  }
+  const { error } = await supabase
+    .from('product_package_availability')
+    .upsert({ product_id: productId, package_id: packageId, is_available: false })
   if (error) throw new Error(error.message)
 }
 
