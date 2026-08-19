@@ -8,7 +8,9 @@ import { imageUrl } from '../lib/images'
 // crawlers get real metadata on every route.
 
 // Absolute site URL for canonical/OG. Set VITE_SITE_URL in the deploy env.
-export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://www.goldenovenbrownies.com').replace(/\/$/, '')
+// Non-www is the canonical host (www 301-redirects to it), so the canonical/OG
+// URLs and the served page URL always match. Override with VITE_SITE_URL.
+export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://goldenovenbrownies.com').replace(/\/$/, '')
 
 interface SeoProps {
   title: string

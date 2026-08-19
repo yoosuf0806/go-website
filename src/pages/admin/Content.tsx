@@ -208,6 +208,52 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
             />
           </label>
         </div>
+        <div className="rounded border border-neutral-100 p-3">
+          <Text
+            label="Privacy Policy — title"
+            value={form.policies.privacy.title}
+            onChange={(v) => set('policies', { ...form.policies, privacy: { ...form.policies.privacy, title: v } })}
+          />
+          <label className="mt-2 block text-sm">
+            <span className="text-neutral-600">Privacy Policy — body</span>
+            <textarea
+              rows={10}
+              value={form.policies.privacy.body}
+              onChange={(e) => set('policies', { ...form.policies, privacy: { ...form.policies.privacy, body: e.target.value } })}
+              className={textareaCls}
+            />
+          </label>
+          <p className="mt-1 text-xs text-neutral-400">Linked in the footer under “Policies” and at /policies/privacy.</p>
+        </div>
+      </Section>
+
+      <Section title="About Us page">
+        <p className="text-xs text-neutral-500">
+          Shown at /about and linked from the footer (“Our Story”). Leave a blank line between paragraphs in the story
+          body.
+        </p>
+        <Text label="Title" value={form.about.title} onChange={(v) => set('about', { ...form.about, title: v })} />
+        <Area label="Intro (hero subtitle)" value={form.about.intro} onChange={(v) => set('about', { ...form.about, intro: v })} />
+        <ImageField
+          label="Hero image (optional)"
+          aspect={4 / 3}
+          aspectLabel="About hero"
+          value={form.about.imageUrl}
+          onChange={(url) => set('about', { ...form.about, imageUrl: url })}
+        />
+        <label className="block text-sm">
+          <span className="text-neutral-600">Story body</span>
+          <textarea
+            rows={8}
+            value={form.about.body}
+            onChange={(e) => set('about', { ...form.about, body: e.target.value })}
+            className={textareaCls}
+          />
+        </label>
+        <div className="rounded border border-neutral-100 p-3">
+          <p className="mb-2 text-xs font-semibold text-neutral-500">“What we stand for” cards (leave empty to hide)</p>
+          <IconCards items={form.about.values} onChange={(v) => set('about', { ...form.about, values: v })} iconLabel="Emoji" />
+        </div>
       </Section>
 
       <Section title="Testimonials heading">
@@ -255,6 +301,7 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
         <SeoEditor label="Corporate Orders" meta={form.seo.corporate} onChange={(m) => set('seo', { ...form.seo, corporate: m })} />
         <SeoEditor label="Wedding Orders" meta={form.seo.wedding} onChange={(m) => set('seo', { ...form.seo, wedding: m })} />
         <SeoEditor label="Brownie Slab" meta={form.seo.slab} onChange={(m) => set('seo', { ...form.seo, slab: m })} />
+        <SeoEditor label="About Us" meta={form.seo.about} onChange={(m) => set('seo', { ...form.seo, about: m })} />
       </Section>
 
       <Section title="SEO · Business & structured data">
