@@ -71,6 +71,14 @@ export default function Seo({ title, description, path, image, preloadImage, jso
 // Google's Rich Results / structured-data guidelines.
 // ---------------------------------------------------------------------------
 
+// Stable @id anchors for the site-wide entities. Giving each node a canonical
+// @id and referencing it (instead of repeating the business inline) is how
+// schema.org consumers link the nodes into a single connected graph rather than
+// reading three unrelated copies of the same business.
+const ORG_ID = `${SITE_URL}/#organization`
+const LOCALBUSINESS_ID = `${SITE_URL}/#localbusiness`
+const WEBSITE_ID = `${SITE_URL}/#website`
+
 /** Prefix a relative path with SITE_URL; pass through absolute URLs; '' → undefined. */
 function absoluteUrl(u?: string | null): string | undefined {
   if (!u) return undefined
@@ -108,6 +116,7 @@ export function organizationJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': ORG_ID,
     name: content.seo.siteName,
     ...(b.legalName && b.legalName !== content.seo.siteName ? { legalName: b.legalName } : {}),
     url: SITE_URL,
@@ -135,9 +144,12 @@ export function websiteJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': WEBSITE_ID,
     name: content.seo.siteName,
     url: SITE_URL,
     inLanguage: 'en',
+    // Link the site to the Organization that publishes it.
+    publisher: { '@id': ORG_ID },
   }
 }
 
@@ -154,9 +166,12 @@ export function localBusinessJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
     '@type': b.type || 'LocalBusiness',
+    '@id': LOCALBUSINESS_ID,
     name: content.seo.siteName,
     url: SITE_URL,
     image,
+    // Tie the storefront/listing back to the publishing Organization.
+    parentOrganization: { '@id': ORG_ID },
     ...(b.priceRange ? { priceRange: b.priceRange } : {}),
     ...(b.telephone ? { telephone: b.telephone } : {}),
     ...(b.email ? { email: b.email } : {}),
