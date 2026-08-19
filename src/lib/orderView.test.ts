@@ -9,6 +9,10 @@ import {
   isRepeatCustomer,
   priorOrderCount,
   tomorrowIso,
+  orderGroup,
+  needsReview,
+  sharedToKitchen,
+  needsReviewCount,
 } from './orderView'
 
 // A fixed "now" so the tomorrow-based tab logic is deterministic.
@@ -79,6 +83,56 @@ describe('tab bucketing (baking today = delivery tomorrow)', () => {
 
   it('tomorrowIso is the day after the given date', () => {
     expect(tomorrowIso(NOW)).toBe(TOMORROW)
+  })
+})
+
+describe('review vs kitchen grouping', () => {
+  // A brand-new bank-transfer order: slip uploaded, admin hasn't verified it —
+  // the kitchen can't see it yet, so it's "for review".
+  const newBankOrder = order({
+    id: 'new',
+    status: 'pending',
+    payment_method: 'bank_transfer',
+    payment_status: 'awaiting_verification',
+  })
+  // Same order after the admin confirms the payment — released to the kitchen.
+  const confirmedOrder = order({
+    id: 'confirmed',
+    status: 'pending',
+    payment_method: 'bank_transfer',
+    payment_status: 'paid',
+  })
+  // A legacy web order with no payment step flows straight to the kitchen.
+  const legacyOrder = order({ id: 'legacy', status: 'confirmed', payment_method: null })
+  const closedOrder = order({ id: 'done', status: 'completed' })
+
+  it('a new unverified order needs review (kitchen cannot see it yet)', () => {
+    expect(orderGroup(newBankOrder)).toBe('review')
+    expect(needsReview(newBankOrder)).toBe(true)
+    expect(sharedToKitchen(newBankOrder)).toBe(false)
+  })
+
+  it('a confirmed (paid) order is shared to the kitchen', () => {
+    expect(orderGroup(confirmedOrder)).toBe('kitchen')
+    expect(sharedToKitchen(confirmedOrder)).toBe(true)
+    expect(needsReview(confirmedOrder)).toBe(false)
+  })
+
+  it('a legacy no-payment web order is with the kitchen', () => {
+    expect(orderGroup(legacyOrder)).toBe('kitchen')
+  })
+
+  it('completed/cancelled orders are closed — neither review nor kitchen', () => {
+    expect(orderGroup(closedOrder)).toBe('closed')
+    expect(needsReview(closedOrder)).toBe(false)
+    expect(sharedToKitchen(closedOrder)).toBe(false)
+  })
+
+  it('ordersForTab buckets into needs_review / with_kitchen', () => {
+    const orders = [newBankOrder, confirmedOrder, legacyOrder, closedOrder]
+    expect(ordersForTab(orders, 'needs_review').map((o) => o.id)).toEqual(['new'])
+    expect(ordersForTab(orders, 'with_kitchen').map((o) => o.id)).toEqual(['confirmed', 'legacy'])
+    expect(needsReviewCount(orders)).toBe(1)
   })
 })
 

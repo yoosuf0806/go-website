@@ -3,15 +3,47 @@
 // detection, and repeat-customer logic can be unit-tested and reused.
 import type { AdminOrder } from './adminOrders'
 import type { OrderStatus } from './orderStatus'
+import { kitchenVisible } from './kitchenOrders'
 import { normalizePhone } from './format'
 
-export type OrderTab = 'baking_today' | 'upcoming' | 'all'
+export type OrderTab = 'needs_review' | 'with_kitchen' | 'baking_today' | 'upcoming' | 'all'
 
 // Orders in these states are "closed" — they only appear under the All tab.
 const CLOSED_STATUSES: OrderStatus[] = ['completed', 'cancelled']
 
 export function isClosed(order: AdminOrder): boolean {
   return CLOSED_STATUSES.includes(order.status)
+}
+
+/**
+ * Where an open order sits in the admin's workflow:
+ *   • 'review'  — a new order the admin hasn't released yet (bank slip still to
+ *     verify / not processed); the kitchen can't see it.
+ *   • 'kitchen' — the admin has confirmed it and it's now with the kitchen.
+ *   • 'closed'  — completed or cancelled.
+ * "Released to the kitchen" reuses kitchenVisible() (the same predicate the
+ * kitchen board uses), so the admin view can never disagree with the kitchen.
+ */
+export type OrderGroup = 'review' | 'kitchen' | 'closed'
+
+export function orderGroup(order: AdminOrder): OrderGroup {
+  if (isClosed(order)) return 'closed'
+  return kitchenVisible(order) ? 'kitchen' : 'review'
+}
+
+/** A brand-new order awaiting the admin's review (not yet shared to the kitchen). */
+export function needsReview(order: AdminOrder): boolean {
+  return orderGroup(order) === 'review'
+}
+
+/** An order the admin has confirmed and shared to the kitchen. */
+export function sharedToKitchen(order: AdminOrder): boolean {
+  return orderGroup(order) === 'kitchen'
+}
+
+/** Count of new orders waiting for the admin's review — drives the bell badge. */
+export function needsReviewCount(orders: AdminOrder[]): number {
+  return orders.filter(needsReview).length
 }
 
 /** YYYY-MM-DD for a Date, in local time (matches the date input / delivery_date column). */
@@ -46,6 +78,8 @@ export function isUpcoming(order: AdminOrder, today: Date = new Date()): boolean
 /** Which orders belong under a given tab. */
 export function ordersForTab(orders: AdminOrder[], tab: OrderTab, today: Date = new Date()): AdminOrder[] {
   if (tab === 'all') return orders
+  if (tab === 'needs_review') return orders.filter(needsReview)
+  if (tab === 'with_kitchen') return orders.filter(sharedToKitchen)
   if (tab === 'baking_today') return orders.filter((o) => isBakingToday(o, today))
   return orders.filter((o) => isUpcoming(o, today))
 }

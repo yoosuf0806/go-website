@@ -3,6 +3,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useSession } from '../../hooks/useSession'
 import { usePublish } from '../../hooks/usePublish'
+import { useAllAdminOrders } from '../../hooks/useAdminOrders'
+import { needsReviewCount } from '../../lib/orderView'
 import Toast from '../ui/Toast'
 
 const navItems = [
@@ -23,6 +25,11 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const publish = usePublish()
   const [toast, setToast] = useState<string | null>(null)
+  // Live count of new orders awaiting review — shown as a bell badge on the
+  // Orders nav item so it's visible from anywhere in the admin. Shares the
+  // React Query cache with the Orders page (same key), so no extra fetch.
+  const { data: orders } = useAllAdminOrders()
+  const reviewCount = needsReviewCount(orders ?? [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -40,22 +47,36 @@ export default function AdminLayout() {
       <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white">
         <div className="px-4 py-4 text-lg font-semibold">Golden Oven Admin</div>
         <nav className="flex flex-1 flex-col px-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `rounded px-3 py-2 text-sm ${
-                  isActive
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-neutral-700 hover:bg-neutral-100'
-                }`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const badge = item.to === '/admin/orders' && reviewCount > 0 ? reviewCount : null
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `flex items-center justify-between rounded px-3 py-2 text-sm ${
+                    isActive
+                      ? 'bg-neutral-900 text-white'
+                      : 'text-neutral-700 hover:bg-neutral-100'
+                  }`
+                }
+              >
+                <span className="flex items-center gap-2">
+                  {item.label}
+                  {badge != null && <span aria-hidden>🔔</span>}
+                </span>
+                {badge != null && (
+                  <span
+                    className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-xs font-bold text-white"
+                    title={`${badge} new order${badge === 1 ? '' : 's'} to review`}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </NavLink>
+            )
+          })}
         </nav>
         <div className="border-t border-neutral-200 p-3">
           <button
