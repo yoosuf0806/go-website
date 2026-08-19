@@ -84,78 +84,89 @@ function mapProductPackageAvailability(
   return map
 }
 
+/** Shape of the single JSON bundle returned by the get_catalog() RPC. */
+interface CatalogBundle {
+  products?: Record<string, unknown>[]
+  packages?: Record<string, unknown>[]
+  addons?: Record<string, unknown>[]
+  categories?: Record<string, unknown>[]
+  delivery_tiers?: Record<string, unknown>[]
+  reviews?: Record<string, unknown>[]
+  site_settings?: { key: string; value: unknown }[]
+  product_package_stock?: Record<string, unknown>[]
+  product_package_availability?: Record<string, unknown>[]
+}
+
 /**
- * Fetch the full catalogue from Supabase. Returns the same shape as the baked
- * snapshot. On any error, the caller keeps the snapshot seed (fail-safe: the
- * site still shows the last-built catalogue rather than going blank).
+ * Fetch the full catalogue from Supabase in ONE request via the get_catalog()
+ * RPC (migration 037), instead of ~10 separate table reads — this is the big
+ * lever on API-request count and egress for the storefront. Returns the same
+ * shape as the baked snapshot. On any error (e.g. the RPC isn't deployed yet),
+ * the caller keeps the snapshot seed — the site still shows the last-built
+ * catalogue rather than going blank, and makes no further DB reads.
  */
 export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
-  const [
-    products,
-    packages,
-    addons,
-    categories,
-    tiers,
-    reviews,
-    settingsRows,
-    stockRows,
-    availabilityRows,
-  ] = await Promise.all([
-    supabase.from('products').select('*'),
-    supabase.from('packages').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('addons').select('*'),
-    supabase.from('categories').select('*').order('sort_order'),
-    supabase.from('delivery_tiers').select('*').order('sort_order'),
-    supabase.from('reviews').select('*').eq('is_featured', true),
-    supabase.from('site_settings').select('*'),
-    supabase.from('product_package_stock').select('*'),
-    supabase.from('product_package_availability').select('*'),
-  ])
+  const { data, error } = await supabase.rpc('get_catalog')
 
-  // If the core product read failed, keep the seed rather than blanking the site.
-  if (products.error) {
-    console.warn('[catalog] live fetch failed, using snapshot seed:', products.error.message)
+  if (error || !data) {
+    console.warn('[catalog] live fetch failed, using snapshot seed:', error?.message ?? 'no data')
     return seed
   }
 
-  const mappedPackages: CatalogPackage[] = (packages.data ?? []).map((p) => ({
-    id: p.id,
-    label: p.label,
-    pieceCount: p.piece_count,
-    isSlab: p.is_slab,
-    letterMaxChars: p.letter_max_chars ?? 0,
-    sortOrder: p.sort_order,
+  const bundle = data as CatalogBundle
+  const productsData = bundle.products ?? []
+  const packagesData = bundle.packages ?? []
+  const addonsData = bundle.addons ?? []
+  const categoriesData = bundle.categories ?? []
+  const tiersData = bundle.delivery_tiers ?? []
+  const reviewsData = bundle.reviews ?? []
+  const settingsData = bundle.site_settings ?? []
+  const stockData = bundle.product_package_stock ?? []
+  const availabilityData = bundle.product_package_availability ?? []
+
+  const mappedPackages: CatalogPackage[] = packagesData.map((p) => ({
+    id: p.id as string,
+    label: p.label as string,
+    pieceCount: p.piece_count as number,
+    isSlab: p.is_slab as boolean,
+    letterMaxChars: (p.letter_max_chars as number | null) ?? 0,
+    sortOrder: p.sort_order as number,
   }))
 
-  const mappedAddons: CatalogAddon[] = (addons.data ?? []).map((a) => ({
-    id: a.id,
-    label: a.label,
+  const mappedAddons: CatalogAddon[] = addonsData.map((a) => ({
+    id: a.id as string,
+    label: a.label as string,
     price: Number(a.price),
-    config: a.config ?? {},
+    config: (a.config as CatalogAddon['config']) ?? {},
   }))
 
-  const mappedCategories: CatalogCategory[] = (categories.data ?? [])
+  const mappedCategories: CatalogCategory[] = categoriesData
     .filter((c) => c.is_visible !== false)
-    .map((c) => ({ id: c.id, name: c.name, slug: c.slug, sortOrder: c.sort_order }))
+    .map((c) => ({
+      id: c.id as string,
+      name: c.name as string,
+      slug: c.slug as string,
+      sortOrder: c.sort_order as number,
+    }))
 
-  const mappedTiers: CatalogDeliveryTier[] = (tiers.data ?? []).map((t) => ({
-    minPieces: t.min_pieces,
-    maxPieces: t.max_pieces,
+  const mappedTiers: CatalogDeliveryTier[] = tiersData.map((t) => ({
+    minPieces: t.min_pieces as number,
+    maxPieces: (t.max_pieces as number | null) ?? null,
     fee: Number(t.fee),
-    warnAdmin: t.warn_admin,
-    sortOrder: t.sort_order,
+    warnAdmin: t.warn_admin as boolean,
+    sortOrder: t.sort_order as number,
   }))
 
-  const mappedReviews: CatalogReview[] = (reviews.data ?? []).map((r) => ({
-    id: r.id,
-    author: r.author,
-    rating: r.rating,
-    body: r.body,
-    source: r.source ?? '',
+  const mappedReviews: CatalogReview[] = reviewsData.map((r) => ({
+    id: r.id as string,
+    author: r.author as string,
+    rating: r.rating as number,
+    body: r.body as string,
+    source: (r.source as string | null) ?? '',
   }))
 
   // site_settings is a key/value table; fall back to seed values per-key.
-  const settingsMap = new Map((settingsRows.data ?? []).map((s) => [s.key, s.value]))
+  const settingsMap = new Map(settingsData.map((s) => [s.key, s.value]))
   const settings = {
     banner: (settingsMap.get('banner') as Catalog['settings']['banner']) ?? seed.settings.banner,
     features:
@@ -172,23 +183,16 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
   }
   const content = mergeContent(settingsMap.get('content') ?? seed.content)
 
-  // Fall back to the seed's stock map only if the table read itself failed
-  // (an empty result set is the normal "everything in stock" case).
-  const productPackageStock = stockRows.error
-    ? seed.productPackageStock
-    : mapProductPackageStock(stockRows.data ?? [])
-
-  // Fall back to the seed only if the table read itself failed (e.g. migration
-  // 033 not yet applied). An empty result set is the normal "all available" case.
-  const productPackageAvailability = availabilityRows.error
-    ? (seed.productPackageAvailability ?? {})
-    : mapProductPackageAvailability(availabilityRows.data ?? [])
+  // No row = in stock / available (the normal case); the maps only record
+  // explicit overrides, so an empty array is expected, not an error.
+  const productPackageStock = mapProductPackageStock(stockData)
+  const productPackageAvailability = mapProductPackageAvailability(availabilityData)
 
   return {
     generatedAt: new Date().toISOString(),
     source: 'supabase',
     categories: mappedCategories.length > 0 ? mappedCategories : seed.categories,
-    products: mapProducts(products.data ?? []),
+    products: mapProducts(productsData),
     packages: mappedPackages.length > 0 ? mappedPackages : seed.packages,
     addons: mappedAddons.length > 0 ? mappedAddons : seed.addons,
     deliveryTiers: mappedTiers.length > 0 ? mappedTiers : seed.deliveryTiers,
