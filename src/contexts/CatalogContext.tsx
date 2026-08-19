@@ -28,6 +28,38 @@ interface CatalogContextValue {
 
 const CatalogContext = createContext<CatalogContextValue | null>(null)
 
+// Browser-side cache of the live catalogue, so repeat page loads (reloads, a
+// second tab, a returning visitor) don't re-hit Supabase every time. This is
+// the main lever on API/egress usage: within CACHE_TTL_MS the storefront serves
+// the cached catalogue and makes ZERO database reads. Prices are still
+// re-validated server-side at checkout (create_order → PRICE_MISMATCH), so a
+// slightly stale cached price can never place a wrong-priced order — it just
+// asks the customer to refresh.
+const CACHE_KEY = 'go-catalog-cache-v2'
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+function readCatalogCache(): Catalog | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { at: number; catalog: Catalog }
+    if (Date.now() - parsed.at > CACHE_TTL_MS) return null
+    return parsed.catalog
+  } catch {
+    return null
+  }
+}
+
+function writeCatalogCache(catalog: Catalog): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), catalog }))
+  } catch {
+    /* quota / private mode — caching is best-effort */
+  }
+}
+
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog>(seed)
   // Only "loading" if we'll actually fetch (browser). SSR keeps the seed.
@@ -35,9 +67,19 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true
+
+    // Fresh cache → use it and skip the network entirely (the egress win).
+    const cached = readCatalogCache()
+    if (cached) {
+      setCatalog({ ...cached, content: mergeContent(cached.content) })
+      setLoading(false)
+      return
+    }
+
     fetchLiveCatalog(seed)
       .then((live) => {
         if (active) setCatalog(live)
+        writeCatalogCache(live)
       })
       .catch(() => {
         /* keep seed */

@@ -9,6 +9,7 @@ import {
   itemTopperLines,
   isRepeatCustomer,
   priorOrderCount,
+  orderGroup,
   type OrderTab,
 } from '../../lib/orderView'
 import { findTier } from '../../lib/pricing'
@@ -38,10 +39,27 @@ function confirmationLink(order: AdminOrder): string {
 }
 
 const TABS: { id: OrderTab; label: string }[] = [
+  { id: 'needs_review', label: '🔔 Needs review' },
+  { id: 'with_kitchen', label: '✓ With kitchen' },
   { id: 'baking_today', label: 'Baking today' },
   { id: 'upcoming', label: 'Upcoming' },
   { id: 'all', label: 'All orders' },
 ]
+
+// The at-a-glance badge for an order's workflow group. Amber = new/needs the
+// admin's review; green = confirmed and shared to the kitchen.
+const GROUP_BADGE: Record<'review' | 'kitchen', { label: string; row: string; pill: string }> = {
+  review: {
+    label: '🔔 New — needs review',
+    row: 'border-l-4 border-l-amber-400',
+    pill: 'bg-amber-100 text-amber-800',
+  },
+  kitchen: {
+    label: '✓ Sent to kitchen',
+    row: 'border-l-4 border-l-green-500',
+    pill: 'bg-green-100 text-green-700',
+  },
+}
 
 // Admin Orders (spec §7), 3-tab layout:
 //  • Baking today — deliveries due TOMORROW (bake the day before), open only
@@ -50,7 +68,8 @@ const TABS: { id: OrderTab; label: string }[] = [
 // Rows flag letter-topper orders (green) and repeat customers, and expand to
 // show items, topper wording, notes, and full delivery + contact details.
 export default function Orders() {
-  const [tab, setTab] = useState<OrderTab>('baking_today')
+  // Land on the "Needs review" inbox so new orders are the first thing seen.
+  const [tab, setTab] = useState<OrderTab>('needs_review')
   const [expanded, setExpanded] = useState<string | null>(null)
   const { data: orders, isLoading, isError, error } = useAllAdminOrders()
   const updateStatus = useUpdateOrderStatus()
@@ -59,17 +78,45 @@ export default function Orders() {
   const all = orders ?? []
   const counts = useMemo(
     () => ({
+      needs_review: ordersForTab(all, 'needs_review').length,
+      with_kitchen: ordersForTab(all, 'with_kitchen').length,
       baking_today: ordersForTab(all, 'baking_today').length,
       upcoming: ordersForTab(all, 'upcoming').length,
       all: all.length,
     }),
     [all],
   )
+  const reviewCount = counts.needs_review
   const visible = useMemo(() => ordersForTab(all, tab), [all, tab])
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Orders</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Orders</h1>
+        {/* Bell: at-a-glance count of new orders waiting for review. Click to jump
+            to the review inbox. Greyed out (no dot) when nothing is waiting. */}
+        <button
+          type="button"
+          onClick={() => setTab('needs_review')}
+          aria-label={`${reviewCount} new order${reviewCount === 1 ? '' : 's'} to review`}
+          className={`relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+            reviewCount > 0
+              ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+              : 'border-neutral-200 text-neutral-400 hover:bg-neutral-50'
+          }`}
+        >
+          <span className="relative text-base leading-none" aria-hidden>
+            🔔
+            {reviewCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+              </span>
+            )}
+          </span>
+          {reviewCount > 0 ? `${reviewCount} to review` : 'All reviewed'}
+        </button>
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-1 border-b border-neutral-200">
         {TABS.map((t) => (
@@ -86,7 +133,13 @@ export default function Orders() {
             {t.label}
             <span
               className={`rounded-full px-2 py-0.5 text-xs ${
-                tab === t.id ? 'bg-pink-light text-pink' : 'bg-neutral-100 text-neutral-500'
+                // The "needs review" count stays red whenever there are new
+                // orders, even on other tabs, so it always draws the eye.
+                t.id === 'needs_review' && counts.needs_review > 0
+                  ? 'bg-red-500 text-white'
+                  : tab === t.id
+                    ? 'bg-pink-light text-pink'
+                    : 'bg-neutral-100 text-neutral-500'
               }`}
             >
               {counts[t.id]}
@@ -95,6 +148,17 @@ export default function Orders() {
         ))}
       </div>
 
+      {tab === 'needs_review' && (
+        <p className="mt-3 text-xs text-neutral-500">
+          New orders you haven’t confirmed yet. Review the slip/details, then confirm to hand them to
+          the kitchen.
+        </p>
+      )}
+      {tab === 'with_kitchen' && (
+        <p className="mt-3 text-xs text-neutral-500">
+          Orders you’ve confirmed — these are now visible to the kitchen.
+        </p>
+      )}
       {tab === 'baking_today' && (
         <p className="mt-3 text-xs text-neutral-500">
           Deliveries due tomorrow — bake these today.
@@ -110,11 +174,15 @@ export default function Orders() {
 
       {orders && visible.length === 0 && (
         <p className="mt-6 text-sm text-neutral-500">
-          {tab === 'baking_today'
-            ? 'Nothing to bake today — no deliveries due tomorrow.'
-            : tab === 'upcoming'
-              ? 'No upcoming orders.'
-              : 'No orders yet.'}
+          {tab === 'needs_review'
+            ? '🎉 All caught up — no new orders waiting for review.'
+            : tab === 'with_kitchen'
+              ? 'No open orders are with the kitchen right now.'
+              : tab === 'baking_today'
+                ? 'Nothing to bake today — no deliveries due tomorrow.'
+                : tab === 'upcoming'
+                  ? 'No upcoming orders.'
+                  : 'No orders yet.'}
         </p>
       )}
 
@@ -187,10 +255,14 @@ function OrderRow({
   const hasTopper = orderHasTopper(order)
   const repeat = isRepeatCustomer(order, allOrders)
   const priorCount = repeat ? priorOrderCount(order, allOrders) : 0
+  // Workflow group drives the row's left-edge tint + the leading badge, so the
+  // admin can tell new/for-review orders from ones already with the kitchen.
+  const group = orderGroup(order)
+  const groupBadge = group === 'closed' ? null : GROUP_BADGE[group]
 
   return (
     <>
-      <tr className="border-t border-neutral-100 align-top">
+      <tr className={`border-t border-neutral-100 align-top ${groupBadge?.row ?? ''}`}>
         <td className="px-3 py-3">
           <button type="button" onClick={onToggle} className="font-medium hover:underline">
             {order.order_no}
@@ -200,6 +272,11 @@ function OrderRow({
           <div>{order.customer_name}</div>
           <div className="text-xs text-neutral-500">{order.phone}</div>
           <div className="mt-1 flex flex-wrap gap-1.5">
+            {groupBadge && (
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${groupBadge.pill}`}>
+                {groupBadge.label}
+              </span>
+            )}
             {order.is_gift && (
               <span
                 className="inline-block rounded-full bg-pink-light px-2 py-0.5 text-xs font-medium text-pink"
