@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { imageSrcSet } from '../../lib/images'
+import { imageSrcSet, cdnUrl } from '../../lib/images'
 
 interface BrownieImageProps {
   src: string | null
@@ -48,7 +48,7 @@ export default function BrownieImage({
     const srcSet = transformFailed ? undefined : imageSrcSet(src, widths)
     return (
       <img
-        src={src}
+        src={cdnUrl(src)}
         srcSet={srcSet}
         sizes={srcSet ? (sizes ?? '100vw') : undefined}
         alt={alt}

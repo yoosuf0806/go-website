@@ -246,8 +246,12 @@ export async function uploadProductMedia(file: File): Promise<ProductMedia> {
 // re-encode as compressed WebP (~30% smaller than the equivalent JPEG at the
 // same visual quality). SVGs and GIFs are passed through untouched (vector /
 // animation would be destroyed by canvas rasterisation).
-const MAX_EDGE = 1600
-const WEBP_QUALITY = 0.8
+// Longest edge for stored images. 1280px still covers the largest on-screen use
+// (the product-detail gallery is ~600px CSS, so ~1200px on a 2× retina screen)
+// while cutting file size — and therefore egress — noticeably versus 1600px.
+// Only affects NEW uploads; existing images keep their size until re-uploaded.
+const MAX_EDGE = 1280
+const WEBP_QUALITY = 0.78
 // Storage cache-control (seconds). Object paths are random UUIDs and never
 // reused, so a re-uploaded image is always a new URL — the old bytes can be
 // cached for a year. This is what makes repeat visits load instantly.

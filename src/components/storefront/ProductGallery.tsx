@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { CatalogMedia } from '../../types/catalog'
 import BrownieImage from './BrownieImage'
-import { imageSrcSet } from '../../lib/images'
+import { imageSrcSet, cdnUrl } from '../../lib/images'
 
 const GALLERY_WIDTHS = [400, 600, 800, 1200]
 
@@ -53,7 +53,7 @@ export default function ProductGallery({
           <div key={`${item.url}-${i}`} className="h-full min-w-full">
             {item.type === 'video' ? (
               <video
-                src={item.url}
+                src={cdnUrl(item.url)}
                 className="h-full w-full object-cover"
                 controls
                 muted
@@ -62,7 +62,7 @@ export default function ProductGallery({
               />
             ) : (
               <img
-                src={item.url}
+                src={cdnUrl(item.url)}
                 srcSet={imageSrcSet(item.url, GALLERY_WIDTHS)}
                 sizes="(min-width: 768px) 50vw, 100vw"
                 alt={`${alt}${items.length > 1 ? ` — photo ${i + 1}` : ''}`}

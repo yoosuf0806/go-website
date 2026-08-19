@@ -1,4 +1,5 @@
 import { useCatalog } from '../../contexts/CatalogContext'
+import { cdnUrl } from '../../lib/images'
 
 // Shared photo gallery ("View our Gallery") shown on Home, Wedding, and
 // Corporate. Admin-uploaded images (content.gallery), toggleable via
@@ -17,7 +18,7 @@ export default function GallerySection() {
         <div className="mt-6 gap-3 [column-fill:_balance] columns-2 md:columns-3 md:gap-4 lg:columns-4">
           {gallery.map((url, i) => (
             <div key={i} className="mb-3 break-inside-avoid overflow-hidden rounded-2xl bg-blush-50 md:mb-4">
-              <img src={url} alt={`Golden Oven gallery ${i + 1}`} loading="lazy" className="w-full" />
+              <img src={cdnUrl(url)} alt={`Golden Oven gallery ${i + 1}`} loading="lazy" className="w-full" />
             </div>
           ))}
         </div>
