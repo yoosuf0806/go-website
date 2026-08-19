@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { imageSrcSet } from '../../lib/images'
+import { imageSrcSet, cdnUrl } from '../../lib/images'
 
 // Shared full-bleed landing banner — the same visual template as the Home hero
 // (HeroCarousel): a full-width photo with a dark bottom-up scrim and the copy
@@ -74,7 +74,7 @@ export default function HeroBanner({
       {imageUrl ? (
         <>
           <img
-            src={imageUrl}
+            src={cdnUrl(imageUrl)}
             srcSet={imageSrcSet(imageUrl, HERO_WIDTHS)}
             sizes="100vw"
             alt={alt}

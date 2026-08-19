@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PromoSlide } from '../../types/content'
-import { imageSrcSet } from '../../lib/images'
+import { imageSrcSet, cdnUrl } from '../../lib/images'
 
 const SLIDE_WIDTHS = [640, 960, 1280, 1600]
 
@@ -104,7 +104,7 @@ export default function Slideshow({ promoSlides = [] }: { promoSlides?: PromoSli
             {slide.imageUrl ? (
               <>
                 <img
-                  src={slide.imageUrl}
+                  src={cdnUrl(slide.imageUrl)}
                   srcSet={imageSrcSet(slide.imageUrl, SLIDE_WIDTHS)}
                   sizes="100vw"
                   alt=""
