@@ -62,6 +62,34 @@ export interface SeoMeta {
   description: string
 }
 
+// Structured-data business profile. Powers the Organization + LocalBusiness
+// JSON-LD emitted site-wide so Google can build a rich Knowledge-Panel /
+// business listing. Every field is admin-editable (Admin → Content & SEO →
+// "SEO · Business & structured data"); empty fields are simply omitted from the
+// emitted schema so we never publish blank/placeholder structured data.
+export interface SeoBusiness {
+  /** schema.org LocalBusiness subtype, e.g. "Bakery", "FoodEstablishment", "Store". */
+  type: string
+  /** Registered/legal name (Organization.legalName). Blank falls back to siteName. */
+  legalName: string
+  telephone: string
+  email: string
+  /** e.g. "$$" or "Rs. 500 – Rs. 5000". Shown as LocalBusiness.priceRange. */
+  priceRange: string
+  streetAddress: string
+  addressLocality: string
+  addressRegion: string
+  postalCode: string
+  /** ISO country code, e.g. "LK". */
+  addressCountry: string
+  latitude: string
+  longitude: string
+  /** Opening hours in schema.org shorthand, one per line, e.g. "Mo-Sa 09:00-18:00". */
+  openingHours: string[]
+  /** Areas served, e.g. ["Colombo", "Sri Lanka"] — LocalBusiness.areaServed. */
+  areaServed: string[]
+}
+
 export interface FaqItem {
   q: string
   a: string
@@ -160,6 +188,16 @@ export interface SiteContent {
   productInfo: { freshness: string; allergens: string }
   seo: {
     siteName: string
+    /** Default social-share (Open Graph / Twitter) image + Organization/
+     *  LocalBusiness logo. Absolute URL or an uploaded image URL. Blank falls
+     *  back to /og-default.png (share) and the site logo is omitted. */
+    defaultImageUrl?: string
+    logoUrl?: string
+    /** Business profile powering Organization + LocalBusiness structured data. */
+    business: SeoBusiness
+    /** Social / external profile URLs (schema.org sameAs), e.g. Instagram,
+     *  Facebook, Google Business. Blank entries are ignored. */
+    sameAs: string[]
     home: SeoMeta
     shop: SeoMeta
     corporate: SeoMeta
@@ -297,6 +335,25 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   seo: {
     siteName: 'Golden Oven Brownies',
+    defaultImageUrl: '',
+    logoUrl: '',
+    business: {
+      type: 'Bakery',
+      legalName: 'Golden Oven Brownies',
+      telephone: '',
+      email: '',
+      priceRange: 'Rs.',
+      streetAddress: '',
+      addressLocality: 'Colombo',
+      addressRegion: 'Western Province',
+      postalCode: '',
+      addressCountry: 'LK',
+      latitude: '',
+      longitude: '',
+      openingHours: [],
+      areaServed: ['Sri Lanka'],
+    },
+    sameAs: [],
     home: {
       title: 'Golden Oven Brownies — Handmade, delivered across Sri Lanka',
       description: 'Freshly baked, made-to-order brownies with islandwide delivery. Gift boxes, corporate hampers, wedding favours, and customisable brownie slabs.',
@@ -513,6 +570,9 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     seo: {
       ...DEFAULT_CONTENT.seo,
       ...partial.seo,
+      business: { ...DEFAULT_CONTENT.seo.business, ...partial.seo?.business },
+      // sameAs: keep whatever the admin saved (an empty list is valid), else defaults.
+      sameAs: partial.seo?.sameAs ?? DEFAULT_CONTENT.seo.sameAs,
       home: { ...DEFAULT_CONTENT.seo.home, ...partial.seo?.home },
       shop: { ...DEFAULT_CONTENT.seo.shop, ...partial.seo?.shop },
       corporate: { ...DEFAULT_CONTENT.seo.corporate, ...partial.seo?.corporate },

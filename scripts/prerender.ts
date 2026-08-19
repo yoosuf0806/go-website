@@ -76,7 +76,7 @@ ${urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n')}
   // robots.txt
   writeFileSync(
     resolve(DIST, 'robots.txt'),
-    `User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${SITE_URL}/sitemap.xml\n`,
+    `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: ${SITE_URL}/sitemap.xml\n`,
     'utf8',
   )
 

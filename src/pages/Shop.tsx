@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useCatalog } from '../contexts/CatalogContext'
 import ProductTile from '../components/storefront/ProductTile'
-import Seo from '../components/Seo'
+import Seo, { breadcrumbJsonLd } from '../components/Seo'
 
 type SortKey = 'featured' | 'low' | 'high'
 // null = All; 'slab' = slab-available filter; otherwise a category id.
@@ -62,7 +62,17 @@ export default function Shop() {
 
   return (
     <div className="pb-6">
-      <Seo title={content.seo.shop.title} description={content.seo.shop.description} path="/shop" />
+      <Seo
+        title={content.seo.shop.title}
+        description={content.seo.shop.description}
+        path="/shop"
+        jsonLd={[
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'All Brownies', path: '/shop' },
+          ]),
+        ]}
+      />
 
       {/* Category chips — sticky just under the global header. */}
       <div className="sticky top-[68px] z-20 border-b border-blush-200 bg-white/95 backdrop-blur-md">

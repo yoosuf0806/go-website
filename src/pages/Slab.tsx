@@ -3,7 +3,7 @@ import ProductTile from '../components/storefront/ProductTile'
 import BrownieImage from '../components/storefront/BrownieImage'
 import HeroBanner from '../components/storefront/HeroBanner'
 import Accordion from '../components/storefront/Accordion'
-import Seo from '../components/Seo'
+import Seo, { breadcrumbJsonLd, faqPageJsonLd } from '../components/Seo'
 
 // Brownie Slab landing page (/slab). Banner + how-it-works + a flavour picker
 // driven LIVE by slab-enabled products (12pc or 15pc slab), an admin-managed
@@ -20,7 +20,18 @@ export default function Slab() {
 
   return (
     <div className="bg-blush-50">
-      <Seo title={slab.banner.title} description={content.seo.slab.description} path="/slab" />
+      <Seo
+        title={slab.banner.title}
+        description={content.seo.slab.description}
+        path="/slab"
+        jsonLd={[
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Brownie Slab', path: '/slab' },
+          ]),
+          faqPageJsonLd(slab.faq),
+        ].filter((o): o is Record<string, unknown> => o !== null)}
+      />
 
       {/* ── BANNER — same full-bleed hero template as the Home landing banner:
           the uploaded image full-width with the copy overlaid bottom-left. */}

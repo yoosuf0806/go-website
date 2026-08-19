@@ -6,6 +6,7 @@ import type {
   IconCard,
   OccasionCard,
   QuoteLandingContent,
+  SeoBusiness,
   SeoMeta,
   SiteContent,
   SlabLandingContent,
@@ -235,11 +236,46 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
 
       <Section title="SEO">
         <Text label="Site name" value={form.seo.siteName} onChange={(v) => set('seo', { ...form.seo, siteName: v })} />
+        <ImageField
+          label="Default social-share image (Open Graph / Twitter, used when a page has none)"
+          aspect={1200 / 630}
+          aspectLabel="Social share image (1200×630)"
+          value={form.seo.defaultImageUrl || undefined}
+          onChange={(url) => set('seo', { ...form.seo, defaultImageUrl: url ?? '' })}
+        />
+        <ImageField
+          label="Logo (used in Google structured data)"
+          aspect={1}
+          aspectLabel="Square logo"
+          value={form.seo.logoUrl || undefined}
+          onChange={(url) => set('seo', { ...form.seo, logoUrl: url ?? '' })}
+        />
         <SeoEditor label="Home" meta={form.seo.home} onChange={(m) => set('seo', { ...form.seo, home: m })} />
         <SeoEditor label="Shop" meta={form.seo.shop} onChange={(m) => set('seo', { ...form.seo, shop: m })} />
         <SeoEditor label="Corporate Orders" meta={form.seo.corporate} onChange={(m) => set('seo', { ...form.seo, corporate: m })} />
         <SeoEditor label="Wedding Orders" meta={form.seo.wedding} onChange={(m) => set('seo', { ...form.seo, wedding: m })} />
         <SeoEditor label="Brownie Slab" meta={form.seo.slab} onChange={(m) => set('seo', { ...form.seo, slab: m })} />
+      </Section>
+
+      <Section title="SEO · Business & structured data">
+        <p className="text-xs text-neutral-500">
+          Powers the Organization + LocalBusiness structured data (JSON-LD) Google reads to build your business
+          listing and Knowledge Panel. Leave a field blank to omit it — blanks are never published. Add your social
+          profile links so Google can connect them to your business.
+        </p>
+        <SeoBusinessEditor
+          business={form.seo.business}
+          onChange={(b) => set('seo', { ...form.seo, business: b })}
+        />
+        <div className="rounded border border-neutral-100 p-3">
+          <StringListEditor
+            label="Social / profile links (Instagram, Facebook, Google Business…)"
+            placeholder="https://instagram.com/yourbrand"
+            items={form.seo.sameAs}
+            onChange={(v) => set('seo', { ...form.seo, sameAs: v })}
+            addLabel="+ Add profile link"
+          />
+        </div>
       </Section>
 
       <div className="sticky bottom-0 -mx-2 flex items-center gap-3 bg-neutral-50/90 px-2 py-3 backdrop-blur">
@@ -431,6 +467,101 @@ function SeoEditor({ label, meta, onChange }: { label: string; meta: SeoMeta; on
         <Text label="SEO title" value={meta.title} onChange={(v) => onChange({ ...meta, title: v })} />
         <Area label="Meta description" value={meta.description} onChange={(v) => onChange({ ...meta, description: v })} />
       </div>
+    </div>
+  )
+}
+
+// Edit the structured-data business profile (Organization + LocalBusiness
+// JSON-LD). Every field is optional; blanks are omitted from the emitted schema.
+function SeoBusinessEditor({ business, onChange }: { business: SeoBusiness; onChange: (b: SeoBusiness) => void }) {
+  const set = <K extends keyof SeoBusiness>(key: K, value: SeoBusiness[K]) => onChange({ ...business, [key]: value })
+  return (
+    <div className="flex flex-col gap-3 rounded border border-neutral-100 p-3">
+      <Row>
+        <Text label="Business type (schema.org)" value={business.type} onChange={(v) => set('type', v)} />
+        <Text label="Legal name" value={business.legalName} onChange={(v) => set('legalName', v)} />
+        <Text label="Price range (e.g. Rs. or $$)" value={business.priceRange} onChange={(v) => set('priceRange', v)} />
+      </Row>
+      <Row>
+        <Text label="Telephone" value={business.telephone} onChange={(v) => set('telephone', v)} />
+        <Text label="Email" value={business.email} onChange={(v) => set('email', v)} />
+        <Text label="Country code (e.g. LK)" value={business.addressCountry} onChange={(v) => set('addressCountry', v)} />
+      </Row>
+      <Text label="Street address" value={business.streetAddress} onChange={(v) => set('streetAddress', v)} />
+      <Row>
+        <Text label="City / locality" value={business.addressLocality} onChange={(v) => set('addressLocality', v)} />
+        <Text label="Region / province" value={business.addressRegion} onChange={(v) => set('addressRegion', v)} />
+        <Text label="Postal code" value={business.postalCode} onChange={(v) => set('postalCode', v)} />
+      </Row>
+      <Row>
+        <Text label="Latitude (optional)" value={business.latitude} onChange={(v) => set('latitude', v)} />
+        <Text label="Longitude (optional)" value={business.longitude} onChange={(v) => set('longitude', v)} />
+      </Row>
+      <StringListEditor
+        label="Opening hours (schema.org shorthand, e.g. Mo-Sa 09:00-18:00)"
+        placeholder="Mo-Sa 09:00-18:00"
+        items={business.openingHours}
+        onChange={(v) => set('openingHours', v)}
+        addLabel="+ Add hours line"
+      />
+      <StringListEditor
+        label="Areas served (e.g. Colombo, Sri Lanka)"
+        placeholder="Sri Lanka"
+        items={business.areaServed}
+        onChange={(v) => set('areaServed', v)}
+        addLabel="+ Add area"
+      />
+    </div>
+  )
+}
+
+// A simple editable list of free-text strings (opening hours, areas served,
+// social links). Empty rows are kept while editing; blanks are ignored by the
+// structured-data builders that consume them.
+function StringListEditor({
+  label,
+  items,
+  onChange,
+  placeholder,
+  addLabel = '+ Add',
+}: {
+  label: string
+  items: string[]
+  onChange: (v: string[]) => void
+  placeholder?: string
+  addLabel?: string
+}) {
+  const update = (i: number, value: string) => onChange(items.map((x, j) => (j === i ? value : x)))
+  const remove = (i: number) => onChange(items.filter((_, j) => j !== i))
+  const add = () => onChange([...items, ''])
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm text-neutral-600">{label}</span>
+      {items.map((item, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={item}
+            placeholder={placeholder}
+            onChange={(e) => update(i, e.target.value)}
+            className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => remove(i)}
+            className="shrink-0 rounded border border-neutral-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="self-start rounded-full border-2 border-navy px-4 py-1.5 text-sm font-bold text-navy hover:bg-navy hover:text-white"
+      >
+        {addLabel}
+      </button>
     </div>
   )
 }
