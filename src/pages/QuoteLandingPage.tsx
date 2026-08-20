@@ -12,7 +12,7 @@ import QuoteStatsBar from '../components/storefront/QuoteStatsBar'
 import QuoteOccasionsGrid from '../components/storefront/QuoteOccasionsGrid'
 import QuoteHandledSection from '../components/storefront/QuoteHandledSection'
 import Toast from '../components/ui/Toast'
-import Seo from '../components/Seo'
+import Seo, { breadcrumbJsonLd, faqPageJsonLd } from '../components/Seo'
 
 const FORM_ANCHOR_ID = 'quote-form'
 // Corporate orders are counted in brownie pieces, added a box (9 pieces) at a time.
@@ -117,7 +117,18 @@ export default function QuoteLandingPage({
 
   return (
     <div>
-      <Seo title={seo.title} description={seo.description} path={path} />
+      <Seo
+        title={seo.title}
+        description={seo.description}
+        path={path}
+        jsonLd={[
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: isCorporate ? 'Corporate Orders' : 'Wedding Orders', path },
+          ]),
+          faqPageJsonLd(content.faq),
+        ].filter((o): o is Record<string, unknown> => o !== null)}
+      />
 
       <QuoteHero hero={content.hero} ctaHref={`#${FORM_ANCHOR_ID}`} tall={!isCorporate} />
       <QuoteStatsBar stats={content.stats} />

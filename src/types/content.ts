@@ -62,6 +62,34 @@ export interface SeoMeta {
   description: string
 }
 
+// Structured-data business profile. Powers the Organization + LocalBusiness
+// JSON-LD emitted site-wide so Google can build a rich Knowledge-Panel /
+// business listing. Every field is admin-editable (Admin → Content & SEO →
+// "SEO · Business & structured data"); empty fields are simply omitted from the
+// emitted schema so we never publish blank/placeholder structured data.
+export interface SeoBusiness {
+  /** schema.org LocalBusiness subtype, e.g. "Bakery", "FoodEstablishment", "Store". */
+  type: string
+  /** Registered/legal name (Organization.legalName). Blank falls back to siteName. */
+  legalName: string
+  telephone: string
+  email: string
+  /** e.g. "$$" or "Rs. 500 – Rs. 5000". Shown as LocalBusiness.priceRange. */
+  priceRange: string
+  streetAddress: string
+  addressLocality: string
+  addressRegion: string
+  postalCode: string
+  /** ISO country code, e.g. "LK". */
+  addressCountry: string
+  latitude: string
+  longitude: string
+  /** Opening hours in schema.org shorthand, one per line, e.g. "Mo-Sa 09:00-18:00". */
+  openingHours: string[]
+  /** Areas served, e.g. ["Colombo", "Sri Lanka"] — LocalBusiness.areaServed. */
+  areaServed: string[]
+}
+
 export interface FaqItem {
   q: string
   a: string
@@ -73,6 +101,19 @@ export interface FaqItem {
 export interface PolicyContent {
   title: string
   body: string
+}
+
+// About Us page (/about). A hero (title + intro + optional image), a plain-text
+// story body (blank lines separate paragraphs), and an optional "what we stand
+// for" value grid. All admin-editable; empty fields hide their block.
+export interface AboutContent {
+  title: string
+  intro: string
+  imageUrl?: string
+  /** Main story copy; blank lines separate paragraphs. */
+  body: string
+  /** Optional value cards (icon = emoji). Empty hides the section. */
+  values: IconCard[]
 }
 
 // Full-bleed banner hero at the top of a bulk-order landing page (corporate
@@ -152,19 +193,32 @@ export interface SiteContent {
   homeCorporate: { eyebrow: string; title: string; body: string; cta: string }
   /** Homepage FAQ — admin add/edit/delete; hidden when empty. */
   homeFaq: FaqItem[]
-  /** Footer policy pages (return + payment terms). Rendered at /policies/:slug. */
-  policies: { returns: PolicyContent; payment: PolicyContent }
+  /** Footer policy pages (return, payment terms, privacy). Rendered at /policies/:slug. */
+  policies: { returns: PolicyContent; payment: PolicyContent; privacy: PolicyContent }
+  /** About Us page (/about). Admin-editable copy + optional hero image. */
+  about: AboutContent
   howItWorks: IconCard[]
   badges: IconCard[]
   testimonialsHeading: { title: string; sub: string }
   productInfo: { freshness: string; allergens: string }
   seo: {
     siteName: string
+    /** Default social-share (Open Graph / Twitter) image + Organization/
+     *  LocalBusiness logo. Absolute URL or an uploaded image URL. Blank falls
+     *  back to /og-default.png (share) and the site logo is omitted. */
+    defaultImageUrl?: string
+    logoUrl?: string
+    /** Business profile powering Organization + LocalBusiness structured data. */
+    business: SeoBusiness
+    /** Social / external profile URLs (schema.org sameAs), e.g. Instagram,
+     *  Facebook, Google Business. Blank entries are ignored. */
+    sameAs: string[]
     home: SeoMeta
     shop: SeoMeta
     corporate: SeoMeta
     wedding: SeoMeta
     slab: SeoMeta
+    about: SeoMeta
   }
   corporate: QuoteLandingContent
   wedding: QuoteLandingContent
@@ -275,6 +329,22 @@ export const DEFAULT_CONTENT: SiteContent = {
       title: 'Payment Terms',
       body: 'Golden Oven does not take card payments on this website. You place your order here, we confirm the details and total with you on WhatsApp, and payment is settled directly.\n\nAccepted methods: bank transfer and cash on delivery. For corporate and bulk orders, we issue a formal invoice and accept bank transfer against it.\n\nOrders are confirmed once payment (or, for cash on delivery, confirmation) is received. Prices are in Sri Lankan Rupees (LKR) and include applicable taxes unless stated otherwise.\n\nFor bulk and corporate orders, payment terms are set out on the quotation we provide.',
     },
+    privacy: {
+      title: 'Privacy Policy',
+      body: 'This Privacy Policy explains what information Golden Oven Brownies collects when you use this website or place an order, how we use it, and the choices you have. By using the site you agree to the practices described here.\n\nInformation we collect. When you place an order or request a quote, we collect the details you give us — your name, phone number, delivery address, order details, and any message you send. Because orders are confirmed over WhatsApp, we also hold the messages you exchange with us there. We do not take card payments on this site, so we never collect card or bank-login details through the website.\n\nHow we use your information. We use it only to prepare and deliver your order, to contact you about your order or quote, to arrange payment, and to keep records for our accounts. For bulk and corporate orders we use it to prepare a quotation and invoice.\n\nCookies and analytics. The site uses essential cookies and local storage to remember your shopping cart between visits. We may use privacy-respecting analytics to understand how the site is used and improve it; this does not identify you personally.\n\nSharing. We do not sell your personal information. We share it only with the delivery partner fulfilling your order and, where required, with our payment or accounting providers — and only as far as needed to complete your order or meet a legal obligation.\n\nData retention. We keep order and contact records for as long as needed to fulfil your order and to meet tax and accounting requirements, then delete or anonymise them.\n\nYour rights. You can ask us what personal information we hold about you, ask us to correct it, or ask us to delete it where we are not required to keep it. Contact us on WhatsApp or by email and we will help.\n\nChanges. We may update this policy from time to time; the latest version always lives on this page.\n\nContact. For any privacy question, or to exercise your rights, reach us on WhatsApp or at the contact details in the site footer.',
+    },
+  },
+  about: {
+    title: 'Our Story',
+    intro: 'Freshly baked brownies, made to order in Colombo and delivered across Sri Lanka.',
+    imageUrl: undefined,
+    body: 'Golden Oven started with a simple idea: a brownie should taste like it was made for you, because it was. Every order is baked fresh to order — never pre-made, never sitting on a shelf — using ingredients we would happily serve our own family.\n\nWhat began as boxes for friends and family has grown into gift boxes, corporate hampers, wedding favours, and customisable brownie slabs delivered islandwide. Through all of it we have kept the same promise: bake it fresh, pack it beautifully, and make every little celebration worth sharing.\n\nWe are proud to be 100% Halal certified, so everyone can enjoy what we make. Whether it is a single box for someone you love or fifty boxes for your team, we would love to bake for you.',
+    values: [
+      { icon: '🍫', title: 'Freshly Baked', body: 'Every order baked to order — never pre-made or stored.' },
+      { icon: '🚚', title: 'Islandwide Delivery', body: 'We deliver across Sri Lanka, with next-day options.' },
+      { icon: '♥️', title: '100% Halal', body: 'All ingredients fully Halal certified.' },
+      { icon: '🎁', title: 'Gift-Ready', body: 'Beautiful packaging, ready to give straight from the box.' },
+    ],
   },
   howItWorks: [
     { icon: '1', title: 'Choose a Category', body: 'Browse Shop All, Bulk Orders, or Brownie Slab.' },
@@ -297,6 +367,25 @@ export const DEFAULT_CONTENT: SiteContent = {
   },
   seo: {
     siteName: 'Golden Oven Brownies',
+    defaultImageUrl: '',
+    logoUrl: '',
+    business: {
+      type: 'Bakery',
+      legalName: 'Golden Oven Brownies',
+      telephone: '',
+      email: '',
+      priceRange: 'Rs.',
+      streetAddress: '',
+      addressLocality: 'Colombo',
+      addressRegion: 'Western Province',
+      postalCode: '',
+      addressCountry: 'LK',
+      latitude: '',
+      longitude: '',
+      openingHours: [],
+      areaServed: ['Sri Lanka'],
+    },
+    sameAs: [],
     home: {
       title: 'Golden Oven Brownies — Handmade, delivered across Sri Lanka',
       description: 'Freshly baked, made-to-order brownies with islandwide delivery. Gift boxes, corporate hampers, wedding favours, and customisable brownie slabs.',
@@ -316,6 +405,10 @@ export const DEFAULT_CONTENT: SiteContent = {
     slab: {
       title: 'Brownie Slab — Golden Oven',
       description: 'One big shareable brownie slab, freshly baked in your choice of flavour. Perfect for celebrations, offices, and gifting. Add letter toppers free.',
+    },
+    about: {
+      title: 'Our Story — Golden Oven Brownies',
+      description: 'Golden Oven bakes fresh, made-to-order brownies in Colombo and delivers islandwide across Sri Lanka. 100% Halal certified. Learn who we are.',
     },
   },
   corporate: {
@@ -507,17 +600,28 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     policies: {
       returns: { ...DEFAULT_CONTENT.policies.returns, ...partial.policies?.returns },
       payment: { ...DEFAULT_CONTENT.policies.payment, ...partial.policies?.payment },
+      privacy: { ...DEFAULT_CONTENT.policies.privacy, ...partial.policies?.privacy },
+    },
+    about: {
+      ...DEFAULT_CONTENT.about,
+      ...partial.about,
+      // Empty values list is valid (hides the value grid), so keep what's saved.
+      values: partial.about?.values ?? DEFAULT_CONTENT.about.values,
     },
     testimonialsHeading: { ...DEFAULT_CONTENT.testimonialsHeading, ...partial.testimonialsHeading },
     productInfo: { ...DEFAULT_CONTENT.productInfo, ...partial.productInfo },
     seo: {
       ...DEFAULT_CONTENT.seo,
       ...partial.seo,
+      business: { ...DEFAULT_CONTENT.seo.business, ...partial.seo?.business },
+      // sameAs: keep whatever the admin saved (an empty list is valid), else defaults.
+      sameAs: partial.seo?.sameAs ?? DEFAULT_CONTENT.seo.sameAs,
       home: { ...DEFAULT_CONTENT.seo.home, ...partial.seo?.home },
       shop: { ...DEFAULT_CONTENT.seo.shop, ...partial.seo?.shop },
       corporate: { ...DEFAULT_CONTENT.seo.corporate, ...partial.seo?.corporate },
       wedding: { ...DEFAULT_CONTENT.seo.wedding, ...partial.seo?.wedding },
       slab: { ...DEFAULT_CONTENT.seo.slab, ...partial.seo?.slab },
+      about: { ...DEFAULT_CONTENT.seo.about, ...partial.seo?.about },
     },
     promoMessages: partial.promoMessages?.length ? partial.promoMessages : DEFAULT_CONTENT.promoMessages,
     trust: partial.trust?.length ? partial.trust : DEFAULT_CONTENT.trust,

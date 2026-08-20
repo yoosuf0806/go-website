@@ -15,7 +15,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '..')
 const DIST = resolve(ROOT, 'dist')
 
-const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://www.goldenovenbrownies.com').replace(/\/$/, '')
+// Canonical host is non-www (www 301-redirects to it). Override with VITE_SITE_URL.
+const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://goldenovenbrownies.com').replace(/\/$/, '')
 
 interface CatalogProduct {
   slug: string
@@ -42,8 +43,10 @@ async function main() {
     { url: '/corporate', out: 'corporate/index.html' },
     { url: '/wedding', out: 'wedding/index.html' },
     { url: '/slab', out: 'slab/index.html' },
+    { url: '/about', out: 'about/index.html' },
     { url: '/policies/returns', out: 'policies/returns/index.html' },
     { url: '/policies/payment', out: 'policies/payment/index.html' },
+    { url: '/policies/privacy', out: 'policies/privacy/index.html' },
     ...catalog.products.map((p) => ({
       url: `/shop/${p.slug}`,
       out: `shop/${p.slug}/index.html`,
@@ -76,7 +79,7 @@ ${urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n')}
   // robots.txt
   writeFileSync(
     resolve(DIST, 'robots.txt'),
-    `User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${SITE_URL}/sitemap.xml\n`,
+    `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: ${SITE_URL}/sitemap.xml\n`,
     'utf8',
   )
 

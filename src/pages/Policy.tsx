@@ -9,6 +9,7 @@ import Seo from '../components/Seo'
 const SLUGS = {
   returns: 'returns',
   payment: 'payment',
+  privacy: 'privacy',
 } as const
 
 export default function Policy() {
@@ -16,7 +17,8 @@ export default function Policy() {
   const { catalog } = useCatalog()
   const { policies } = catalog.content
 
-  const key = slug === SLUGS.returns ? 'returns' : slug === SLUGS.payment ? 'payment' : null
+  const key =
+    slug === SLUGS.returns ? 'returns' : slug === SLUGS.payment ? 'payment' : slug === SLUGS.privacy ? 'privacy' : null
   const policy = key ? policies[key] : null
 
   if (!policy) {

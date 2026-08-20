@@ -313,7 +313,7 @@ function Footer() {
           <FooterCol
             title="Company"
             links={[
-              { to: '/', label: 'Our Story' },
+              { to: '/about', label: 'Our Story' },
               { to: '/corporate', label: 'Contact Us' },
             ]}
           />
@@ -322,6 +322,7 @@ function Footer() {
             links={[
               { to: '/policies/returns', label: 'Return Policy' },
               { to: '/policies/payment', label: 'Payment Terms' },
+              { to: '/policies/privacy', label: 'Privacy Policy' },
             ]}
           />
         </div>

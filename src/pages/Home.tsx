@@ -7,7 +7,7 @@ import HeroCarousel from '../components/storefront/HeroCarousel'
 import ProductTile from '../components/storefront/ProductTile'
 import BrownieImage from '../components/storefront/BrownieImage'
 import GallerySection from '../components/storefront/GallerySection'
-import Seo, { organizationJsonLd } from '../components/Seo'
+import Seo, { organizationJsonLd, websiteJsonLd, localBusinessJsonLd, faqPageJsonLd } from '../components/Seo'
 
 // Home — Blush & Ink direction. Mobile matches the mockup (screen 01) exactly:
 // a tight blush/white/navy column. From md: up it expands into full-width,
@@ -45,7 +45,12 @@ export default function Home() {
         description={content.seo.home.description}
         path="/"
         preloadImage={content.heroSlides[0]?.imageUrl ?? heroImage}
-        jsonLd={[organizationJsonLd()]}
+        jsonLd={[
+          organizationJsonLd(),
+          websiteJsonLd(),
+          localBusinessJsonLd(),
+          faqPageJsonLd(homeFaq),
+        ].filter((o): o is Record<string, unknown> => o !== null)}
       />
 
       {/* HERO — admin image carousel if slides exist, else the blush hero */}
