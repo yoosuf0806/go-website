@@ -70,6 +70,7 @@ export async function createOrder({ items, totals, details, voucher, payment }: 
       p_alt_phone: altPhone,
       p_address: details.address,
       p_delivery_date: details.deliveryDate,
+      p_delivery_slot: details.deliverySlot || null,
       p_note: details.note || null,
       p_subtotal: totals.subtotal,
       p_delivery_fee: totals.deliveryFee,

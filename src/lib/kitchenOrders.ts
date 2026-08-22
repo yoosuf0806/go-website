@@ -21,6 +21,7 @@ export interface KitchenOrder {
   customer_name: string
   address: string | null
   delivery_date: string | null
+  delivery_slot: string | null
   note: string | null
   total_pieces: number
   order_items: KitchenOrderItem[]
@@ -110,7 +111,7 @@ export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenO
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_no, status, customer_name, address, delivery_date, note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
+      'id, order_no, status, customer_name, address, delivery_date, delivery_slot, note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
     )
     .eq('delivery_date', deliveryDate)
     .neq('status', 'cancelled')
@@ -122,6 +123,44 @@ export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenO
     payment_method?: string | null
     source?: string | null
   })[]).filter(kitchenVisible)
+}
+
+/**
+ * Every delivery still outstanding, for the kitchen month calendar.
+ *
+ * Unlike fetchKitchenOrders (one day, full order detail for baking), this is a
+ * lightweight read across all dates. Completed/cancelled are filtered in the
+ * query so the payload stays small — the calendar only ever shows work still
+ * to do. The same kitchenVisible() payment gate as the Board is applied, so
+ * the two views can never disagree about which orders the kitchen can see.
+ */
+export async function fetchKitchenSchedule(): Promise<KitchenScheduleOrder[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      'id, order_no, status, customer_name, address, delivery_date, delivery_slot, total_pieces, payment_status, payment_method, source',
+    )
+    .not('delivery_date', 'is', null)
+    .not('status', 'in', '(completed,cancelled)')
+    .order('delivery_date', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as (KitchenScheduleOrder & {
+    payment_status?: string | null
+    payment_method?: string | null
+    source?: string | null
+  })[]).filter(kitchenVisible)
+}
+
+export interface KitchenScheduleOrder {
+  id: string
+  order_no: number
+  status: OrderStatus
+  customer_name: string
+  address: string | null
+  delivery_date: string | null
+  delivery_slot: string | null
+  total_pieces: number
 }
 
 // Kitchen accounts have no direct UPDATE on orders (RLS, migration 027) — the

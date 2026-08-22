@@ -76,6 +76,9 @@ export async function convertInquiryToOrder({
       phone,
       address: details.address,
       delivery_date: details.deliveryDate,
+      // Blank means "no fixed slot" — store NULL, not '', so the CHECK
+      // constraint on orders.delivery_slot is satisfied.
+      delivery_slot: details.deliverySlot || null,
       note: details.note || null,
       subtotal: totals.subtotal,
       delivery_fee: totals.deliveryFee,

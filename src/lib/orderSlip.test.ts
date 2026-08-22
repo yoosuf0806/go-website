@@ -12,6 +12,7 @@ const order: AdminOrder = {
   alt_phone: '+94712223344',
   address: '123 Galle Rd, Colombo',
   delivery_date: '2026-07-10',
+  delivery_slot: null,
   note: 'Leave with security',
   subtotal: 2880,
   delivery_fee: 580,

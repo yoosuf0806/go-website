@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useCatalog } from '../contexts/CatalogContext'
 import { lookupOrder, type TrackedOrder } from '../lib/trackOrder'
 import { toWhatsAppNumber, formatDate } from '../lib/format'
+import { slotLabel } from '../lib/deliverySlots'
 import { whatsAppLink, buildOrderInquiryMessage } from '../lib/whatsapp'
 import WhatsAppIcon from '../components/ui/WhatsAppIcon'
 
@@ -66,6 +67,7 @@ export default function TrackOrder() {
           buildOrderInquiryMessage({
             orderNo: order.order_no,
             deliveryDate: order.delivery_date,
+            deliverySlot: order.delivery_slot,
             address: order.address,
             phone: order.phone,
             items: order.items,
@@ -177,7 +179,10 @@ function OrderDetails({ order }: { order: TrackedOrder }) {
           <dl className="mt-2 flex flex-col gap-1.5 text-sm text-navy">
             <div>
               <dt className="inline text-neutral-500">Delivery date: </dt>
-              <dd className="inline">{order.delivery_date ? formatDate(order.delivery_date) : '—'}</dd>
+              <dd className="inline">
+                {order.delivery_date ? formatDate(order.delivery_date) : '—'}
+                {order.delivery_slot ? ` · ${slotLabel(order.delivery_slot)}` : ''}
+              </dd>
             </div>
             <div>
               <dt className="inline text-neutral-500">Delivery address: </dt>

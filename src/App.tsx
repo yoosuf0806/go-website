@@ -21,6 +21,7 @@ const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
 const Login = lazy(() => import('./pages/admin/Login'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Orders = lazy(() => import('./pages/admin/Orders'))
+const AdminCalendar = lazy(() => import('./pages/admin/Calendar'))
 const Inquiries = lazy(() => import('./pages/admin/Inquiries'))
 const Content = lazy(() => import('./pages/admin/Content'))
 const Products = lazy(() => import('./pages/admin/Products'))
@@ -31,6 +32,7 @@ const Settings = lazy(() => import('./pages/admin/Settings'))
 const BakeList = lazy(() => import('./pages/admin/BakeList'))
 const KitchenLogin = lazy(() => import('./pages/kitchen/KitchenLogin'))
 const KitchenBoard = lazy(() => import('./pages/kitchen/KitchenBoard'))
+const KitchenCalendar = lazy(() => import('./pages/kitchen/KitchenCalendar'))
 
 function AdminFallback() {
   return (
@@ -94,6 +96,7 @@ export default function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="calendar" element={<AdminCalendar />} />
         <Route path="inquiries" element={<Inquiries />} />
         <Route path="content" element={<Content />} />
         <Route path="products" element={<Products />} />
@@ -120,6 +123,18 @@ export default function App() {
           <ProtectedRoute requireRole="kitchen">
             <Suspense fallback={<AdminFallback />}>
               <KitchenBoard />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Kitchen month schedule (role-gated) */}
+      <Route
+        path="/kitchen/schedule"
+        element={
+          <ProtectedRoute requireRole="kitchen">
+            <Suspense fallback={<AdminFallback />}>
+              <KitchenCalendar />
             </Suspense>
           </ProtectedRoute>
         }
