@@ -11,6 +11,7 @@ import {
   type KitchenOrder,
 } from '../../lib/kitchenOrders'
 import KitchenLayout from '../../components/kitchen/KitchenLayout'
+import { slotShort } from '../../lib/deliverySlots'
 import type { OrderStatus } from '../../lib/orderStatus'
 
 const DATE_CHIPS = [
@@ -184,7 +185,10 @@ function OrderCard({
       {/* Details */}
       <div className="mt-3 space-y-1 text-sm text-white/60">
         {extras.length > 0 && <p>📝 {extras.join(', ')}</p>}
-        <p>📅 Deliver {formatShortDate(order.delivery_date)}</p>
+        <p>
+          📅 Deliver {formatShortDate(order.delivery_date)}
+          {order.delivery_slot ? ` · ${slotShort(order.delivery_slot)}` : ''}
+        </p>
         {order.address && <p>📍 {order.address}</p>}
       </div>
 

@@ -3,7 +3,8 @@ import { useCatalog } from '../../contexts/CatalogContext'
 import { cartTotals, type CartItem } from '../../lib/pricing'
 import { cartLineKey, type CartLine } from '../../stores/cart'
 import { formatLKR } from '../../lib/format'
-import { checkoutDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
+import { adminOrderDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
+import { DELIVERY_SLOTS } from '../../lib/deliverySlots'
 import { useConvertInquiry } from '../../hooks/useAdminInquiries'
 import type { AdminInquiry } from '../../lib/adminInquiries'
 import type { CatalogProduct, CatalogPackage } from '../../types/catalog'
@@ -38,6 +39,8 @@ export default function ConvertToOrderModal({
     altPhone: '',
     address: '',
     deliveryDate: inquiry.event_date ?? '',
+    // Optional for admin-scheduled orders; blank means "no fixed slot".
+    deliverySlot: '',
     note: inquiry.message ?? '',
     isGift: false,
   })
@@ -54,7 +57,7 @@ export default function ConvertToOrderModal({
   const totals = cartTotals(lines, deliveryTiers)
 
   async function handleSave() {
-    const parsed = checkoutDetailsSchema.safeParse(details)
+    const parsed = adminOrderDetailsSchema.safeParse(details)
     if (!parsed.success) {
       const fieldErrors: Partial<Record<keyof CheckoutDetails, string>> = {}
       for (const issue of parsed.error.issues) {
@@ -145,6 +148,22 @@ export default function ConvertToOrderModal({
               onChange={(e) => setDetails({ ...details, deliveryDate: e.target.value })}
               className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
             />
+          </TextField>
+          {/* Optional here: corporate/wedding deliveries are scheduled by
+              agreement and may not fit a retail slot. */}
+          <TextField label="Delivery time (optional)" error={errors.deliverySlot}>
+            <select
+              value={details.deliverySlot}
+              onChange={(e) => setDetails({ ...details, deliverySlot: e.target.value })}
+              className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            >
+              <option value="">No fixed time</option>
+              {DELIVERY_SLOTS.map((slot) => (
+                <option key={slot.code} value={slot.code}>
+                  {slot.label}
+                </option>
+              ))}
+            </select>
           </TextField>
         </div>
 

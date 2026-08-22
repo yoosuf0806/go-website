@@ -4,6 +4,7 @@
 // cart/checkout UI (a real prototype bug class). Encoded with encodeURIComponent;
 // `\n` line breaks become %0A in the link.
 import { formatLKR, formatDate, toWhatsAppNumber } from './format'
+import { slotShort } from './deliverySlots'
 import { lineTotal, totalAfterVoucher, type CartAddon, type CartItem, type CartTotals } from './pricing'
 
 export interface OrderCustomer {
@@ -13,6 +14,7 @@ export interface OrderCustomer {
   altPhone?: string | null
   address?: string
   deliveryDate?: string | null
+  deliverySlot?: string | null
   note?: string
   isGift?: boolean
   recipientName?: string | null
@@ -93,7 +95,11 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   if (customer.altPhone) lines.push(`📞 Alt: ${customer.altPhone}`)
   if (customer.email) lines.push(`✉️ ${customer.email}`)
   if (customer.address) lines.push(`📍 ${customer.address}`)
-  if (customer.deliveryDate) lines.push(`🗓 Delivery: ${formatDate(customer.deliveryDate)}`)
+  if (customer.deliveryDate)
+    lines.push(
+      `🗓 Delivery: ${formatDate(customer.deliveryDate)}` +
+        (customer.deliverySlot ? ` (${slotShort(customer.deliverySlot)})` : ''),
+    )
   if (customer.isGift && customer.recipientName) {
     lines.push(`🎁 Gift for: ${customer.recipientName}${customer.recipientPhone ? ` | 📞 ${customer.recipientPhone}` : ''}`)
   }
@@ -118,6 +124,7 @@ export interface DeliveryConfirmationInput {
   phone: string
   address?: string | null
   deliveryDate?: string | null
+  deliverySlot?: string | null
   isGift?: boolean
   recipientName?: string | null
   recipientPhone?: string | null
@@ -142,7 +149,11 @@ export function buildDeliveryConfirmationMessage(input: DeliveryConfirmationInpu
     lines.push(`- ${item.product_name} — ${item.package_label} x ${item.box_qty}`)
   }
   lines.push('')
-  if (input.deliveryDate) lines.push(`Delivery date: ${formatDate(input.deliveryDate)}`)
+  if (input.deliveryDate)
+    lines.push(
+      `Delivery date: ${formatDate(input.deliveryDate)}` +
+        (input.deliverySlot ? ` (${slotShort(input.deliverySlot)})` : ''),
+    )
   if (input.address) lines.push(`Delivery address: ${input.address}`)
   lines.push(`Contact number: ${input.phone}`)
   if (input.isGift && input.recipientName) {
@@ -162,6 +173,7 @@ export function deliveryConfirmationWaLink(input: DeliveryConfirmationInput): st
 export interface OrderInquiryInput {
   orderNo: number | string
   deliveryDate?: string | null
+  deliverySlot?: string | null
   address?: string | null
   phone: string
   items: ConfirmationItem[]
@@ -181,7 +193,11 @@ export function buildOrderInquiryMessage(input: OrderInquiryInput): string {
   for (const item of input.items) {
     lines.push(`- ${item.product_name} — ${item.package_label} x ${item.box_qty}`)
   }
-  if (input.deliveryDate) lines.push(`Delivery date: ${formatDate(input.deliveryDate)}`)
+  if (input.deliveryDate)
+    lines.push(
+      `Delivery date: ${formatDate(input.deliveryDate)}` +
+        (input.deliverySlot ? ` (${slotShort(input.deliverySlot)})` : ''),
+    )
   if (input.address) lines.push(`Delivery address: ${input.address}`)
   lines.push(`Contact number: ${input.phone}`)
   return lines.join('\n')

@@ -18,6 +18,7 @@ import { printOrderSlip } from '../../lib/orderSlip'
 import { useCatalog } from '../../contexts/CatalogContext'
 import { addonSummary, deliveryConfirmationWaLink } from '../../lib/whatsapp'
 import StatusBadge from '../../components/admin/StatusBadge'
+import { slotLabel, slotShort } from '../../lib/deliverySlots'
 
 // wa.me link to the CUSTOMER carrying the order-confirmed message, built
 // entirely from the order so the text can't diverge from the system.
@@ -27,6 +28,7 @@ function confirmationLink(order: AdminOrder): string {
     phone: order.phone,
     address: order.address,
     deliveryDate: order.delivery_date,
+    deliverySlot: order.delivery_slot,
     isGift: order.is_gift,
     recipientName: order.recipient_name,
     recipientPhone: order.recipient_phone,
@@ -313,7 +315,10 @@ function OrderRow({
         </td>
         <td className="px-3 py-3">
           {order.delivery_date ? formatDate(order.delivery_date) : '—'}
-          <div className="text-xs text-neutral-500">{order.total_pieces} pcs</div>
+          <div className="text-xs text-neutral-500">
+            {order.delivery_slot ? `${slotShort(order.delivery_slot)} · ` : ''}
+            {order.total_pieces} pcs
+          </div>
         </td>
         <td className="px-3 py-3">{formatLKR(order.total)}</td>
         <td className="px-3 py-3">
@@ -412,6 +417,7 @@ function OrderRow({
                   <div>📍 {order.address || <span className="text-neutral-400">No address</span>}</div>
                   <div>
                     🗓 {order.delivery_date ? formatDate(order.delivery_date) : 'No delivery date'}
+                    {order.delivery_slot ? ` · ${slotLabel(order.delivery_slot)}` : ''}
                   </div>
                   <div>
                     📞 {order.phone}

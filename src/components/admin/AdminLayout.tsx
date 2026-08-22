@@ -10,6 +10,7 @@ import Toast from '../ui/Toast'
 const navItems = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/orders', label: 'Orders' },
+  { to: '/admin/calendar', label: 'Delivery Schedule' },
   { to: '/admin/inquiries', label: 'Inquiries' },
   { to: '/admin/content', label: 'Content & SEO' },
   { to: '/admin/products', label: 'Products' },

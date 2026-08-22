@@ -8,6 +8,7 @@ import { checkoutDetailsSchema, paymentSchema, type CheckoutDetails, type Paymen
 import { useCreateOrder } from '../../hooks/useCreateOrder'
 import { useCatalog } from '../../contexts/CatalogContext'
 import { uploadBankSlip, validateSlipFile } from '../../lib/bankSlips'
+import { DELIVERY_SLOTS, OUT_OF_COLOMBO_NOTE, slotLabel } from '../../lib/deliverySlots'
 
 type Step = 'details' | 'review' | 'payment'
 
@@ -18,6 +19,7 @@ const emptyForm: CheckoutDetails = {
   altPhone: '',
   address: '',
   deliveryDate: '',
+  deliverySlot: '',
   note: '',
   isGift: false,
   recipientName: '',
@@ -194,6 +196,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
           altPhone: details.altPhone ? normalizePhone(details.altPhone) : null,
           address: details.address,
           deliveryDate: details.deliveryDate,
+          deliverySlot: details.deliverySlot,
           note: details.note,
           isGift: details.isGift,
           recipientName: details.recipientName,
@@ -361,6 +364,33 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                 <Field label="Delivery date" error={errors.deliveryDate}>
                   <Input type="date" min={minDeliveryDate} value={form.deliveryDate} invalid={!!errors.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} />
                 </Field>
+                <Field label="Delivery time" error={errors.deliverySlot}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DELIVERY_SLOTS.map((slot) => {
+                      const active = form.deliverySlot === slot.code
+                      return (
+                        <button
+                          key={slot.code}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => set({ deliverySlot: slot.code })}
+                          className={`min-h-[44px] rounded-lg border px-3 text-sm font-medium transition-colors ${
+                            active
+                              ? 'border-pink bg-pink text-white'
+                              : errors.deliverySlot
+                                ? 'border-red-400 text-ink hover:border-pink'
+                                : 'border-neutral-300 text-ink hover:border-pink'
+                          }`}
+                        >
+                          {slot.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                    {OUT_OF_COLOMBO_NOTE}
+                  </p>
+                </Field>
                 <Field label="Note" error={errors.note} optional>
                   <textarea
                     rows={2}
@@ -420,7 +450,9 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                   <RecapCard title="Delivery" onEdit={() => setStep('details')}>
                     {details.address}
                     <br />
-                    <span className="text-neutral-500">{details.deliveryDate}</span>
+                    <span className="text-neutral-500">
+                      {details.deliveryDate} · {slotLabel(details.deliverySlot)}
+                    </span>
                     {details.note ? (
                       <>
                         <br />

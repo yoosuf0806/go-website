@@ -19,6 +19,7 @@ export interface TrackedOrder {
   phone: string
   address: string | null
   delivery_date: string | null
+  delivery_slot: string | null
   is_gift: boolean
   recipient_name: string | null
   recipient_phone: string | null

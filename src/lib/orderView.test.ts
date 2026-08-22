@@ -31,6 +31,7 @@ function order(partial: Partial<AdminOrder>): AdminOrder {
     alt_phone: null,
     address: '1 Main St',
     delivery_date: TOMORROW,
+    delivery_slot: null,
     note: null,
     subtotal: 100,
     delivery_fee: 580,

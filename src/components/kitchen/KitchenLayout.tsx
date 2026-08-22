@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useSession } from '../../hooks/useSession'
 
@@ -8,6 +8,7 @@ import { useSession } from '../../hooks/useSession'
 export default function KitchenLayout({ children }: { children: ReactNode }) {
   const { session } = useSession()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const email = session?.user.email ?? ''
   const initial = email.slice(0, 1).toUpperCase() || 'K'
@@ -57,6 +58,28 @@ export default function KitchenLayout({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
+
+      {/* Board = today's baking; Schedule = the month ahead. */}
+      <nav className="flex gap-1 border-b border-white/10 bg-navy px-4 py-2">
+        {[
+          { to: '/kitchen', label: 'Board' },
+          { to: '/kitchen/schedule', label: 'Schedule' },
+        ].map((tab) => {
+          const active = pathname === tab.to
+          return (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end
+              className={`min-h-[40px] flex-1 rounded-lg px-4 text-center text-sm font-medium leading-10 transition-colors ${
+                active ? 'bg-pink text-white' : 'text-white/60 hover:bg-white/10'
+              }`}
+            >
+              {tab.label}
+            </NavLink>
+          )
+        })}
+      </nav>
 
       <main style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>{children}</main>
     </div>
