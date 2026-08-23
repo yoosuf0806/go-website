@@ -7,12 +7,15 @@
          here, high in <head> (right after charset/viewport and before the icon
          and font links) so the title is one of the first tags crawlers read. -->
     <!--app-head-->
-    <link rel="icon" href="/favicon.ico?v=3" sizes="32x32" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png" />
-    <link rel="icon" type="image/png" sizes="96x96" href="/icon-96.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+    <!-- ?v= is a cache-buster: browsers hold favicons far longer than the
+         1-day Cache-Control in vercel.json, so bump it on every icon change or
+         visitors keep seeing the previous mark. -->
+    <link rel="icon" href="/favicon.ico?v=4" sizes="32x32" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png?v=4" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/icon-96.png?v=4" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=4" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg?v=4" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
