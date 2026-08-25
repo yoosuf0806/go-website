@@ -80,6 +80,7 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
       isSlabProduct: r.is_slab_product ?? false,
       flavors: (r.flavors ?? []).map((f) => ({ name: f.name, price: Number(f.price) })),
       allowsLetterTopper: r.allows_letter_topper,
+      slabLetterMaxChars: r.slab_letter_max_chars ?? 7,
       isHotPick: r.is_hot_pick,
       isCorporate: r.is_corporate ?? false,
       sortOrder: r.sort_order,

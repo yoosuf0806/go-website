@@ -57,6 +57,12 @@ export interface CatalogProduct {
   /** Selectable flavours for a slab product (each with its own flat price). Empty for non-slab products. */
   flavors: CatalogFlavor[]
   allowsLetterTopper: boolean
+  /**
+   * Letter-topper characters allowed PER LINE on a standalone slab product
+   * (isSlabProduct). Package products read packages[].letterMaxChars instead.
+   * 0 disables the topper for this slab.
+   */
+  slabLetterMaxChars: number
   /** Featured in the homepage Hot Picks section. */
   isHotPick: boolean
   /** Offered as a corporate/wedding quote flavour on the /corporate page. */

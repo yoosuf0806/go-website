@@ -45,6 +45,8 @@ export interface AdminProduct {
   /** Selectable flavours (name + flat price) for a slab product; [] for non-slab products. */
   flavors: ProductFlavor[]
   allows_letter_topper: boolean
+  /** Topper characters per line for a slab product (3 lines). 0 = no topper. */
+  slab_letter_max_chars: number
   /** Featured on the homepage Hot Picks section. */
   is_hot_pick: boolean
   /** Offered as a corporate/wedding quote flavour on the /corporate page. */

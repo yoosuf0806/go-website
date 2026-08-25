@@ -42,6 +42,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     is_slab_product: false,
     flavors: [],
     allows_letter_topper: false,
+    slab_letter_max_chars: 7,
     is_hot_pick: false,
     is_corporate: false,
     sort_order: 0,
@@ -394,6 +395,22 @@ export default function ProductFormModal({
                   onChange={(e) => set('allows_letter_topper', e.target.checked)}
                 />
                 Allows letter topper
+              </label>
+            )}
+            {/* Slab products have no package to take a topper limit from, so it
+                lives on the product: a Mini slab fits fewer letters than a Party slab. */}
+            {form.is_slab_product && form.allows_letter_topper && (
+              <label className="flex items-center gap-2 pl-6 text-sm">
+                Letters per line
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={form.slab_letter_max_chars}
+                  onChange={(e) => set('slab_letter_max_chars', Number(e.target.value))}
+                  className="w-20 rounded border border-neutral-300 px-2 py-1 text-sm"
+                />
+                <span className="text-xs text-neutral-500">across 3 lines (0 = no topper)</span>
               </label>
             )}
           </div>

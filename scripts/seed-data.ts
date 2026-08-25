@@ -37,6 +37,7 @@ export interface RawProduct {
   is_slab_15_available: boolean
   /** Standalone slab product — priced per product via `flavors`, flavour selector on the PDP. */
   is_slab_product: boolean
+  slab_letter_max_chars?: number
   /** Selectable flavours (name + flat price) for a slab product; [] for non-slab products. */
   flavors: { name: string; price: number }[]
   allows_letter_topper: boolean
