@@ -25,9 +25,12 @@ interface ProductConfiguratorProps {
   onAdded?: () => void
 }
 
-// Letter-topper allowance for a slab product (slabs have no package to read a
-// per-package limit from). Matches the old slab package limit (7 chars/line).
-const SLAB_TOPPER_MAX = 7
+// Fallback letter-topper allowance for a slab product, used only when the
+// product row predates migration 039 and carries no per-slab limit of its own.
+// Slabs have no package to read packages.letter_max_chars from; the real value
+// now lives on the product (products.slab_letter_max_chars) so a Mini slab can
+// allow fewer letters per line than a Party slab.
+const SLAB_TOPPER_MAX_FALLBACK = 7
 
 // Configure + add a product to the cart: box size / flavour, add-ons, quantity,
 // live price. Lives on the product detail page. Two modes:
@@ -148,7 +151,9 @@ export default function ProductConfigurator({
     onAdded?.()
   }
 
-  const topperMaxChars = isSlab ? SLAB_TOPPER_MAX : (selectedPackage?.letterMaxChars ?? 0)
+  const topperMaxChars = isSlab
+    ? (product.slabLetterMaxChars ?? SLAB_TOPPER_MAX_FALLBACK)
+    : (selectedPackage?.letterMaxChars ?? 0)
   const unit = isSlab ? 'slab' : 'box'
   const pkgSummary = isSlab
     ? `${boxQty === 1 ? '1 slab' : `${boxQty} slabs`}`

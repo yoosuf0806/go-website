@@ -53,6 +53,7 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
           price: Number(f.price),
         })),
         allowsLetterTopper: r.allows_letter_topper as boolean,
+        slabLetterMaxChars: (r.slab_letter_max_chars as number | null) ?? 7,
         isHotPick: (r.is_hot_pick as boolean) ?? false,
         isCorporate: (r.is_corporate as boolean) ?? false,
         sortOrder: r.sort_order as number,
