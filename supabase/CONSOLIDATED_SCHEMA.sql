@@ -29,6 +29,14 @@
 --   • Starting genuinely fresh instead → run this, then supabase/seed.sql and
 --     supabase/content.sql for demo catalogue + editable-content rows.
 --
+-- IF YOU EVER REGENERATE THIS FILE
+--   pg_dump emits two psql client meta-commands, `\restrict` and
+--   `\unrestrict`, wrapping the body. They are not SQL: psql understands them,
+--   but the Supabase SQL Editor sends the file straight to the server and fails
+--   with `syntax error at or near "\"`. Strip every line starting with a
+--   backslash, and test by sending the file as raw SQL (psql -c "$(cat file)"),
+--   not with psql -f, which would hide the problem.
+--
 -- ASSUMPTIONS
 --   A managed Supabase project, which already provides the `auth` and
 --   `storage` schemas and the anon / authenticated / service_role roles.
@@ -47,7 +55,8 @@
 --                            than in a migration and are folded in here.
 --   Then smoke-tested on the result: create_order() places an order with a
 --   delivery slot, lookup_order() returns it, and anon/authenticated hold the
---   execute grants the storefront needs.
+--   execute grants the storefront needs. Re-verified by executing this file as
+--   raw SQL the way the Supabase SQL Editor does, not via psql -f.
 -- ============================================================================
 
 -- uuid_generate_v4() backs most primary keys.
@@ -63,7 +72,6 @@ create extension if not exists "uuid-ossp";
 -- defined in any order; Postgres still resolves them correctly at call time.
 set check_function_bodies = false;
 
-\restrict yVAxHxeteQh6057YPAvnZ4WJUoMxENbsRroP9zCCtUT8sXiZ6mIxXXXNYnahFgU
 
 
 
@@ -1974,7 +1982,6 @@ GRANT ALL ON FUNCTION public.validate_gift_voucher(p_code text) TO authenticated
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yVAxHxeteQh6057YPAvnZ4WJUoMxENbsRroP9zCCtUT8sXiZ6mIxXXXNYnahFgU
 
 
 -- ============================================================================
