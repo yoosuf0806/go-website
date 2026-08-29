@@ -173,6 +173,7 @@ create table if not exists inquiries (
   email text,
   event_date date,
   guest_count int,
+  delivery_address text,
   message text,
   converted_order_id uuid references orders(id),
   created_at timestamptz not null default now()

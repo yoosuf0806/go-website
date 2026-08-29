@@ -11,6 +11,7 @@ const inquiry: AdminInquiry = {
   email: 'ayesha@example.com',
   event_date: '2026-08-15',
   guest_count: 120,
+  delivery_address: '12 Galle Road, Colombo 03',
   message: 'Slab favours for 120 guests',
   converted_order_id: null,
   created_at: '2026-07-04T10:00:00Z',
@@ -23,6 +24,7 @@ describe('buildQuotationHtml (spec §7 Inquiries)', () => {
     expect(html).toContain('Ayesha F.')
     expect(html).toContain('+94712223333')
     expect(html).toContain('Guests:</strong> 120')
+    expect(html).toContain('Delivery address:</strong> 12 Galle Road, Colombo 03')
     expect(html).toContain('15 Aug 2026')
   })
 

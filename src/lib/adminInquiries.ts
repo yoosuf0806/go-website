@@ -26,6 +26,7 @@ export interface AdminInquiry {
   email: string | null
   event_date: string | null
   guest_count: number | null
+  delivery_address: string | null
   message: string | null
   converted_order_id: string | null
   created_at: string
