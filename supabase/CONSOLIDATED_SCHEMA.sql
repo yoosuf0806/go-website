@@ -59,8 +59,15 @@
 --   raw SQL the way the Supabase SQL Editor does, not via psql -f.
 -- ============================================================================
 
--- uuid_generate_v4() backs most primary keys.
-create extension if not exists "uuid-ossp";
+-- Primary keys default to public.uuid_generate_v4(). Supabase installs the
+-- uuid-ossp extension into the `extensions` schema, not `public`, so that
+-- function name does not resolve there and every insert would fail with
+-- "function public.uuid_generate_v4() does not exist". gen_random_uuid() is
+-- built into Postgres 13+ and always available, so expose the expected name as
+-- a thin wrapper over it. This works no matter where (or whether) uuid-ossp is
+-- installed, and is a no-op to re-run.
+create or replace function public.uuid_generate_v4() returns uuid
+  language sql volatile as $$ select gen_random_uuid() $$;
 
 
 -- ============================================================================
