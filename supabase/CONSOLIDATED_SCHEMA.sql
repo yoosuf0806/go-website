@@ -1992,6 +1992,13 @@ GRANT ALL ON FUNCTION public.validate_gift_voucher(p_code text) TO authenticated
 
 
 -- ============================================================================
+-- LEGACY: ops_sales.address (migration 041)
+-- Present in the live database, never in a committed migration; needed to
+-- round-trip a data import of ops_sales.
+alter table public.ops_sales add column if not exists address text;
+
+
+-- ============================================================================
 -- LEGACY: quote_flavors + inquiries flavour columns (migration 040)
 --
 -- Present in the live database but added by hand outside the migration history.
