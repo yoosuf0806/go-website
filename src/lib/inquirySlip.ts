@@ -19,6 +19,8 @@ export function buildQuotationHtml(inquiry: AdminInquiry): string {
     rows.push(`<div><strong>Event date:</strong> ${esc(formatDate(inquiry.event_date))}</div>`)
   if (inquiry.guest_count != null)
     rows.push(`<div><strong>Guests:</strong> ${inquiry.guest_count}</div>`)
+  if (inquiry.delivery_address)
+    rows.push(`<div><strong>Delivery address:</strong> ${esc(inquiry.delivery_address)}</div>`)
   if (inquiry.message) rows.push(`<div><strong>Requirements:</strong> ${esc(inquiry.message)}</div>`)
 
   return `<!doctype html>

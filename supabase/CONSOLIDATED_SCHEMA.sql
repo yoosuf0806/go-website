@@ -609,6 +609,7 @@ CREATE TABLE public.inquiries (
     email text,
     event_date date,
     guest_count integer,
+    delivery_address text,
     message text,
     converted_order_id uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL

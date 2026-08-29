@@ -189,7 +189,7 @@ export default function QuoteLandingPage({
                     {flavors.length > 0 && <FlavorChips flavors={flavors} selectedId={selectedId} onPick={pickFlavor} />}
                   </div>
 
-                  <GroupLabel>Delivery date</GroupLabel>
+                  <GroupLabel>Delivery</GroupLabel>
                   <div className="flex flex-col gap-2.5">
                     <FieldError error={errors.deliveryDate?.message}>
                       <input
@@ -197,6 +197,15 @@ export default function QuoteLandingPage({
                         type="date"
                         min={new Date().toISOString().split('T')[0]}
                         className={inputCls(!!errors.deliveryDate, false)}
+                      />
+                    </FieldError>
+                    <FieldError error={errors.deliveryAddress?.message}>
+                      <textarea
+                        {...register('deliveryAddress')}
+                        rows={2}
+                        autoComplete="street-address"
+                        placeholder="Delivery address (optional)"
+                        className={`${inputCls(!!errors.deliveryAddress, false)} resize-none`}
                       />
                     </FieldError>
                     <textarea
@@ -233,6 +242,18 @@ export default function QuoteLandingPage({
                   </div>
                   <QtyStepper label={qtyLabel} hint={qtyHint} qty={qty} min={qtyFloor} onAdjust={(d) => adjustQty(d)} onSet={setQtyValue} />
                   {flavors.length > 0 && <FlavorChips flavors={flavors} selectedId={selectedId} onPick={pickFlavor} />}
+                  <div>
+                    <label className="block pb-1.5 text-[13px] font-medium text-[#7a5c64]">Delivery address</label>
+                    <FieldError error={errors.deliveryAddress?.message}>
+                      <textarea
+                        {...register('deliveryAddress')}
+                        rows={2}
+                        autoComplete="street-address"
+                        placeholder="Where should we deliver? (optional)"
+                        className={`${inputCls(!!errors.deliveryAddress, false)} resize-none`}
+                      />
+                    </FieldError>
+                  </div>
                   <textarea
                     {...register('message')}
                     rows={3}
