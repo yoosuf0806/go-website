@@ -1992,6 +1992,41 @@ GRANT ALL ON FUNCTION public.validate_gift_voucher(p_code text) TO authenticated
 
 
 -- ============================================================================
+-- LEGACY: quote_flavors + inquiries flavour columns (migration 040)
+--
+-- Present in the live database but added by hand outside the migration history.
+-- Recreated here so a from-scratch build matches production and can round-trip
+-- a data import. quote_flavors is no longer read by the app; kept for its data
+-- and the inquiries.flavor_id foreign key.
+-- ============================================================================
+
+create table if not exists public.quote_flavors (
+  id uuid primary key default public.uuid_generate_v4(),
+  name text not null,
+  image_url text,
+  description text,
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.quote_flavors enable row level security;
+
+drop policy if exists "public read quote_flavors" on public.quote_flavors;
+create policy "public read quote_flavors" on public.quote_flavors
+  for select using (true);
+
+drop policy if exists "admin all quote_flavors" on public.quote_flavors;
+create policy "admin all quote_flavors" on public.quote_flavors
+  for all using (public.is_admin()) with check (public.is_admin());
+
+alter table public.inquiries add column if not exists flavor_id uuid
+  references public.quote_flavors (id) on delete set null;
+alter table public.inquiries add column if not exists flavor_name text;
+alter table public.inquiries add column if not exists piece_count integer;
+
+
+-- ============================================================================
 -- STORAGE — buckets and their policies
 --
 -- Lives in the `storage` schema, which a public-schema dump does not cover, so
