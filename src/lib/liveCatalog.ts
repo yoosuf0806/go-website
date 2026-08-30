@@ -19,6 +19,7 @@ import type {
   CatalogReview,
   ProductPackageStockMap,
   ProductPackageAvailabilityMap,
+  ProductPackagePriceMap,
 } from '../types/catalog'
 import { stockKey } from '../types/catalog'
 import { mergeContent } from '../types/content'
@@ -85,6 +86,15 @@ function mapProductPackageAvailability(
   return map
 }
 
+/** No row = priced per piece; only whole-pack overrides need to appear in the map. */
+function mapProductPackagePrice(rows: Record<string, unknown>[]): ProductPackagePriceMap {
+  const map: ProductPackagePriceMap = {}
+  for (const r of rows) {
+    map[stockKey(r.product_id as string, r.package_id as string)] = Number(r.price)
+  }
+  return map
+}
+
 /** Shape of the single JSON bundle returned by the get_catalog() RPC. */
 interface CatalogBundle {
   products?: Record<string, unknown>[]
@@ -96,6 +106,7 @@ interface CatalogBundle {
   site_settings?: { key: string; value: unknown }[]
   product_package_stock?: Record<string, unknown>[]
   product_package_availability?: Record<string, unknown>[]
+  product_package_price?: Record<string, unknown>[]
 }
 
 /**
@@ -124,6 +135,7 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
   const settingsData = bundle.site_settings ?? []
   const stockData = bundle.product_package_stock ?? []
   const availabilityData = bundle.product_package_availability ?? []
+  const priceData = bundle.product_package_price ?? []
 
   const mappedPackages: CatalogPackage[] = packagesData.map((p) => ({
     id: p.id as string,
@@ -193,6 +205,7 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
   // explicit overrides, so an empty array is expected, not an error.
   const productPackageStock = mapProductPackageStock(stockData)
   const productPackageAvailability = mapProductPackageAvailability(availabilityData)
+  const productPackagePrice = mapProductPackagePrice(priceData)
 
   return {
     generatedAt: new Date().toISOString(),
@@ -210,5 +223,6 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
     content,
     productPackageStock,
     productPackageAvailability,
+    productPackagePrice,
   }
 }

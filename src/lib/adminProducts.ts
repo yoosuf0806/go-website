@@ -68,6 +68,13 @@ export interface AdminProductPackageAvailability {
   is_available: boolean
 }
 
+/** One row of `product_package_price` — a per product×package whole-pack price. No row = priced per piece. */
+export interface AdminProductPackagePrice {
+  product_id: string
+  package_id: string
+  price: number
+}
+
 export interface AdminPackage {
   id: string
   label: string
@@ -205,6 +212,39 @@ export async function setProductPackageAvailability(
   const { error } = await supabase
     .from('product_package_availability')
     .upsert({ product_id: productId, package_id: packageId, is_available: false })
+  if (error) throw new Error(error.message)
+}
+
+/** All product_package_price rows. No row for a product×package = priced per piece. */
+export async function fetchProductPackagePrice(): Promise<AdminProductPackagePrice[]> {
+  const { data, error } = await supabase.from('product_package_price').select('*')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as AdminProductPackagePrice[]
+}
+
+/**
+ * Set (or clear) the flat whole-pack price for a single product×package. Passing
+ * null clears the override — the row is deleted so the combo goes back to
+ * per-piece pricing (no row = priced per piece, keeping the table small).
+ * A non-null price upserts the row.
+ */
+export async function setProductPackagePrice(
+  productId: string,
+  packageId: string,
+  price: number | null,
+): Promise<void> {
+  if (price == null) {
+    const { error } = await supabase
+      .from('product_package_price')
+      .delete()
+      .eq('product_id', productId)
+      .eq('package_id', packageId)
+    if (error) throw new Error(error.message)
+    return
+  }
+  const { error } = await supabase
+    .from('product_package_price')
+    .upsert({ product_id: productId, package_id: packageId, price })
   if (error) throw new Error(error.message)
 }
 

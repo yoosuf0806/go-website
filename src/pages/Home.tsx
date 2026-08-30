@@ -115,7 +115,7 @@ export default function Home() {
             <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-[22px] pb-1.5 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:px-0 lg:grid-cols-4">
               {hotPicks.map((product) => (
                 <div key={product.id} className="w-[170px] flex-none snap-start md:w-auto">
-                  <ProductTile product={product} packages={packages} />
+                  <ProductTile product={product} packages={packages} productPackagePrice={catalog.productPackagePrice} />
                 </div>
               ))}
             </div>
