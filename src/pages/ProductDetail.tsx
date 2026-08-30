@@ -152,6 +152,7 @@ export default function ProductDetail() {
               addons={addons}
               productPackageStock={catalog.productPackageStock}
               productPackageAvailability={catalog.productPackageAvailability}
+              productPackagePrice={catalog.productPackagePrice}
             />
           </div>
 

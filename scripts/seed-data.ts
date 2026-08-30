@@ -71,6 +71,13 @@ export interface RawProductPackageAvailability {
   is_available: boolean
 }
 
+/** One row of `product_package_price` — presence means a flat whole-pack price for that product×package. */
+export interface RawProductPackagePrice {
+  product_id: string
+  package_id: string
+  price: number
+}
+
 export interface RawAddon {
   id: string
   label: string
@@ -116,6 +123,7 @@ export interface SeedData {
   settings: RawSettings
   productPackageStock: RawProductPackageStock[]
   productPackageAvailability: RawProductPackageAvailability[]
+  productPackagePrice: RawProductPackagePrice[]
 }
 
 const CAT_CLASSIC = '11111111-1111-4111-8111-111111111111'
@@ -363,4 +371,9 @@ export const seedData: SeedData = {
   // No row = available. Empty by default: every product offers all its eligible
   // packages until the admin explicitly hides one (product_package_availability).
   productPackageAvailability: [],
+
+  // No row = priced per piece (price_per_piece × piece_count). Empty by default:
+  // a product×package gets a flat whole-pack price only when the admin sets one
+  // (product_package_price).
+  productPackagePrice: [],
 }

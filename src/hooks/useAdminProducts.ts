@@ -7,6 +7,8 @@ import {
   setProductPackageStock,
   fetchProductPackageAvailability,
   setProductPackageAvailability,
+  fetchProductPackagePrice,
+  setProductPackagePrice,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -127,5 +129,30 @@ export function useSetProductPackageAvailability() {
       available: boolean
     }) => setProductPackageAvailability(productId, packageId, available),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'productPackageAvailability'] }),
+  })
+}
+
+/** All product_package_price override rows. No row for a combo = priced per piece. */
+export function useAdminProductPackagePrice() {
+  return useQuery({
+    queryKey: ['admin', 'productPackagePrice'],
+    queryFn: fetchProductPackagePrice,
+    staleTime: 15_000,
+  })
+}
+
+export function useSetProductPackagePrice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      productId,
+      packageId,
+      price,
+    }: {
+      productId: string
+      packageId: string
+      price: number | null
+    }) => setProductPackagePrice(productId, packageId, price),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'productPackagePrice'] }),
   })
 }

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { CatalogProduct, CatalogPackage } from '../../types/catalog'
+import type { CatalogProduct, CatalogPackage, ProductPackagePriceMap } from '../../types/catalog'
+import { stockKey } from '../../types/catalog'
 import type { CartItem } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { useCartStore } from '../../stores/cart'
@@ -9,6 +10,8 @@ import BrownieImage from './BrownieImage'
 interface ProductTileProps {
   product: CatalogProduct
   packages: CatalogPackage[]
+  /** Whole-pack price overrides; no entry = priced per piece. */
+  productPackagePrice?: ProductPackagePriceMap
 }
 
 // Catalogue card: image with a badge/sold-out overlay, name, price, and a
@@ -17,7 +20,11 @@ interface ProductTileProps {
 // always adds the product's smallest eligible package at qty 1, no add-ons;
 // the customer can refine it from the cart (edit routes to Product Detail
 // with the config pre-filled) or on the product page itself.
-export default function ProductTile({ product, packages }: ProductTileProps) {
+export default function ProductTile({
+  product,
+  packages,
+  productPackagePrice = {},
+}: ProductTileProps) {
   const [justAdded, setJustAdded] = useState(false)
   const timer = useRef<number | undefined>(undefined)
   const addItem = useCartStore((s) => s.addItem)
@@ -42,10 +49,15 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
     null,
   )
 
+  // A whole-pack price override for the cheapest package wins over the per-piece
+  // computation, so the tile "from" price matches what the customer is charged.
+  const cheapestPackPrice = cheapest
+    ? productPackagePrice[stockKey(product.id, cheapest.id)]
+    : undefined
   const fromPrice = isSlab
     ? (cheapestFlavor?.price ?? product.pricePerPiece)
     : cheapest
-      ? product.pricePerPiece * cheapest.pieceCount
+      ? (cheapestPackPrice ?? product.pricePerPiece * cheapest.pieceCount)
       : product.pricePerPiece
   const soldOut = !product.inStock
   const badge = product.isHotPick
@@ -85,6 +97,9 @@ export default function ProductTile({ product, packages }: ProductTileProps) {
         pieceCount: cheapest.pieceCount,
         boxQty: 1,
         unitPrice: product.pricePerPiece,
+        // Carry the whole-pack override so a quick-add is priced exactly as the
+        // server will re-derive it (else checkout would raise PRICE_MISMATCH).
+        packPrice: cheapestPackPrice,
         addons: [],
       }
     }

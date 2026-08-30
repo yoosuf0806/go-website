@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { CartAddon, CartItem } from '../lib/pricing'
 import type { Catalog } from '../types/catalog'
+import { stockKey } from '../types/catalog'
 import { toast } from './toast'
 
 // Zustand cart store, persisted to localStorage under a versioned key. Items
@@ -71,12 +72,18 @@ export function repriceLine(line: CartLine, catalog: Catalog): CartLine | null {
   const pkg = catalog.packages.find((p) => p.id === line.packageId)
   if (!pkg) return null
 
+  // Whole-pack override for this product×package, if the admin set one; else the
+  // line stays priced per piece. Refreshed from the live catalogue like every
+  // other cached price so a returning customer never checks out at a stale rate.
+  const packPrice = catalog.productPackagePrice[stockKey(line.productId, line.packageId)]
+
   const item: CartItem = {
     ...line,
     productName: product.name,
     packageLabel: pkg.label,
     pieceCount: pkg.pieceCount,
     unitPrice: product.pricePerPiece,
+    packPrice: packPrice ?? undefined,
     addons: repricedAddons,
   }
   return { ...item, key: cartLineKey(item.productId, item.packageId, item.addons) }

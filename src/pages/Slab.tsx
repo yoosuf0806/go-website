@@ -70,7 +70,7 @@ export default function Slab() {
         {slabProducts.length > 0 ? (
           <div className="mt-7 grid grid-cols-2 gap-3.5 md:grid-cols-3 md:gap-6 lg:grid-cols-4">
             {slabProducts.map((product) => (
-              <ProductTile key={product.id} product={product} packages={packages} />
+              <ProductTile key={product.id} product={product} packages={packages} productPackagePrice={catalog.productPackagePrice} />
             ))}
           </div>
         ) : (

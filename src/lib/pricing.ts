@@ -33,6 +33,13 @@ export interface CartItem {
    * the chosen flavour's flat per-product price.
    */
   unitPrice: number
+  /**
+   * Whole-pack override (product_package_price): when set, this product×package
+   * is priced at this flat amount for the pack instead of unitPrice × pieceCount.
+   * undefined = the normal per-piece pricing. Ignored for slab lines. Mirrors
+   * the v_pack_price branch in create_order() so client and server never diverge.
+   */
+  packPrice?: number
   addons: CartAddon[]
   /**
    * True for a standalone slab product line. Slabs are priced per product (flat
@@ -68,14 +75,21 @@ export function addonsTotal(item: CartItem): number {
  * Line total for one cart line.
  *
  * Normal line: `(price_per_piece × piece_count + add-on prices) × box_qty`
- * (spec §6.1). Slab line: `(flat flavour price + add-on prices) × box_qty` —
- * a slab is priced per product, not per piece, so pieceCount is not a factor.
+ * (spec §6.1). Whole-pack line (packPrice set): `(pack price + add-on prices) ×
+ * box_qty` — the admin fixed a flat price for this product×package, so piece
+ * count is not a factor in the price (it still drives delivery, computed
+ * elsewhere). Slab line: `(flat flavour price + add-on prices) × box_qty` — a
+ * slab is priced per product, not per piece, so pieceCount is not a factor.
  * Add-ons are charged PER BOX: a line with box_qty = 3 and a ribbon carries
  * three ribbons, since identical (product + package + add-ons) configs merge
  * into one line via box_qty (spec §8). Confirmed with the owner.
  */
 export function lineTotal(item: CartItem): number {
-  const base = item.isSlab ? item.unitPrice : item.unitPrice * item.pieceCount
+  const base = item.isSlab
+    ? item.unitPrice
+    : item.packPrice != null
+      ? item.packPrice
+      : item.unitPrice * item.pieceCount
   return (base + addonsTotal(item)) * item.boxQty
 }
 

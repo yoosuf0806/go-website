@@ -7,6 +7,8 @@ import {
   useSetProductPackageStock,
   useAdminProductPackageAvailability,
   useSetProductPackageAvailability,
+  useAdminProductPackagePrice,
+  useSetProductPackagePrice,
   useProductMutations,
   useCategoryMutations,
 } from '../../hooks/useAdminProducts'
@@ -25,6 +27,8 @@ export default function Products() {
   const setStock = useSetProductPackageStock()
   const { data: availabilityRows } = useAdminProductPackageAvailability()
   const setAvailability = useSetProductPackageAvailability()
+  const { data: priceRows } = useAdminProductPackagePrice()
+  const setPackPrice = useSetProductPackagePrice()
   const { create, update, remove } = useProductMutations()
   const categoryMutations = useCategoryMutations()
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -98,6 +102,22 @@ export default function Products() {
   function isAvailable(productId: string, packageId: string): boolean {
     const row = availabilityRows?.find((r) => r.product_id === productId && r.package_id === packageId)
     return row ? row.is_available : true
+  }
+
+  // No row for a product×package combo = priced per piece (price_per_piece ×
+  // piece_count). A row carries a flat whole-pack price for that combo.
+  function packPriceOf(productId: string, packageId: string): number | undefined {
+    return priceRows?.find((r) => r.product_id === productId && r.package_id === packageId)?.price
+  }
+
+  // Save the whole-pack price from a grid cell: a positive number upserts the
+  // override; an empty/zero/invalid value clears it back to per-piece pricing.
+  function handlePackPriceCommit(productId: string, packageId: string, raw: string) {
+    const trimmed = raw.trim()
+    const parsed = trimmed === '' ? null : Number(trimmed)
+    const next = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    if (next === (packPriceOf(productId, packageId) ?? null)) return
+    setPackPrice.mutate({ productId, packageId, price: next })
   }
 
   return (
@@ -366,6 +386,65 @@ export default function Products() {
                         >
                           {available ? 'Shown' : 'Hidden'}
                         </button>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {products && products.length > 0 && packages && packages.length > 0 && (
+        <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+          <div className="border-b border-neutral-100 px-4 py-3">
+            <h2 className="text-sm font-semibold">Whole-pack price</h2>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Optional flat price for a whole pack, overriding the per-piece rate for that size.
+              Leave blank to keep pricing per piece (price per piece × piece count). Delivery is
+              unchanged — still based on the pack’s piece count. Slab sizes are priced per flavour in
+              the product’s Edit form, so they can’t take a whole-pack price here.
+            </p>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-500">
+              <tr>
+                <th className="px-3 py-2 font-medium">Product</th>
+                {packages.map((pkg) => (
+                  <th key={pkg.id} className="px-3 py-2 text-center font-medium">
+                    {pkg.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id} className="border-t border-neutral-100">
+                  <td className="px-3 py-2">{product.name}</td>
+                  {packages.map((pkg) => {
+                    if (pkg.is_slab) {
+                      return (
+                        <td key={pkg.id} className="px-3 py-2 text-center text-neutral-300">
+                          —
+                        </td>
+                      )
+                    }
+                    const current = packPriceOf(product.id, pkg.id)
+                    return (
+                      <td key={pkg.id} className="px-3 py-2 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          defaultValue={current ?? ''}
+                          key={`${product.id}:${pkg.id}:${current ?? ''}`}
+                          placeholder="per pc"
+                          disabled={setPackPrice.isPending}
+                          onBlur={(e) => handlePackPriceCommit(product.id, pkg.id, e.target.value)}
+                          className="w-24 rounded border border-neutral-300 px-2 py-1 text-right text-xs disabled:opacity-50"
+                        />
                       </td>
                     )
                   })}

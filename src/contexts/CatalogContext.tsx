@@ -14,8 +14,9 @@ const rawSeed = catalogJson as unknown as Catalog
 const seed: Catalog = {
   ...rawSeed,
   content: mergeContent(rawSeed.content),
-  // Guard against snapshots baked before this field existed.
+  // Guard against snapshots baked before these fields existed.
   productPackageAvailability: rawSeed.productPackageAvailability ?? {},
+  productPackagePrice: rawSeed.productPackagePrice ?? {},
 }
 
 interface CatalogContextValue {
