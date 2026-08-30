@@ -234,6 +234,7 @@ export default function ProductFormModal({
               <input
                 type="number"
                 min={0}
+                step="0.01"
                 value={form.price_per_piece}
                 onChange={(e) => set('price_per_piece', Number(e.target.value))}
                 className="mt-1 w-32 rounded border border-neutral-300 px-3 py-2 text-sm"
@@ -449,6 +450,7 @@ export default function ProductFormModal({
                         <input
                           type="number"
                           min={0}
+                          step="0.01"
                           value={fl.price}
                           onChange={(e) => updateFlavor(i, { price: Number(e.target.value) })}
                           className="w-24 rounded border border-neutral-300 px-2 py-1.5 text-sm"

@@ -133,13 +133,17 @@ export default function ProductDetail() {
             <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-berry">{categoryLabel}</span>
           )}
           <h1 className="mt-1.5 text-[clamp(1.8rem,3vw,2.5rem)] leading-tight text-navy">{product.name}</h1>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            {product.isSlabProduct && slabPriceVaries && (
-              <span className="text-sm text-neutral-500">from</span>
-            )}
-            <span className="font-display text-[1.5rem] text-pink">{formatLKR(headlinePrice)}</span>
-            <span className="text-sm text-neutral-500">{product.isSlabProduct ? 'per slab' : 'per piece'}</span>
-          </div>
+          {/* Per-piece rate is hidden from customers for normal products — the
+              configurator shows the pack total (the price they actually pay).
+              Slab products still show their per-slab "from" price, since that is
+              a whole-product price, not a per-unit rate. */}
+          {product.isSlabProduct && (
+            <div className="mt-1.5 flex items-baseline gap-2">
+              {slabPriceVaries && <span className="text-sm text-neutral-500">from</span>}
+              <span className="font-display text-[1.5rem] text-pink">{formatLKR(headlinePrice)}</span>
+              <span className="text-sm text-neutral-500">per slab</span>
+            </div>
+          )}
 
           {product.description && (
             <p className="mt-3 text-[15px] leading-relaxed text-neutral-500">{product.description}</p>
@@ -177,7 +181,6 @@ export default function ProductDetail() {
                   {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
                 </div>
                 <div className="mt-2 truncate text-[13px] font-medium text-navy">{p.name}</div>
-                <div className="text-[13px] font-bold text-[#c02249]">{formatLKR(p.pricePerPiece)}</div>
               </Link>
             ))}
           </div>
