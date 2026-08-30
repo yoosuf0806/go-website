@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { useAdminSettings, useUpdateSetting } from '../../hooks/useAdminSettings'
 import { changePassword } from '../../lib/adminSettings'
-import type { BannerSetting, FeaturesSetting, BusinessSetting } from '../../types/catalog'
+import type {
+  BannerSetting,
+  FeaturesSetting,
+  BusinessSetting,
+  BankTransferSetting,
+} from '../../types/catalog'
 import Toast from '../../components/ui/Toast'
 
 // Admin Settings (spec §7): banner scheduler, feature toggles, business info,
@@ -31,6 +36,7 @@ export default function Settings() {
           <BannerSection initial={data.banner} onSaved={() => setToast('Banner saved.')} />
           <FeaturesSection initial={data.features} onSaved={() => setToast('Features saved.')} />
           <BusinessSection initial={data.business} onSaved={() => setToast('Business info saved.')} />
+          <BankTransferSection initial={data.bank_transfer} onSaved={() => setToast('Bank details saved.')} />
           <PasswordSection onSaved={() => setToast('Password updated.')} />
         </div>
       )}
@@ -208,6 +214,51 @@ function BusinessSection({ initial, onSaved }: { initial: BusinessSetting; onSav
             className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
           />
         </label>
+        <SaveButton pending={update.isPending} error={update.error?.message} />
+      </Section>
+    </form>
+  )
+}
+
+function BankTransferSection({ initial, onSaved }: { initial: BankTransferSetting; onSaved: () => void }) {
+  const [bank, setBank] = useState<BankTransferSetting>(initial)
+  const update = useUpdateSetting()
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    update.mutate({ key: 'bank_transfer', value: bank }, { onSuccess: onSaved })
+  }
+
+  const fields: { key: keyof Omit<BankTransferSetting, 'enabled'>; label: string; placeholder: string }[] = [
+    { key: 'bank_name', label: 'Bank name', placeholder: 'Nations Trust Bank' },
+    { key: 'account_name', label: 'Account name', placeholder: 'Account holder name' },
+    { key: 'account_no', label: 'Account number', placeholder: '200520120714' },
+    { key: 'branch', label: 'Branch', placeholder: 'Mt Lavinia' },
+  ]
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Section title="Bank transfer">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={bank.enabled}
+            onChange={(e) => setBank({ ...bank, enabled: e.target.checked })}
+          />
+          Show these details at checkout
+        </label>
+        {fields.map(({ key, label, placeholder }) => (
+          <label key={key} className="text-sm">
+            <span className="block text-neutral-600">{label}</span>
+            <input
+              type="text"
+              placeholder={placeholder}
+              value={bank[key]}
+              onChange={(e) => setBank({ ...bank, [key]: e.target.value })}
+              className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            />
+          </label>
+        ))}
         <SaveButton pending={update.isPending} error={update.error?.message} />
       </Section>
     </form>
