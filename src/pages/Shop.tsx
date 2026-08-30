@@ -129,7 +129,7 @@ export default function Shop() {
           <>
             <div className="grid grid-cols-2 gap-x-3.5 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
               {visible.map((product) => (
-                <ProductTile key={product.id} product={product} packages={packages} />
+                <ProductTile key={product.id} product={product} packages={packages} productPackagePrice={catalog.productPackagePrice} />
               ))}
             </div>
             {hasMore && (

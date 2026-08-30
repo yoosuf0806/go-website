@@ -29,6 +29,7 @@ import type {
   RawProduct,
   RawProductPackageStock,
   RawProductPackageAvailability,
+  RawProductPackagePrice,
   RawReview,
   SeedData,
 } from './seed-data.ts'
@@ -41,6 +42,7 @@ import type {
   BankTransferSetting,
   ProductPackageStockMap,
   ProductPackageAvailabilityMap,
+  ProductPackagePriceMap,
 } from '../src/types/catalog.ts'
 import { stockKey } from '../src/types/catalog.ts'
 import { mergeContent, type SiteContent } from '../src/types/content.ts'
@@ -121,6 +123,15 @@ function mapProductPackageAvailability(
   return map
 }
 
+/** No row = priced per piece; only whole-pack overrides need to appear in the map. */
+function mapProductPackagePrice(rows: RawProductPackagePrice[]): ProductPackagePriceMap {
+  const map: ProductPackagePriceMap = {}
+  for (const r of rows) {
+    map[stockKey(r.product_id, r.package_id)] = Number(r.price)
+  }
+  return map
+}
+
 function mapAddons(rows: RawAddon[]): Catalog['addons'] {
   return rows
     .filter((r) => r.is_enabled)
@@ -181,6 +192,7 @@ function buildCatalog(data: SeedData, source: Catalog['source']): Catalog {
     content: mergeContent(data.settings.content as Partial<SiteContent> | undefined),
     productPackageStock: mapProductPackageStock(data.productPackageStock),
     productPackageAvailability: mapProductPackageAvailability(data.productPackageAvailability),
+    productPackagePrice: mapProductPackagePrice(data.productPackagePrice),
   }
 }
 
@@ -260,6 +272,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     settings,
     productPackageStock,
     productPackageAvailability,
+    productPackagePrice,
   ] = await Promise.all([
     supabase.from('categories').select('*'),
     supabase.from('products').select('*'),
@@ -270,6 +283,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     supabase.from('site_settings').select('*'),
     supabase.from('product_package_stock').select('*'),
     supabase.from('product_package_availability').select('*'),
+    supabase.from('product_package_price').select('*'),
   ])
 
   for (const res of [
@@ -296,6 +310,15 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     )
   }
 
+  // Whole-pack prices are read tolerantly for the same reason: if migration 041
+  // hasn't run yet the table won't exist, so treat it as "no overrides" (every
+  // package priced per piece) until the migration is applied.
+  if (productPackagePrice.error) {
+    console.warn(
+      `[snapshot] product_package_price read failed (${productPackagePrice.error.message}) — treating all packages as priced per piece. Run migration 041.`,
+    )
+  }
+
   const settingsByKey = Object.fromEntries(
     (settings.data ?? []).map((row: { key: string; value: unknown }) => [row.key, row.value]),
   )
@@ -317,6 +340,7 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
     productPackageStock: (productPackageStock.data ?? []) as RawProductPackageStock[],
     productPackageAvailability: (productPackageAvailability.data ??
       []) as RawProductPackageAvailability[],
+    productPackagePrice: (productPackagePrice.data ?? []) as RawProductPackagePrice[],
   }
 }
 

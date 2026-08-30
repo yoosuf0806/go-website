@@ -56,6 +56,34 @@ describe('addonsTotal / lineTotal', () => {
   })
 })
 
+describe('lineTotal — whole-pack (flat) pricing', () => {
+  // packPrice overrides the per-piece rate: the pack costs a flat amount,
+  // ignoring unitPrice × pieceCount, mirroring the create_order() override.
+  it('uses packPrice instead of unitPrice × pieceCount', () => {
+    // per-piece would be 150 × 12 = 1800; the flat pack price wins.
+    expect(lineTotal(item({ packPrice: 5500 }))).toBe(5500)
+    expect(lineTotal(item({ packPrice: 5500, boxQty: 3 }))).toBe(5500 * 3)
+  })
+
+  it('adds per-box add-on prices on top of the flat pack price', () => {
+    const withAddons = item({
+      packPrice: 5500,
+      boxQty: 2,
+      addons: [{ id: 'gift_ribbon', label: 'Gift Ribbon', price: 150, detail: { color: 'Gold' } }],
+    })
+    // (5500 + 150) × 2 = 11300
+    expect(lineTotal(withAddons)).toBe(11300)
+  })
+
+  it('a packPrice of 0 is honoured as a free pack (not treated as "unset")', () => {
+    expect(lineTotal(item({ packPrice: 0 }))).toBe(0)
+  })
+
+  it('falls back to per-piece pricing when packPrice is undefined', () => {
+    expect(lineTotal(item({ packPrice: undefined }))).toBe(150 * 12)
+  })
+})
+
 describe('lineTotal — slab (flat, per-product) pricing', () => {
   // A slab line is priced per product (flat flavour price), NOT × pieceCount.
   const slab = (overrides: Partial<CartItem> = {}): CartItem =>

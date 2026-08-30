@@ -96,6 +96,15 @@ export type ProductPackageStockMap = Record<string, boolean>
  */
 export type ProductPackageAvailabilityMap = Record<string, boolean>
 
+/**
+ * Per product×package WHOLE-PACK price overrides (`product_package_price`). No
+ * entry for a productId::packageId key means that combo is priced per piece
+ * (price_per_piece × piece_count, the default). Only overridden combos are
+ * recorded (value = the flat pack price), so the map stays small. Uses the same
+ * key format as stockKey.
+ */
+export type ProductPackagePriceMap = Record<string, number>
+
 export function stockKey(productId: string, packageId: string): string {
   return `${productId}::${packageId}`
 }
@@ -207,4 +216,6 @@ export interface Catalog {
   productPackageStock: ProductPackageStockMap
   /** Hidden product×package overrides; see ProductPackageAvailabilityMap. No entry = available. */
   productPackageAvailability: ProductPackageAvailabilityMap
+  /** Whole-pack price overrides; see ProductPackagePriceMap. No entry = priced per piece. */
+  productPackagePrice: ProductPackagePriceMap
 }

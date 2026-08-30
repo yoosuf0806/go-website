@@ -5,6 +5,7 @@ import type {
   CatalogAddon,
   ProductPackageStockMap,
   ProductPackageAvailabilityMap,
+  ProductPackagePriceMap,
 } from '../../types/catalog'
 import { stockKey } from '../../types/catalog'
 import { lineTotal, type CartItem } from '../../lib/pricing'
@@ -22,6 +23,8 @@ interface ProductConfiguratorProps {
   productPackageStock?: ProductPackageStockMap
   /** Hidden product×package overrides; no entry = available/shown. */
   productPackageAvailability?: ProductPackageAvailabilityMap
+  /** Whole-pack price overrides; no entry = priced per piece. */
+  productPackagePrice?: ProductPackagePriceMap
   onAdded?: () => void
 }
 
@@ -42,6 +45,7 @@ export default function ProductConfigurator({
   addons,
   productPackageStock = {},
   productPackageAvailability = {},
+  productPackagePrice = {},
   onAdded,
 }: ProductConfiguratorProps) {
   const isSlab = product.isSlabProduct
@@ -118,6 +122,9 @@ export default function ProductConfigurator({
           pieceCount: selectedPackage.pieceCount,
           boxQty,
           unitPrice: product.pricePerPiece,
+          // A flat whole-pack price for this product×package overrides the
+          // per-piece rate when the admin has set one (product_package_price).
+          packPrice: productPackagePrice[stockKey(product.id, selectedPackage.id)],
           addons: cartAddons,
         }
       : null
