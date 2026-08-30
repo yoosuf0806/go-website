@@ -37,7 +37,7 @@ export default function ConvertToOrderModal({
     phone: inquiry.phone,
     email: inquiry.email ?? '',
     altPhone: '',
-    address: '',
+    address: inquiry.delivery_address ?? '',
     deliveryDate: inquiry.event_date ?? '',
     // Optional for admin-scheduled orders; blank means "no fixed slot".
     deliverySlot: '',

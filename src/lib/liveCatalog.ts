@@ -178,9 +178,14 @@ export async function fetchLiveCatalog(seed: Catalog): Promise<Catalog> {
       ...seed.settings.business,
       ...((settingsMap.get('business') as Partial<Catalog['settings']['business']>) ?? {}),
     },
-    bankTransfer:
-      (settingsMap.get('bank_transfer') as Catalog['settings']['bankTransfer']) ??
-      seed.settings.bankTransfer,
+    // Merge per-key like `business`: a stored bank_transfer row that predates a
+    // field (or omits `enabled`) still falls back to the seed defaults, so the
+    // checkout's "Transfer to" panel never renders blank or gets hidden by a
+    // missing `enabled` flag.
+    bankTransfer: {
+      ...seed.settings.bankTransfer,
+      ...((settingsMap.get('bank_transfer') as Partial<Catalog['settings']['bankTransfer']>) ?? {}),
+    },
   }
   const content = mergeContent(settingsMap.get('content') ?? seed.content)
 

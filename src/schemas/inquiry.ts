@@ -39,6 +39,7 @@ export interface QuoteForm {
   email?: string
   pieceCount: number
   deliveryDate: string
+  deliveryAddress?: string
   flavorId?: string
   flavorName?: string
   message?: string
@@ -65,6 +66,7 @@ export const quoteFormSchema = z.object({
       message: 'Enter a valid piece count',
     }),
   deliveryDate: z.string().trim().min(1, 'Delivery date is required'),
+  deliveryAddress: z.string().trim().max(300, 'Max 300 characters').optional(),
   flavorId: z.string().uuid().optional(),
   flavorName: z.string().trim().optional(),
   message: z.string().trim().max(500, 'Max 500 characters').optional(),

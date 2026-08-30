@@ -124,6 +124,12 @@ function InquiryCard({
             <dd className="inline">{inquiry.guest_count}</dd>
           </div>
         )}
+        {inquiry.delivery_address && (
+          <div className="col-span-2">
+            <dt className="inline font-medium">Delivery: </dt>
+            <dd className="inline">{inquiry.delivery_address}</dd>
+          </div>
+        )}
       </dl>
 
       {inquiry.message && <p className="mt-2 text-sm text-neutral-700">{inquiry.message}</p>}
