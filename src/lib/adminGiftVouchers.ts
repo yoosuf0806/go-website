@@ -12,6 +12,9 @@ export interface AdminGiftVoucher {
   amount: number
   discount_type: VoucherDiscountType
   is_active: boolean
+  /** When true the code is a promo/discount code: unlimited redemptions and it
+   *  never records used_at. When false it is a single-use gift voucher. */
+  is_reusable: boolean
   /** Optional validity window (timestamptz ISO strings). null = unbounded. */
   valid_from: string | null
   valid_until: string | null
@@ -24,6 +27,7 @@ export interface NewGiftVoucher {
   code: string
   amount: number
   discount_type: VoucherDiscountType
+  is_reusable: boolean
   valid_from: string | null
   valid_until: string | null
 }
@@ -42,6 +46,7 @@ export async function addGiftVoucher(input: NewGiftVoucher): Promise<void> {
     code: input.code.trim().toUpperCase(),
     amount: input.amount,
     discount_type: input.discount_type,
+    is_reusable: input.is_reusable,
     valid_from: input.valid_from || null,
     valid_until: input.valid_until || null,
   })
