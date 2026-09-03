@@ -29,6 +29,7 @@ export default function GiftVouchers() {
   const [code, setCode] = useState('')
   const [amount, setAmount] = useState(0)
   const [discountType, setDiscountType] = useState<VoucherDiscountType>('fixed')
+  const [isReusable, setIsReusable] = useState(false)
   const [validFrom, setValidFrom] = useState('')   // datetime-local string
   const [validUntil, setValidUntil] = useState('') // datetime-local string
 
@@ -44,6 +45,7 @@ export default function GiftVouchers() {
         code: code.trim(),
         amount,
         discount_type: discountType,
+        is_reusable: isReusable,
         valid_from: localToISO(validFrom),
         valid_until: localToISO(validUntil),
       },
@@ -52,6 +54,7 @@ export default function GiftVouchers() {
           setCode('')
           setAmount(0)
           setDiscountType('fixed')
+          setIsReusable(false)
           setValidFrom('')
           setValidUntil('')
         },
@@ -64,7 +67,8 @@ export default function GiftVouchers() {
       <h1 className="text-xl font-semibold">Gift Vouchers</h1>
       <p className="mt-1 text-sm text-neutral-500">
         Create codes customers can redeem at checkout for a flat (Rs.) or percentage discount.
-        Each code works once. Optionally restrict redemption to a date/time window.
+        A gift voucher works once; tick “reusable” for a promo code that can be redeemed any
+        number of times. Optionally restrict redemption to a date/time window.
       </p>
 
       <form onSubmit={handleAdd} className="mt-4 rounded-lg border border-neutral-200 bg-white p-4">
@@ -122,6 +126,17 @@ export default function GiftVouchers() {
             />
           </div>
         </div>
+
+        {/* Reusable toggle */}
+        <label className="mt-3 flex items-center gap-2 text-sm text-neutral-700">
+          <input
+            type="checkbox"
+            checked={isReusable}
+            onChange={(e) => setIsReusable(e.target.checked)}
+            className="h-4 w-4 rounded border-neutral-300"
+          />
+          Reusable — can be redeemed any number of times (promo code)
+        </label>
 
         {discountType === 'percent' && (
           <p className="mt-1.5 text-xs text-neutral-400">
@@ -214,7 +229,14 @@ function VoucherRow({
   return (
     <li className="flex items-start justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4">
       <div className="min-w-0">
-        <p className="font-mono text-sm font-semibold text-neutral-900">{voucher.code}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-mono text-sm font-semibold text-neutral-900">{voucher.code}</p>
+          {voucher.is_reusable && (
+            <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[11px] font-medium text-purple-700">
+              Reusable
+            </span>
+          )}
+        </div>
         <p className="text-sm text-neutral-500">{discountLabel(voucher)}</p>
         {/* Validity window */}
         {(voucher.valid_from || voucher.valid_until) && (
