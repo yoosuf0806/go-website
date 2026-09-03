@@ -1,13 +1,20 @@
+// Admin CRUD for gift_vouchers (migration 021). Live Supabase reads/writes,
+// same pattern as adminReviews — the storefront only ever calls the
+// validate_gift_voucher() RPC, never this table directly.
+import { supabase } from './supabase'
+
 export type VoucherDiscountType = 'fixed' | 'percent'
 
 export interface AdminGiftVoucher {
   id: string
   code: string
+  /** LKR for a 'fixed' voucher, or the percentage for a 'percent' voucher. */
   amount: number
   discount_type: VoucherDiscountType
   is_active: boolean
-  valid_from: string | null   // ISO timestamptz
-  valid_until: string | null  // ISO timestamptz
+  /** Optional validity window (timestamptz ISO strings). null = unbounded. */
+  valid_from: string | null
+  valid_until: string | null
   used_at: string | null
   used_by_order_id: string | null
   created_at: string
@@ -41,4 +48,12 @@ export async function addGiftVoucher(input: NewGiftVoucher): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-// setGiftVoucherActive and deleteGiftVoucher stay the same
+export async function setGiftVoucherActive(id: string, is_active: boolean): Promise<void> {
+  const { error } = await supabase.from('gift_vouchers').update({ is_active }).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteGiftVoucher(id: string): Promise<void> {
+  const { error } = await supabase.from('gift_vouchers').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}

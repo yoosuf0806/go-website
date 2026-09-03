@@ -181,6 +181,7 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
                 )}
                 {voucher.status === 'invalid' && <p className="mt-1.5 text-xs text-red-600">No voucher available / wrong code.</p>}
                 {voucher.status === 'used' && <p className="mt-1.5 text-xs text-red-600">Voucher already used.</p>}
+                {voucher.status === 'expired' && <p className="mt-1.5 text-xs text-red-600">That voucher code has expired.</p>}
                 {voucher.error && <p className="mt-1.5 text-xs text-red-600">{voucher.error}</p>}
               </div>
 
