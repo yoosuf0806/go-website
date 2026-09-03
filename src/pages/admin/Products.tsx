@@ -293,7 +293,8 @@ export default function Products() {
             <h2 className="text-sm font-semibold">Package stock</h2>
             <p className="mt-0.5 text-xs text-neutral-500">
               Per-product, per-package sold-out toggle — e.g. 9pc Cashew in stock, 12pc Cashew out.
-              Click a package to flip it.
+              Click a package to flip it. Slab products aren’t sold by the box, so they show one
+              toggle that marks the whole slab sold out.
             </p>
           </div>
           <table className="w-full text-sm">
@@ -311,27 +312,49 @@ export default function Products() {
               {products.map((product) => (
                 <tr key={product.id} className="border-t border-neutral-100">
                   <td className="px-3 py-2">{product.name}</td>
-                  {packages.map((pkg) => {
-                    const inStock = isInStock(product.id, pkg.id)
-                    return (
-                      <td key={pkg.id} className="px-3 py-2 text-center">
-                        <button
-                          type="button"
-                          disabled={setStock.isPending}
-                          onClick={() =>
-                            setStock.mutate({ productId: product.id, packageId: pkg.id, inStock: !inStock })
-                          }
-                          className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
-                            inStock
-                              ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
-                              : 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                        >
-                          {inStock ? 'In stock' : 'Sold out'}
-                        </button>
-                      </td>
-                    )
-                  })}
+                  {product.is_slab_product ? (
+                    // A slab product is sold as a flavour, not as a 9/12/15 box, so
+                    // the per-package cells don't apply. One toggle flips the whole
+                    // product's in_stock — the flag the storefront slab card reads.
+                    <td colSpan={packages.length} className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        disabled={update.isPending}
+                        onClick={() =>
+                          update.mutate({ id: product.id, patch: { in_stock: !product.in_stock } })
+                        }
+                        className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
+                          product.in_stock
+                            ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                            : 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                      >
+                        {product.in_stock ? 'In stock (whole slab)' : 'Sold out (whole slab)'}
+                      </button>
+                    </td>
+                  ) : (
+                    packages.map((pkg) => {
+                      const inStock = isInStock(product.id, pkg.id)
+                      return (
+                        <td key={pkg.id} className="px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            disabled={setStock.isPending}
+                            onClick={() =>
+                              setStock.mutate({ productId: product.id, packageId: pkg.id, inStock: !inStock })
+                            }
+                            className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
+                              inStock
+                                ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                                : 'border-red-300 bg-red-100 text-red-700 hover:bg-red-200'
+                            }`}
+                          >
+                            {inStock ? 'In stock' : 'Sold out'}
+                          </button>
+                        </td>
+                      )
+                    })
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -345,8 +368,8 @@ export default function Products() {
             <h2 className="text-sm font-semibold">Package availability</h2>
             <p className="mt-0.5 text-xs text-neutral-500">
               Which package sizes each product offers on the storefront. Hide the ones a product
-              never sells — e.g. a slab-only product hides the 9/12/15 boxes. Click a package to flip
-              it. (Slab sizes also need their toggle enabled in the product’s Edit form to appear.)
+              never sells. Click a package to flip it. Slab products have no boxes to hide, so they
+              show one toggle that shows or hides the whole slab on the storefront.
             </p>
           </div>
           <table className="w-full text-sm">
@@ -364,31 +387,53 @@ export default function Products() {
               {products.map((product) => (
                 <tr key={product.id} className="border-t border-neutral-100">
                   <td className="px-3 py-2">{product.name}</td>
-                  {packages.map((pkg) => {
-                    const available = isAvailable(product.id, pkg.id)
-                    return (
-                      <td key={pkg.id} className="px-3 py-2 text-center">
-                        <button
-                          type="button"
-                          disabled={setAvailability.isPending}
-                          onClick={() =>
-                            setAvailability.mutate({
-                              productId: product.id,
-                              packageId: pkg.id,
-                              available: !available,
-                            })
-                          }
-                          className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
-                            available
-                              ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
-                              : 'border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200'
-                          }`}
-                        >
-                          {available ? 'Shown' : 'Hidden'}
-                        </button>
-                      </td>
-                    )
-                  })}
+                  {product.is_slab_product ? (
+                    // A slab product has no 9/12/15 boxes to hide; it's shown or
+                    // hidden as a whole. One toggle flips its is_visible — the flag
+                    // that adds/removes it from the storefront (slab page included).
+                    <td colSpan={packages.length} className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        disabled={update.isPending}
+                        onClick={() =>
+                          update.mutate({ id: product.id, patch: { is_visible: !product.is_visible } })
+                        }
+                        className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
+                          product.is_visible
+                            ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                            : 'border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        }`}
+                      >
+                        {product.is_visible ? 'Shown (whole slab)' : 'Hidden (whole slab)'}
+                      </button>
+                    </td>
+                  ) : (
+                    packages.map((pkg) => {
+                      const available = isAvailable(product.id, pkg.id)
+                      return (
+                        <td key={pkg.id} className="px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            disabled={setAvailability.isPending}
+                            onClick={() =>
+                              setAvailability.mutate({
+                                productId: product.id,
+                                packageId: pkg.id,
+                                available: !available,
+                              })
+                            }
+                            className={`rounded-full border px-2.5 py-1 text-xs disabled:opacity-50 ${
+                              available
+                                ? 'border-neutral-300 text-neutral-500 hover:bg-neutral-100'
+                                : 'border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            }`}
+                          >
+                            {available ? 'Shown' : 'Hidden'}
+                          </button>
+                        </td>
+                      )
+                    })
+                  )}
                 </tr>
               ))}
             </tbody>
