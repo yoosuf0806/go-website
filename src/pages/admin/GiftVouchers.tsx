@@ -22,15 +22,6 @@ function localToISO(local: string): string | null {
   return new Date(local).toISOString()
 }
 
-/** Convert an ISO timestamptz to the value format datetime-local inputs need. */
-function isoToLocal(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  // "YYYY-MM-DDTHH:MM" in local time — what <input type="datetime-local"> expects.
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 export default function GiftVouchers() {
   const { data: vouchers, isLoading, isError, error } = useAdminGiftVouchers()
   const { add, setActive, remove } = useGiftVoucherMutations()
