@@ -11,7 +11,7 @@
  *     can never be wrong for the URL it was stored under.
  *   - API and any other cross-origin / non-GET request: never touched.
  */
-const VERSION = 'go-sw-v2'
+const VERSION = 'go-sw-v3'
 const IMG_CACHE = 'go-img-v1'
 const IMG_CACHE_LIMIT = 150
 const SHELL = '/app.html'
@@ -52,6 +52,43 @@ async function trimCache(name, limit) {
   if (keys.length <= limit) return
   await Promise.all(keys.slice(0, keys.length - limit).map((k) => cache.delete(k)))
 }
+
+// Clicking an order notification focuses an existing admin tab if one is open,
+// otherwise opens the orders screen. Used by both the free Realtime
+// notifications and any future Web Push messages.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = (event.notification.data && event.notification.data.url) || '/admin/orders'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes('/admin') && 'focus' in client) return client.focus()
+      }
+      return self.clients.openWindow(target)
+    }),
+  )
+})
+
+// Web Push (optional upgrade for closed-app delivery): if a VAPID sender is
+// wired up later — e.g. a Supabase Edge Function on an orders webhook — its
+// payload is shown here. Harmless when unused: with no sender, no push fires.
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data && event.data.text() }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'New order', {
+      body: data.body || '',
+      tag: data.tag,
+      icon: '/icons/admin-192.png',
+      badge: '/icons/admin-192.png',
+      data: { url: data.url || '/admin/orders' },
+    }),
+  )
+})
 
 self.addEventListener('fetch', (event) => {
   const { request } = event

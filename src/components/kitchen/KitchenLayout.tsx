@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useSession } from '../../hooks/useSession'
+import InstallAppButton from '../InstallAppButton'
 
 // Minimal kitchen header: title + account avatar with a sign-out popover.
 // Dark navy theme, mobile-first, honours the top safe-area inset.
@@ -46,6 +47,7 @@ export default function KitchenLayout({ children }: { children: ReactNode }) {
               />
               <div className="absolute right-0 top-11 z-20 w-56 rounded-xl border border-white/10 bg-navy-light p-3 shadow-xl">
                 {email && <p className="truncate px-1 pb-2 text-xs text-white/50">{email}</p>}
+                <InstallAppButton className="mb-2 min-h-[44px] w-full rounded-lg border border-white/20 px-3 text-sm font-medium text-white hover:bg-white/10" />
                 <button
                   type="button"
                   onClick={handleLogout}
