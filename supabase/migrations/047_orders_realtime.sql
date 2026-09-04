@@ -1,4 +1,4 @@
--- 043_orders_realtime.sql
+-- 047_orders_realtime.sql
 --
 -- Enable Supabase Realtime for the orders table so the admin PWA can be
 -- notified of new orders the moment they're placed (free OS notifications while

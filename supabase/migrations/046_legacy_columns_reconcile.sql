@@ -1,4 +1,4 @@
--- 042_legacy_columns_reconcile.sql
+-- 046_legacy_columns_reconcile.sql
 --
 -- Final reconciliation of committed schema vs. the live production database,
 -- found by diffing production's exact per-table column lists (the COPY headers

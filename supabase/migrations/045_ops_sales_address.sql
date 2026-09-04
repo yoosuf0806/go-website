@@ -1,4 +1,4 @@
--- 041_ops_sales_address.sql
+-- 045_ops_sales_address.sql
 --
 -- Another column present in the live database but never captured in a committed
 -- migration: ops_sales.address. Found by diffing the live column inventory

@@ -1,4 +1,4 @@
--- 040_quote_flavors_legacy.sql
+-- 044_quote_flavors_legacy.sql
 --
 -- Reconciles the committed schema with the live production database. The live DB
 -- has a `quote_flavors` reference table and three extra `inquiries` columns
