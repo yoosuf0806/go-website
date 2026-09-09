@@ -44,11 +44,16 @@ export default function ConvertToOrderModal({
     note: inquiry.message ?? '',
     isGift: false,
   })
-  // Slab products are priced per flavour, which this package-based converter
-  // doesn't model — offer only normal (package) products here.
+  // Slab products/packages are priced per flavour, which this package-based
+  // converter doesn't model — offer only normal (piece-box) products and
+  // packages here. Defaulting a row to packages[0] was a bug: live catalogues
+  // sort the slab packages first, so the row defaulted to a slab package that
+  // isn't in the dropdown — the shown selection didn't match state and the
+  // totals ignored the picked item/quantity.
   const orderableProducts = products.filter((p) => !p.isSlabProduct)
+  const orderablePackages = packages.filter((p) => !p.isSlab)
   const [rows, setRows] = useState<LineRow[]>([
-    { productId: orderableProducts[0]?.id ?? '', packageId: packages[0]?.id ?? '', boxQty: 1 },
+    { productId: orderableProducts[0]?.id ?? '', packageId: orderablePackages[0]?.id ?? '', boxQty: 1 },
   ])
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutDetails, string>>>({})
   const convert = useConvertInquiry()
@@ -196,7 +201,7 @@ export default function ConvertToOrderModal({
         <h3 className="mt-5 text-sm font-semibold">Order items</h3>
         <div className="mt-2 flex flex-col gap-2">
           {rows.map((row, i) => {
-            const availablePackages = packages.filter((p) => !p.isSlab)
+            const availablePackages = orderablePackages
             return (
               <div key={i} className="flex flex-wrap items-center gap-2">
                 <select
@@ -221,15 +226,19 @@ export default function ConvertToOrderModal({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
-                  min={1}
-                  value={row.boxQty}
-                  onChange={(e) =>
-                    updateRow(setRows, i, { boxQty: Math.max(1, Number(e.target.value) || 1) })
-                  }
-                  className="w-16 rounded border border-neutral-300 px-2 py-1.5 text-sm"
-                />
+                <label className="flex items-center gap-1 text-xs text-neutral-500">
+                  Qty
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    value={row.boxQty}
+                    onChange={(e) =>
+                      updateRow(setRows, i, { boxQty: Math.max(1, Math.floor(Number(e.target.value) || 1)) })
+                    }
+                    className="w-20 rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
                 {rows.length > 1 && (
                   <button
                     type="button"
@@ -247,7 +256,7 @@ export default function ConvertToOrderModal({
             onClick={() =>
               setRows((rs) => [
                 ...rs,
-                { productId: products[0]?.id ?? '', packageId: packages[0]?.id ?? '', boxQty: 1 },
+                { productId: orderableProducts[0]?.id ?? '', packageId: orderablePackages[0]?.id ?? '', boxQty: 1 },
               ])
             }
             className="self-start text-sm text-amber-700 hover:underline"
@@ -308,8 +317,8 @@ function buildLines(
   for (const row of rows) {
     const product = products.find((p) => p.id === row.productId)
     const pkg = packages.find((p) => p.id === row.packageId)
-    // Slab products aren't orderable through this package-based converter.
-    if (!product || product.isSlabProduct || !pkg) continue
+    // Slab products/packages aren't orderable through this package-based converter.
+    if (!product || product.isSlabProduct || !pkg || pkg.isSlab) continue
     const item: CartItem = {
       productId: product.id,
       packageId: pkg.id,
