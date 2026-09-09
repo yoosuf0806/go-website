@@ -52,8 +52,12 @@ export default function ConvertToOrderModal({
   // totals ignored the picked item/quantity.
   const orderableProducts = products.filter((p) => !p.isSlabProduct)
   const orderablePackages = packages.filter((p) => !p.isSlab)
+  // Pre-fill the first line from the customer's structured request (quote form:
+  // flavour + piece count), so the order item and quantity match what they
+  // asked for. Falls back to a default row for free-text inquiries.
+  const requested = requestedItemRow(inquiry, orderableProducts, orderablePackages)
   const [rows, setRows] = useState<LineRow[]>([
-    { productId: orderableProducts[0]?.id ?? '', packageId: orderablePackages[0]?.id ?? '', boxQty: 1 },
+    requested ?? { productId: orderableProducts[0]?.id ?? '', packageId: orderablePackages[0]?.id ?? '', boxQty: 1 },
   ])
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutDetails, string>>>({})
   const convert = useConvertInquiry()
@@ -106,16 +110,23 @@ export default function ConvertToOrderModal({
           {inquiry.guest_count != null && ` · ${inquiry.guest_count} guests`}
         </p>
 
-        {/* What the customer actually asked for. Inquiries are free text (no
-            structured line items), so the admin reads this and picks the
-            matching products/quantities below. Shown read-only here AND carried
-            into the editable Note field so it lands on the order. */}
-        {inquiry.message && (
+        {/* What the customer asked for. A quote-form request (flavour + pieces)
+            pre-fills the order line below; free-text notes are shown for the
+            admin to read and match. Both are surfaced here so nothing is missed. */}
+        {(inquiry.flavor_name || inquiry.piece_count != null || inquiry.message) && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
               Customer’s requirements
             </p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{inquiry.message}</p>
+            {(inquiry.flavor_name || inquiry.piece_count != null) && (
+              <p className="mt-1 text-sm font-medium text-neutral-800">
+                Requested: {inquiry.flavor_name ?? 'flavour not specified'}
+                {inquiry.piece_count != null ? ` · ${inquiry.piece_count} pieces` : ''}
+              </p>
+            )}
+            {inquiry.message && (
+              <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{inquiry.message}</p>
+            )}
           </div>
         )}
 
@@ -306,6 +317,37 @@ export default function ConvertToOrderModal({
       </div>
     </div>
   )
+}
+
+// Map the customer's quote-form request (flavour name + piece count) onto an
+// order row. Matches the flavour to a non-slab product by name, then picks a
+// box size that divides the requested pieces exactly (largest such) — else the
+// largest box — and the box count that gets closest to the requested pieces.
+// The admin can still adjust everything; this just starts from what they asked.
+function requestedItemRow(
+  inquiry: AdminInquiry,
+  products: CatalogProduct[],
+  packages: CatalogPackage[],
+): LineRow | null {
+  const pieces = inquiry.piece_count && inquiry.piece_count > 0 ? inquiry.piece_count : null
+  const name = inquiry.flavor_name?.trim().toLowerCase()
+  const matched = name ? products.find((p) => p.name.trim().toLowerCase() === name) : undefined
+
+  // Nothing structured to pre-fill (free-text inquiry) → let the caller default.
+  if (!matched && pieces == null) return null
+
+  // Flavour matched → use it; otherwise keep the default product but still apply
+  // the requested piece count so the quantity reflects what they asked for.
+  const product = matched ?? products[0]
+  if (!product) return null
+
+  const byBiggest = [...packages].filter((p) => p.pieceCount > 0).sort((a, b) => b.pieceCount - a.pieceCount)
+  const pkg =
+    (pieces != null ? byBiggest.find((p) => pieces % p.pieceCount === 0) : undefined) ?? byBiggest[0]
+  if (!pkg) return null
+
+  const boxQty = pieces != null ? Math.max(1, Math.round(pieces / pkg.pieceCount)) : 1
+  return { productId: product.id, packageId: pkg.id, boxQty }
 }
 
 function buildLines(

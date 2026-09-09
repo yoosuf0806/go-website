@@ -12,6 +12,8 @@ const inquiry: AdminInquiry = {
   event_date: '2026-08-15',
   guest_count: 120,
   delivery_address: '12 Galle Road, Colombo 03',
+  flavor_name: null,
+  piece_count: null,
   message: 'Slab favours for 120 guests',
   converted_order_id: null,
   created_at: '2026-07-04T10:00:00Z',
