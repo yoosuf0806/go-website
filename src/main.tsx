@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import { CatalogProvider, CartSync } from './contexts/CatalogContext'
 import './index.css'
 
@@ -19,7 +20,9 @@ const app = (
         <CatalogProvider>
           <CartSync />
           <BrowserRouter>
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
           </BrowserRouter>
         </CatalogProvider>
       </QueryClientProvider>
