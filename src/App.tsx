@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, type ComponentType } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
 import PwaManifest from './components/PwaManifest'
@@ -17,22 +17,43 @@ import NotFound from './pages/NotFound'
 
 // Admin and kitchen portals are code-split: each lazy import becomes its own
 // chunk, loaded on demand behind the auth gate.
-const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
-const Login = lazy(() => import('./pages/admin/Login'))
-const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
-const Orders = lazy(() => import('./pages/admin/Orders'))
-const AdminCalendar = lazy(() => import('./pages/admin/Calendar'))
-const Inquiries = lazy(() => import('./pages/admin/Inquiries'))
-const Content = lazy(() => import('./pages/admin/Content'))
-const Products = lazy(() => import('./pages/admin/Products'))
-const AddonPricing = lazy(() => import('./pages/admin/AddonPricing'))
-const GiftVouchers = lazy(() => import('./pages/admin/GiftVouchers'))
-const Reviews = lazy(() => import('./pages/admin/Reviews'))
-const Settings = lazy(() => import('./pages/admin/Settings'))
-const BakeList = lazy(() => import('./pages/admin/BakeList'))
-const KitchenLogin = lazy(() => import('./pages/kitchen/KitchenLogin'))
-const KitchenBoard = lazy(() => import('./pages/kitchen/KitchenBoard'))
-const KitchenCalendar = lazy(() => import('./pages/kitchen/KitchenCalendar'))
+//
+// Retry the dynamic import a few times before giving up: a chunk fetch can fail
+// on a transient network/DNS blip (observed as ERR_NAME_NOT_RESOLVED / a
+// rejected FetchEvent for a not-yet-cached /assets/*.js), which would otherwise
+// hard-fail the route. A short backoff usually lets the next attempt succeed; if
+// every attempt fails the error still propagates to the app ErrorBoundary, which
+// shows a recoverable screen (and auto-reloads once for chunk errors).
+async function retryImport<T>(factory: () => Promise<T>, attempts = 3, delayMs = 400): Promise<T> {
+  try {
+    return await factory()
+  } catch (err) {
+    if (attempts <= 1) throw err
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+    return retryImport(factory, attempts - 1, delayMs * 2)
+  }
+}
+
+function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
+  return lazy(() => retryImport(factory))
+}
+
+const AdminLayout = lazyWithRetry(() => import('./components/admin/AdminLayout'))
+const Login = lazyWithRetry(() => import('./pages/admin/Login'))
+const Dashboard = lazyWithRetry(() => import('./pages/admin/Dashboard'))
+const Orders = lazyWithRetry(() => import('./pages/admin/Orders'))
+const AdminCalendar = lazyWithRetry(() => import('./pages/admin/Calendar'))
+const Inquiries = lazyWithRetry(() => import('./pages/admin/Inquiries'))
+const Content = lazyWithRetry(() => import('./pages/admin/Content'))
+const Products = lazyWithRetry(() => import('./pages/admin/Products'))
+const AddonPricing = lazyWithRetry(() => import('./pages/admin/AddonPricing'))
+const GiftVouchers = lazyWithRetry(() => import('./pages/admin/GiftVouchers'))
+const Reviews = lazyWithRetry(() => import('./pages/admin/Reviews'))
+const Settings = lazyWithRetry(() => import('./pages/admin/Settings'))
+const BakeList = lazyWithRetry(() => import('./pages/admin/BakeList'))
+const KitchenLogin = lazyWithRetry(() => import('./pages/kitchen/KitchenLogin'))
+const KitchenBoard = lazyWithRetry(() => import('./pages/kitchen/KitchenBoard'))
+const KitchenCalendar = lazyWithRetry(() => import('./pages/kitchen/KitchenCalendar'))
 
 function AdminFallback() {
   return (
