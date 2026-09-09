@@ -1,3 +1,4 @@
+/// <reference types="node" />
 // Vercel serverless function (spec §8 Publish flow / §9). The admin "Publish
 // changes" button POSTs here; the function verifies the caller's Supabase Auth
 // token, then triggers the Vercel Deploy Hook that rebuilds the storefront with

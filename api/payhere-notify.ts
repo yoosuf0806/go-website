@@ -1,3 +1,4 @@
+/// <reference types="node" />
 // Vercel serverless function — PayHere payment notification (ITN) handler.
 //
 // PayHere confirms a payment by POSTing server-to-server to this `notify_url`.
