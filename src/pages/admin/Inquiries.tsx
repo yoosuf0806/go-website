@@ -9,7 +9,7 @@ import {
   type InquiryStatus,
 } from '../../lib/adminInquiries'
 import { formatDate, toWhatsAppNumber } from '../../lib/format'
-import { printQuotation } from '../../lib/inquirySlip'
+import { shareQuotation } from '../../lib/inquirySlip'
 import ConvertToOrderModal from '../../components/admin/ConvertToOrderModal'
 import Toast from '../../components/ui/Toast'
 
@@ -51,6 +51,7 @@ export default function Inquiries() {
               inquiry={inquiry}
               onSetStatus={(status) => updateStatus.mutate({ id: inquiry.id, status })}
               onConvert={() => setConverting(inquiry)}
+              onNotify={setToast}
               busy={updateStatus.isPending}
             />
           ))}
@@ -76,15 +77,31 @@ function InquiryCard({
   inquiry,
   onSetStatus,
   onConvert,
+  onNotify,
   busy,
 }: {
   inquiry: AdminInquiry
   onSetStatus: (status: InquiryStatus) => void
   onConvert: () => void
+  onNotify: (message: string) => void
   busy: boolean
 }) {
   const waNumber = toWhatsAppNumber(inquiry.phone)
   const isConverted = inquiry.status === 'converted'
+  const [sharing, setSharing] = useState(false)
+
+  async function handleShareQuote() {
+    if (sharing) return
+    setSharing(true)
+    try {
+      const result = await shareQuotation(inquiry)
+      if (result === 'downloaded') onNotify('Quote PDF downloaded.')
+    } catch {
+      onNotify('Could not generate the quote PDF — please try again.')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4">
@@ -171,10 +188,11 @@ function InquiryCard({
         )}
         <button
           type="button"
-          onClick={() => printQuotation(inquiry)}
-          className="rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-100"
+          onClick={handleShareQuote}
+          disabled={sharing}
+          className="rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50"
         >
-          Quotation
+          {sharing ? 'Preparing…' : 'Share quote'}
         </button>
         {!isConverted && (
           <button
