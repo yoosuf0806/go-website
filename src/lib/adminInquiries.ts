@@ -27,6 +27,11 @@ export interface AdminInquiry {
   event_date: string | null
   guest_count: number | null
   delivery_address: string | null
+  /** Structured request from the quote form (migration 044): the flavour the
+   *  customer chose and how many pieces they want. Used to pre-fill the order
+   *  when converting. Null for free-text inquiries that didn't specify them. */
+  flavor_name: string | null
+  piece_count: number | null
   message: string | null
   converted_order_id: string | null
   created_at: string

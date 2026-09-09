@@ -141,6 +141,18 @@ function InquiryCard({
             <dd className="inline">{inquiry.guest_count}</dd>
           </div>
         )}
+        {inquiry.flavor_name && (
+          <div>
+            <dt className="inline font-medium">Flavour: </dt>
+            <dd className="inline">{inquiry.flavor_name}</dd>
+          </div>
+        )}
+        {inquiry.piece_count != null && (
+          <div>
+            <dt className="inline font-medium">Pieces: </dt>
+            <dd className="inline">{inquiry.piece_count}</dd>
+          </div>
+        )}
         {inquiry.delivery_address && (
           <div className="col-span-2">
             <dt className="inline font-medium">Delivery: </dt>
