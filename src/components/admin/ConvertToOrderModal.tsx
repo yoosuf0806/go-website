@@ -98,7 +98,21 @@ export default function ConvertToOrderModal({
         <h2 className="text-lg font-semibold">Convert inquiry to order</h2>
         <p className="mt-1 text-sm text-neutral-500">
           {inquiry.name} · {inquiry.category}
+          {inquiry.guest_count != null && ` · ${inquiry.guest_count} guests`}
         </p>
+
+        {/* What the customer actually asked for. Inquiries are free text (no
+            structured line items), so the admin reads this and picks the
+            matching products/quantities below. Shown read-only here AND carried
+            into the editable Note field so it lands on the order. */}
+        {inquiry.message && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+              Customer’s requirements
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{inquiry.message}</p>
+          </div>
+        )}
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextField label="Name" error={errors.name}>
@@ -164,6 +178,18 @@ export default function ConvertToOrderModal({
                 </option>
               ))}
             </select>
+          </TextField>
+        </div>
+
+        <div className="mt-3">
+          <TextField label="Note (carried onto the order)" error={errors.note}>
+            <textarea
+              value={details.note ?? ''}
+              onChange={(e) => setDetails({ ...details, note: e.target.value })}
+              rows={3}
+              className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+              placeholder="Flavours, quantities, and any special requests…"
+            />
           </TextField>
         </div>
 
