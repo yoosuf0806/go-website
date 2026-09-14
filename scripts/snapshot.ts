@@ -345,6 +345,30 @@ async function fetchFromSupabase(url: string, serviceKey: string): Promise<SeedD
   }
 }
 
+// Run an async operation, retrying on failure with exponential backoff
+// (1s, 2s, 4s, …). Used for the Supabase read so a transient gateway timeout
+// during the build retries instead of failing the deploy outright.
+async function withRetries<T>(op: () => Promise<T>, attempts: number): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await op()
+    } catch (err) {
+      lastErr = err
+      if (i < attempts - 1) {
+        const delayMs = 1000 * 2 ** i
+        console.warn(
+          `[snapshot] Supabase read attempt ${i + 1}/${attempts} failed (${
+            err instanceof Error ? err.message : String(err)
+          }) — retrying in ${delayMs / 1000}s…`,
+        )
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
+      }
+    }
+  }
+  throw lastErr
+}
+
 // ── main ────────────────────────────────────────────────────────────────────────
 async function main() {
   // Accept both storefront and build-only env var names for the URL.
@@ -356,7 +380,11 @@ async function main() {
   if (url && serviceKey) {
     console.log('[snapshot] Reading catalogue from Supabase…')
     try {
-      const data = await fetchFromSupabase(url, serviceKey)
+      // Retry transient read failures (e.g. a Supabase "Gateway Timeout" during
+      // a cold pooler) with exponential backoff before giving up, so one slow
+      // response doesn't fail the whole deploy. We never fall back to seed data
+      // here — that would ship the dummy catalogue to production.
+      const data = await withRetries(() => fetchFromSupabase(url, serviceKey), 4)
       catalog = buildCatalog(data, 'supabase')
     } catch (err) {
       // Fail the build loudly rather than shipping an empty catalogue (spec §8).
