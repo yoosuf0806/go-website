@@ -67,6 +67,8 @@ export interface CatalogProduct {
   isHotPick: boolean
   /** Offered as a corporate/wedding quote flavour on the /corporate page. */
   isCorporate: boolean
+  /** Selectable as a flavour in the "Make your own box" (15pc) builder. */
+  isBuildYourOwn: boolean
   sortOrder: number
 }
 

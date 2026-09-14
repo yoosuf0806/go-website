@@ -61,6 +61,12 @@ export function buildOrderSlipHtml(order: AdminOrder): string {
   }
   if (order.note) meta.push(`<div><strong>Note:</strong> ${esc(order.note)}</div>`)
 
+  // Admin's private note to the kitchen, rendered as a highlighted callout so
+  // it stands out on the printed slip.
+  const kitchenNoteBlock = order.kitchen_note
+    ? `<div class="kitchen-note"><strong>📌 Note to kitchen:</strong> ${esc(order.kitchen_note)}</div>`
+    : ''
+
   return `<!doctype html>
 <html>
 <head>
@@ -76,6 +82,7 @@ export function buildOrderSlipHtml(order: AdminOrder): string {
   th, td { text-align: left; padding: 8px 4px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
   .num { text-align: right; white-space: nowrap; }
   .addons { color: #666; font-size: 12px; margin-top: 2px; }
+  .kitchen-note { border: 2px solid #d97706; background: #fffbeb; color: #92400e; padding: 8px 10px; border-radius: 6px; font-size: 14px; margin-bottom: 16px; }
   tfoot td { border-bottom: none; padding-top: 6px; }
   tfoot .total { font-weight: 700; font-size: 15px; border-top: 2px solid #171717; }
   @media print { body { margin: 0; } }
@@ -85,6 +92,7 @@ export function buildOrderSlipHtml(order: AdminOrder): string {
   <h1>Golden Oven — Order #${order.order_no}</h1>
   <div class="status">${esc(STATUS_LABELS[order.status])} · ${esc(order.customer_name)}</div>
   <div class="customer">${meta.join('')}</div>
+  ${kitchenNoteBlock}
   <table>
     <tbody>${rows}</tbody>
     <tfoot>

@@ -43,6 +43,8 @@ export interface RawProduct {
   allows_letter_topper: boolean
   is_hot_pick: boolean
   is_corporate: boolean
+  /** Selectable as a flavour in the "Make your own box" builder. */
+  is_build_your_own?: boolean
   sort_order: number
 }
 
@@ -154,6 +156,7 @@ export const seedData: SeedData = {
       is_hot_pick: true,
       is_corporate: true,
       is_slab_product: false,
+      is_build_your_own: true,
       flavors: [],
       sort_order: 1,
     },
@@ -175,6 +178,7 @@ export const seedData: SeedData = {
       is_hot_pick: false,
       is_corporate: false,
       is_slab_product: false,
+      is_build_your_own: true,
       flavors: [],
       sort_order: 2,
     },
@@ -196,6 +200,7 @@ export const seedData: SeedData = {
       is_hot_pick: false,
       is_corporate: true,
       is_slab_product: false,
+      is_build_your_own: true,
       flavors: [],
       sort_order: 3,
     },
@@ -217,6 +222,7 @@ export const seedData: SeedData = {
       is_hot_pick: true,
       is_corporate: false,
       is_slab_product: false,
+      is_build_your_own: true,
       flavors: [],
       sort_order: 4,
     },
@@ -238,6 +244,7 @@ export const seedData: SeedData = {
       is_hot_pick: false,
       is_corporate: true,
       is_slab_product: false,
+      is_build_your_own: true,
       flavors: [],
       sort_order: 5,
     },

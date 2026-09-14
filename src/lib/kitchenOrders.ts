@@ -5,6 +5,14 @@ import { supabase } from './supabase'
 import type { CartAddon } from './pricing'
 import type { OrderStatus } from './orderStatus'
 
+/** One flavour inside a "Make your own box" line, as stored on order_items. */
+export interface BoxItemLine {
+  product_id: string
+  name: string
+  count: number
+  price_per_piece: number
+}
+
 export interface KitchenOrderItem {
   id: string
   product_name: string
@@ -12,6 +20,8 @@ export interface KitchenOrderItem {
   piece_count: number
   box_qty: number
   addons: CartAddon[]
+  /** Composition for a "Make your own box" line; null for normal/slab lines. */
+  box_items: BoxItemLine[] | null
 }
 
 export interface KitchenOrder {
@@ -23,6 +33,7 @@ export interface KitchenOrder {
   delivery_date: string | null
   delivery_slot: string | null
   note: string | null
+  kitchen_note: string | null
   total_pieces: number
   order_items: KitchenOrderItem[]
 }
@@ -111,7 +122,7 @@ export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenO
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_no, status, customer_name, address, delivery_date, delivery_slot, note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons)',
+      'id, order_no, status, customer_name, address, delivery_date, delivery_slot, note, kitchen_note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons, box_items)',
     )
     .eq('delivery_date', deliveryDate)
     .neq('status', 'cancelled')

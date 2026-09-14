@@ -2112,6 +2112,418 @@ GRANT ALL ON FUNCTION public.validate_gift_voucher(p_code text) TO authenticated
 
 
 -- ============================================================================
+-- MIGRATIONS 048–050 — features layered on top of the dump above.
+-- (This dump was generated before these migrations existed; their effects are
+-- reproduced here verbatim so a freshly-stood-up project matches the migration
+-- chain. Regenerate the whole file with gen_consolidated.sh to fold them in.)
+-- ============================================================================
+
+-- 048_kitchen_note.sql — admin's private note to the kitchen, per order.
+alter table public.orders
+  add column if not exists kitchen_note text;
+
+-- 050_build_your_own_box.sql — "Make your own box" (15pc) flavour flag + the
+-- durable box composition stored on each box order line.
+alter table public.products
+  add column if not exists is_build_your_own boolean not null default false;
+alter table public.order_items
+  add column if not exists box_items jsonb;
+
+-- 049_admin_edit_order_items.sql — admin manual line-item override (qty + unit
+-- price, add/remove lines) with server-side total recompute; gated on is_admin().
+create or replace function public.admin_update_order_items(
+  p_order_id uuid,
+  p_items jsonb,
+  p_delivery_fee numeric
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item jsonb;
+  v_keep uuid[] := array[]::uuid[];
+  v_item_id uuid;
+  v_box int;
+  v_unit numeric;
+  v_pieces int;
+  v_line_total numeric;
+  v_subtotal numeric := 0;
+  v_total_pieces int := 0;
+  v_delivery numeric;
+  v_discount numeric;
+begin
+  if not is_admin() then
+    raise exception 'NOT_AUTHORIZED';
+  end if;
+
+  if not exists (select 1 from orders where id = p_order_id) then
+    raise exception 'ORDER_NOT_FOUND';
+  end if;
+
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'NO_ITEMS';
+  end if;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_item_id := nullif(v_item->>'id', '')::uuid;
+    if v_item_id is not null then
+      v_keep := array_append(v_keep, v_item_id);
+    end if;
+  end loop;
+
+  delete from order_items
+    where order_id = p_order_id
+      and not (id = any (v_keep));
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_item_id := nullif(v_item->>'id', '')::uuid;
+    v_box := greatest(1, coalesce((v_item->>'box_qty')::int, 1));
+    v_unit := greatest(0, coalesce((v_item->>'unit_price')::numeric, 0));
+    v_pieces := greatest(0, coalesce((v_item->>'piece_count')::int, 0));
+    v_line_total := round(v_unit * v_box, 2);
+
+    v_subtotal := v_subtotal + v_line_total;
+    v_total_pieces := v_total_pieces + v_pieces * v_box;
+
+    if v_item_id is not null and exists (
+      select 1 from order_items where id = v_item_id and order_id = p_order_id
+    ) then
+      update order_items
+        set product_name = coalesce(nullif(v_item->>'product_name', ''), product_name),
+            package_label = coalesce(v_item->>'package_label', package_label),
+            piece_count = v_pieces,
+            box_qty = v_box,
+            unit_price = v_unit,
+            line_total = v_line_total
+        where id = v_item_id and order_id = p_order_id;
+    else
+      insert into order_items (
+        order_id, product_id, product_name, package_id, package_label,
+        piece_count, box_qty, unit_price, addons, line_total
+      )
+      values (
+        p_order_id, null,
+        coalesce(nullif(v_item->>'product_name', ''), 'Item'),
+        null, coalesce(v_item->>'package_label', ''),
+        v_pieces, v_box, v_unit, '[]'::jsonb, v_line_total
+      );
+    end if;
+  end loop;
+
+  v_delivery := greatest(0, coalesce(p_delivery_fee, 0));
+  select coalesce(voucher_discount, 0) into v_discount from orders where id = p_order_id;
+
+  update orders
+    set subtotal = v_subtotal,
+        delivery_fee = v_delivery,
+        total = greatest(0, v_subtotal + v_delivery - v_discount),
+        total_pieces = v_total_pieces
+    where id = p_order_id;
+end;
+$$;
+
+revoke execute on function public.admin_update_order_items(uuid, jsonb, numeric) from public;
+grant execute on function public.admin_update_order_items(uuid, jsonb, numeric) to authenticated;
+
+-- 050_build_your_own_box.sql — create_order() extended with the box branch.
+create or replace function public.create_order(
+  p_customer_name text,
+  p_phone text,
+  p_email text,
+  p_alt_phone text,
+  p_address text,
+  p_delivery_date date,
+  p_note text,
+  p_subtotal numeric,
+  p_delivery_fee numeric,
+  p_total numeric,
+  p_total_pieces int,
+  p_items jsonb,
+  p_voucher_code text default null,
+  p_voucher_discount numeric default 0,
+  p_is_gift boolean default false,
+  p_recipient_name text default null,
+  p_recipient_phone text default null,
+  p_payment_method text default null,
+  p_payment_ref text default null,
+  p_slip_url text default null,
+  p_delivery_slot text default null
+)
+returns table (id uuid, order_no int)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_order_no int;
+  v_code text := nullif(upper(trim(coalesce(p_voucher_code, ''))), '');
+  v_voucher gift_vouchers%rowtype;
+  v_now timestamptz := now();
+  v_item jsonb;
+  v_prod_id uuid;
+  v_pp numeric;
+  v_is_slab boolean;
+  v_flavors jsonb;
+  v_flavor_price numeric;
+  v_label text;
+  v_pc int;
+  v_pack_price numeric;
+  v_line_base numeric;
+  v_addons_sum numeric;
+  v_box int;
+  v_calc_subtotal numeric := 0;
+  v_calc_pieces int := 0;
+  v_has_slab boolean := false;
+  v_delivery_fee numeric := 0;
+  v_base_fee numeric := 0;
+  v_discount numeric := 0;
+  v_calc_total numeric;
+  v_is_box boolean;
+  v_box_price numeric;
+  v_box_pieces int;
+  v_box_items jsonb;
+  v_box_label text;
+  v_payment_status text := case
+    when p_payment_method = 'bank_transfer' then 'awaiting_verification'
+    else 'unpaid'
+  end;
+begin
+  if v_code is not null then
+    select * into v_voucher from gift_vouchers where code = v_code for update;
+    if not found or not v_voucher.is_active then
+      raise exception 'VOUCHER_INVALID';
+    end if;
+    if not v_voucher.is_reusable and v_voucher.used_at is not null then
+      raise exception 'VOUCHER_USED';
+    end if;
+    if (v_voucher.valid_from  is not null and v_now <  v_voucher.valid_from) or
+       (v_voucher.valid_until is not null and v_now >= v_voucher.valid_until) then
+      raise exception 'VOUCHER_EXPIRED';
+    end if;
+  end if;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_addons_sum := 0;
+    select coalesce(sum(a.price), 0) into v_addons_sum
+      from jsonb_array_elements(coalesce(v_item->'addons', '[]'::jsonb)) as ai
+      join addons a on a.id = ai->>'id' and a.is_enabled = true;
+
+    v_box := coalesce((v_item->>'box_qty')::int, 1);
+    if v_box < 1 then
+      raise exception 'PRICE_MISMATCH';
+    end if;
+
+    v_is_box := coalesce((v_item->>'box')::boolean, false);
+    if v_is_box then
+      select coalesce(sum(p.price_per_piece * c.count), 0), coalesce(sum(c.count), 0)
+        into v_box_price, v_box_pieces
+        from jsonb_to_recordset(coalesce(v_item->'box_items', '[]'::jsonb))
+          as c(product_id uuid, count int)
+        join products p on p.id = c.product_id
+          and p.is_visible = true
+          and coalesce(p.is_build_your_own, false) = true;
+      if coalesce(v_box_pieces, 0) <> 15 then
+        raise exception 'PRICE_MISMATCH';
+      end if;
+      v_calc_subtotal := v_calc_subtotal + (v_box_price + v_addons_sum) * v_box;
+      v_calc_pieces := v_calc_pieces + v_box_pieces * v_box;
+      continue;
+    end if;
+
+    select products.price_per_piece, coalesce(products.is_slab_product, false), coalesce(products.flavors, '[]'::jsonb)
+      into v_pp, v_is_slab, v_flavors
+      from products
+      where products.id = nullif(v_item->>'product_id', '')::uuid and products.is_visible = true;
+    if not found then
+      raise exception 'PRICE_MISMATCH';
+    end if;
+
+    if v_is_slab then
+      v_label := v_item->>'package_label';
+      select (f->>'price')::numeric into v_flavor_price
+        from jsonb_array_elements(v_flavors) as f
+        where f->>'name' = v_label
+        limit 1;
+      if v_flavor_price is null then
+        raise exception 'PRICE_MISMATCH';
+      end if;
+      v_calc_subtotal := v_calc_subtotal + (v_flavor_price + v_addons_sum) * v_box;
+      v_has_slab := true;
+    else
+      select packages.piece_count into v_pc
+        from packages
+        where packages.id = v_item->>'package_id' and packages.is_active = true;
+      if v_pc is null then
+        raise exception 'PRICE_MISMATCH';
+      end if;
+      select ppp.price into v_pack_price
+        from product_package_price ppp
+        where ppp.product_id = nullif(v_item->>'product_id', '')::uuid
+          and ppp.package_id = v_item->>'package_id';
+      v_line_base := coalesce(v_pack_price, v_pp * v_pc);
+      v_calc_subtotal := v_calc_subtotal + (v_line_base + v_addons_sum) * v_box;
+      v_calc_pieces := v_calc_pieces + v_pc * v_box;
+    end if;
+  end loop;
+
+  if v_calc_pieces <= 0 and not v_has_slab then
+    raise exception 'PRICE_MISMATCH';
+  end if;
+
+  select coalesce(dt.fee, 0) into v_delivery_fee
+    from delivery_tiers dt
+    where v_calc_pieces >= dt.min_pieces
+      and (dt.max_pieces is null or v_calc_pieces <= dt.max_pieces)
+    order by dt.min_pieces desc
+    limit 1;
+  v_delivery_fee := coalesce(v_delivery_fee, 0);
+
+  if v_has_slab then
+    select coalesce(dt.fee, 0) into v_base_fee
+      from delivery_tiers dt
+      where 1 >= dt.min_pieces
+        and (dt.max_pieces is null or 1 <= dt.max_pieces)
+      order by dt.min_pieces desc
+      limit 1;
+    if v_base_fee > v_delivery_fee then
+      v_delivery_fee := v_base_fee;
+    end if;
+  end if;
+
+  if v_code is not null then
+    if v_voucher.discount_type = 'percent' then
+      v_discount := round((v_calc_subtotal + v_delivery_fee) * coalesce(v_voucher.amount, 0) / 100);
+    else
+      v_discount := coalesce(v_voucher.amount, 0);
+    end if;
+  end if;
+
+  v_calc_total := greatest(0, v_calc_subtotal + v_delivery_fee - v_discount);
+
+  if abs(coalesce(p_total, 0) - v_calc_total) > 0.01 then
+    raise exception 'PRICE_MISMATCH';
+  end if;
+
+  insert into orders (
+    customer_name, phone, email, alt_phone, address, delivery_date, delivery_slot, note,
+    subtotal, delivery_fee, total, total_pieces, status, source, inquiry_id,
+    voucher_code, voucher_discount, is_gift, recipient_name, recipient_phone,
+    payment_method, payment_status, payment_ref, slip_url
+  )
+  values (
+    p_customer_name, p_phone, nullif(p_email, ''), nullif(p_alt_phone, ''),
+    p_address, p_delivery_date, nullif(p_delivery_slot, ''), p_note,
+    v_calc_subtotal, v_delivery_fee, v_calc_total, v_calc_pieces, 'pending', 'web', null,
+    v_code, v_discount,
+    coalesce(p_is_gift, false), nullif(p_recipient_name, ''), nullif(p_recipient_phone, ''),
+    p_payment_method, v_payment_status, nullif(p_payment_ref, ''), nullif(p_slip_url, '')
+  )
+  returning orders.id, orders.order_no into v_id, v_order_no;
+
+  if v_code is not null and not v_voucher.is_reusable then
+    update gift_vouchers
+      set used_at = now(), used_by_order_id = v_id
+      where code = v_code;
+  end if;
+
+  for v_item in select * from jsonb_array_elements(p_items)
+  loop
+    v_addons_sum := 0;
+    select coalesce(sum(a.price), 0) into v_addons_sum
+      from jsonb_array_elements(coalesce(v_item->'addons', '[]'::jsonb)) as ai
+      join addons a on a.id = ai->>'id' and a.is_enabled = true;
+
+    v_box := greatest(1, coalesce((v_item->>'box_qty')::int, 1));
+    v_is_box := coalesce((v_item->>'box')::boolean, false);
+
+    if v_is_box then
+      select coalesce(sum(p.price_per_piece * c.count), 0),
+             coalesce(sum(c.count), 0),
+             jsonb_agg(jsonb_build_object(
+               'product_id', p.id, 'name', p.name,
+               'count', c.count, 'price_per_piece', p.price_per_piece
+             ) order by p.name),
+             string_agg(c.count::text || '× ' || p.name, ', ' order by p.name)
+        into v_box_price, v_box_pieces, v_box_items, v_box_label
+        from jsonb_to_recordset(coalesce(v_item->'box_items', '[]'::jsonb))
+          as c(product_id uuid, count int)
+        join products p on p.id = c.product_id
+          and p.is_visible = true
+          and coalesce(p.is_build_your_own, false) = true;
+
+      insert into order_items (
+        order_id, product_id, product_name, package_id, package_label,
+        piece_count, box_qty, unit_price, addons, line_total, box_items
+      )
+      values (
+        v_id, null,
+        coalesce(nullif(v_item->>'product_name', ''), 'Make Your Own Box (15 pcs)'),
+        null, coalesce(v_box_label, ''),
+        v_box_pieces, v_box, v_box_price, coalesce(v_item->'addons', '[]'::jsonb),
+        (v_box_price + v_addons_sum) * v_box, v_box_items
+      );
+      continue;
+    end if;
+
+    select products.id, products.price_per_piece, coalesce(products.is_slab_product, false), coalesce(products.flavors, '[]'::jsonb)
+      into v_prod_id, v_pp, v_is_slab, v_flavors
+      from products
+      where products.id = nullif(v_item->>'product_id', '')::uuid and products.is_visible = true;
+
+    v_box := greatest(1, coalesce((v_item->>'box_qty')::int, 1));
+
+    if v_is_slab then
+      v_label := v_item->>'package_label';
+      select (f->>'price')::numeric into v_flavor_price
+        from jsonb_array_elements(v_flavors) as f
+        where f->>'name' = v_label
+        limit 1;
+      insert into order_items (
+        order_id, product_id, product_name, package_id, package_label,
+        piece_count, box_qty, unit_price, addons, line_total
+      )
+      values (
+        v_id, v_prod_id, v_item->>'product_name', null, v_label,
+        0, v_box, v_flavor_price, coalesce(v_item->'addons', '[]'::jsonb),
+        (v_flavor_price + v_addons_sum) * v_box
+      );
+    else
+      select packages.piece_count into v_pc
+        from packages
+        where packages.id = v_item->>'package_id' and packages.is_active = true;
+      select ppp.price into v_pack_price
+        from product_package_price ppp
+        where ppp.product_id = v_prod_id and ppp.package_id = v_item->>'package_id';
+      v_line_base := coalesce(v_pack_price, v_pp * v_pc);
+      insert into order_items (
+        order_id, product_id, product_name, package_id, package_label,
+        piece_count, box_qty, unit_price, addons, line_total
+      )
+      values (
+        v_id, v_prod_id, v_item->>'product_name', v_item->>'package_id', v_item->>'package_label',
+        v_pc, v_box, coalesce(v_pack_price, v_pp), coalesce(v_item->'addons', '[]'::jsonb),
+        (v_line_base + v_addons_sum) * v_box
+      );
+    end if;
+  end loop;
+
+  return query select v_id, v_order_no;
+end;
+$$;
+
+grant execute on function public.create_order(
+  text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb,
+  text, numeric, boolean, text, text, text, text, text, text
+) to anon, authenticated;
+
+
+-- ============================================================================
 -- STORAGE — buckets and their policies (from storage-setup.sql + migrations)
 -- Creates buckets and access rules, NOT their contents (copy files separately).
 -- ============================================================================

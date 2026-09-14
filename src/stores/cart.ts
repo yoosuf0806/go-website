@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { CartAddon, CartItem } from '../lib/pricing'
+import type { BoxFlavor, CartAddon, CartItem } from '../lib/pricing'
+import { boxBase } from '../lib/pricing'
 import type { Catalog } from '../types/catalog'
 import { stockKey } from '../types/catalog'
 import { toast } from './toast'
@@ -40,13 +41,36 @@ export function cartLineKey(productId: string, packageId: string, addons: CartAd
  * prices/labels refresh.
  */
 export function repriceLine(line: CartLine, catalog: Catalog): CartLine | null {
-  const product = catalog.products.find((p) => p.id === line.productId)
-  if (!product) return null
-
   const repricedAddons = line.addons.map((a) => {
     const current = catalog.addons.find((ca) => ca.id === a.id)
     return current ? { ...a, price: current.price, label: current.label } : a
   })
+
+  // Build-your-own box: re-price every flavour from the live catalogue and drop
+  // the whole line if any flavour is gone or no longer offered in the builder.
+  // The composition (and thus the 15-piece total) is preserved.
+  if (line.isBox) {
+    const repriced: (BoxFlavor | null)[] = (line.boxItems ?? []).map((f) => {
+      const p = catalog.products.find((pp) => pp.id === f.productId)
+      if (!p || !p.isBuildYourOwn) return null
+      return { productId: f.productId, name: p.name, count: f.count, pricePerPiece: p.pricePerPiece }
+    })
+    if (repriced.length === 0 || repriced.some((f) => f === null)) return null
+    const boxItems = repriced as BoxFlavor[]
+    const item: CartItem = {
+      ...line,
+      productName: line.productName || 'Make Your Own Box (15 pcs)',
+      pieceCount: boxItems.reduce((n, f) => n + f.count, 0),
+      unitPrice: boxBase(boxItems),
+      isBox: true,
+      boxItems,
+      addons: repricedAddons,
+    }
+    return { ...item, key: cartLineKey(item.productId, item.packageId, item.addons) }
+  }
+
+  const product = catalog.products.find((p) => p.id === line.productId)
+  if (!product) return null
 
   // Slab line: re-price from the product's flavours (flat per-product price),
   // not the packages table. Drop it if the product is no longer a slab or the

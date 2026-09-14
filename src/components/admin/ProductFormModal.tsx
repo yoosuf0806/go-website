@@ -45,6 +45,7 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     slab_letter_max_chars: 7,
     is_hot_pick: false,
     is_corporate: false,
+    is_build_your_own: false,
     sort_order: 0,
   }
 }
@@ -165,6 +166,8 @@ export default function ProductFormModal({
       ...form,
       is_slab_available: isSlabProduct ? false : form.is_slab_available,
       is_slab_15_available: isSlabProduct ? false : form.is_slab_15_available,
+      // A slab is priced per product, so it can't be a per-piece box flavour.
+      is_build_your_own: isSlabProduct ? false : form.is_build_your_own,
       flavors: cleanedFlavors,
       allows_letter_topper:
         isSlabProduct || form.is_slab_available || form.is_slab_15_available
@@ -380,6 +383,16 @@ export default function ProductFormModal({
               />
               Corporate / wedding flavour (show on quote page)
             </label>
+            {!form.is_slab_product && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.is_build_your_own}
+                  onChange={(e) => set('is_build_your_own', e.target.checked)}
+                />
+                Make-your-own-box flavour (selectable in the 15pc box builder)
+              </label>
+            )}
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

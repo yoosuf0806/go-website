@@ -14,6 +14,7 @@ const order: AdminOrder = {
   delivery_date: '2026-07-10',
   delivery_slot: null,
   note: 'Leave with security',
+  kitchen_note: null,
   subtotal: 2880,
   delivery_fee: 580,
   total: 3460,

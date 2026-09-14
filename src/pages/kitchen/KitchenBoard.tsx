@@ -175,12 +175,34 @@ function OrderCard({
       {/* qty × brownie type — one line per item */}
       <div className="mt-1 space-y-0.5">
         {order.order_items.map((item) => (
-          <p key={item.id} className="text-base font-semibold text-white">
-            {item.piece_count} × {item.product_name}
-            {item.box_qty > 1 && <span className="text-white/50"> ({item.box_qty} boxes)</span>}
-          </p>
+          <div key={item.id}>
+            <p className="text-base font-semibold text-white">
+              {item.piece_count} × {item.product_name}
+              {item.box_qty > 1 && <span className="text-white/50"> ({item.box_qty} boxes)</span>}
+            </p>
+            {/* Build-your-own box: spell out the flavour mix so the kitchen
+                knows exactly what to bake into the box. */}
+            {item.box_items && item.box_items.length > 0 && (
+              <ul className="mt-0.5 pl-4 text-sm text-white/70">
+                {item.box_items.map((f, i) => (
+                  <li key={i}>
+                    {f.count} × {f.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ))}
       </div>
+
+      {/* Admin's note to the kitchen — highlighted so it stands apart from the
+          customer's own note and can't be missed. */}
+      {order.kitchen_note && (
+        <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-400/15 px-3 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-amber-300">📌 Note from admin</p>
+          <p className="mt-0.5 text-sm font-medium text-amber-100">{order.kitchen_note}</p>
+        </div>
+      )}
 
       {/* Details */}
       <div className="mt-3 space-y-1 text-sm text-white/60">

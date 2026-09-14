@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useAllAdminOrders, useUpdateOrderStatus, useConfirmOrderPayment } from '../../hooks/useAdminOrders'
-import type { AdminOrder } from '../../lib/adminOrders'
+import {
+  useAllAdminOrders,
+  useUpdateOrderStatus,
+  useConfirmOrderPayment,
+  useUpdateKitchenNote,
+  useUpdateOrderItems,
+} from '../../hooks/useAdminOrders'
+import type { AdminOrder, OrderItemEdit } from '../../lib/adminOrders'
 import { signedSlipUrl } from '../../lib/bankSlips'
 import { STATUS_LABELS, nextStatus, canCancel, type OrderStatus } from '../../lib/orderStatus'
 import {
@@ -250,6 +256,7 @@ function OrderRow({
   confirmingPayment: boolean
 }) {
   const { catalog } = useCatalog()
+  const [editingItems, setEditingItems] = useState(false)
   const tier = findTier(order.total_pieces, catalog.deliveryTiers)
   const heavy = tier?.warnAdmin ?? false
   const next = nextStatus(order.status)
@@ -382,31 +389,46 @@ function OrderRow({
           <td colSpan={6} className="px-3 py-4">
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Items</p>
-                <ul className="mt-2 flex flex-col gap-2">
-                  {order.order_items.map((item) => {
-                    const summary = addonSummary(item)
-                    const topper = itemTopperLines(item)
-                    return (
-                      <li key={item.id} className="flex justify-between gap-4 text-sm">
-                        <div>
-                          <span>
-                            {item.product_name} — {item.package_label} × {item.box_qty}
-                          </span>
-                          {topper.length > 0 && (
-                            <div className="text-xs font-medium text-green-700">
-                              Topper: “{topper.join(' / ')}”
-                            </div>
-                          )}
-                          {summary && !topper.length && (
-                            <div className="text-xs text-neutral-500">{summary}</div>
-                          )}
-                        </div>
-                        <span className="whitespace-nowrap">{formatLKR(item.line_total)}</span>
-                      </li>
-                    )
-                  })}
-                </ul>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Items</p>
+                  {!editingItems && canCancel(order.status) && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingItems(true)}
+                      className="rounded border border-neutral-300 px-2 py-0.5 text-xs hover:bg-neutral-100"
+                    >
+                      ✎ Edit items &amp; prices
+                    </button>
+                  )}
+                </div>
+                {editingItems ? (
+                  <OrderItemsEditor order={order} onDone={() => setEditingItems(false)} />
+                ) : (
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {order.order_items.map((item) => {
+                      const summary = addonSummary(item)
+                      const topper = itemTopperLines(item)
+                      return (
+                        <li key={item.id} className="flex justify-between gap-4 text-sm">
+                          <div>
+                            <span>
+                              {item.product_name} — {item.package_label} × {item.box_qty}
+                            </span>
+                            {topper.length > 0 && (
+                              <div className="text-xs font-medium text-green-700">
+                                Topper: “{topper.join(' / ')}”
+                              </div>
+                            )}
+                            {summary && !topper.length && (
+                              <div className="text-xs text-neutral-500">{summary}</div>
+                            )}
+                          </div>
+                          <span className="whitespace-nowrap">{formatLKR(item.line_total)}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
               </div>
 
               <div>
@@ -493,10 +515,294 @@ function OrderRow({
                 </dl>
               </div>
             </div>
+
+            <KitchenNoteEditor order={order} />
           </td>
         </tr>
       )}
     </>
+  )
+}
+
+// A single editable line in the admin order editor. `key` is a stable local
+// id for React (new lines have no DB id yet).
+interface EditLine {
+  key: string
+  id?: string
+  product_name: string
+  package_label: string
+  piece_count: string
+  box_qty: string
+  unit_price: string
+}
+
+let editLineSeq = 0
+function newEditLine(): EditLine {
+  editLineSeq += 1
+  return {
+    key: `new-${editLineSeq}`,
+    product_name: '',
+    package_label: '',
+    piece_count: '0',
+    box_qty: '1',
+    unit_price: '0',
+  }
+}
+
+// Admin manual editor for an order's line items: change each line's quantity
+// and unit price to any number, rename lines, add and remove lines. The order
+// total and piece count are recomputed server-side (admin_update_order_items),
+// and the change flows straight to the kitchen board. unit_price here is the
+// price of ONE box; the line total = unit_price × qty.
+function OrderItemsEditor({ order, onDone }: { order: AdminOrder; onDone: () => void }) {
+  const save = useUpdateOrderItems()
+  const [lines, setLines] = useState<EditLine[]>(() =>
+    order.order_items.map((it) => ({
+      key: it.id,
+      id: it.id,
+      product_name: it.product_name,
+      package_label: it.package_label,
+      piece_count: String(it.piece_count),
+      // Show the per-box price so the line preview matches the stored total.
+      box_qty: String(it.box_qty),
+      unit_price: String(it.box_qty > 0 ? round2(it.line_total / it.box_qty) : it.line_total),
+    })),
+  )
+  const [deliveryFee, setDeliveryFee] = useState(String(order.delivery_fee))
+
+  function patch(key: string, field: keyof EditLine, value: string) {
+    setLines((cur) => cur.map((l) => (l.key === key ? { ...l, [field]: value } : l)))
+  }
+  function removeLine(key: string) {
+    setLines((cur) => cur.filter((l) => l.key !== key))
+  }
+
+  const lineTotal = (l: EditLine) => round2(num(l.unit_price) * Math.max(1, Math.trunc(num(l.box_qty))))
+  const subtotal = lines.reduce((s, l) => s + lineTotal(l), 0)
+  const fee = Math.max(0, num(deliveryFee))
+  const discount = order.voucher_discount ?? 0
+  const total = Math.max(0, subtotal + fee - discount)
+
+  const valid =
+    lines.length > 0 &&
+    lines.every((l) => l.product_name.trim() !== '' && Math.trunc(num(l.box_qty)) >= 1)
+
+  function handleSave() {
+    const items: OrderItemEdit[] = lines.map((l) => ({
+      ...(l.id ? { id: l.id } : {}),
+      product_name: l.product_name.trim(),
+      package_label: l.package_label.trim(),
+      piece_count: Math.max(0, Math.trunc(num(l.piece_count))),
+      box_qty: Math.max(1, Math.trunc(num(l.box_qty))),
+      unit_price: Math.max(0, num(l.unit_price)),
+    }))
+    save.mutate({ orderId: order.id, items, deliveryFee: fee }, { onSuccess: onDone })
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-neutral-300 bg-white p-3">
+      <div className="hidden grid-cols-[1fr_5rem_5rem_6rem_auto] gap-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400 sm:grid">
+        <span>Item</span>
+        <span className="text-right">Pieces</span>
+        <span className="text-right">Qty</span>
+        <span className="text-right">Unit price</span>
+        <span />
+      </div>
+      <div className="flex flex-col gap-3">
+        {lines.map((l) => (
+          <div
+            key={l.key}
+            className="grid grid-cols-2 gap-2 border-b border-neutral-100 pb-3 sm:grid-cols-[1fr_5rem_5rem_6rem_auto] sm:items-center sm:border-0 sm:pb-0"
+          >
+            <div className="col-span-2 flex flex-col gap-1 sm:col-span-1">
+              <input
+                value={l.product_name}
+                onChange={(e) => patch(l.key, 'product_name', e.target.value)}
+                placeholder="Item name"
+                className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
+              />
+              <input
+                value={l.package_label}
+                onChange={(e) => patch(l.key, 'package_label', e.target.value)}
+                placeholder="Description (e.g. 9 Pieces)"
+                className="w-full rounded border border-neutral-200 px-2 py-1 text-xs text-neutral-600"
+              />
+            </div>
+            <label className="flex items-center gap-1 sm:block">
+              <span className="text-[11px] text-neutral-400 sm:hidden">Pieces</span>
+              <input
+                inputMode="numeric"
+                value={l.piece_count}
+                onChange={(e) => patch(l.key, 'piece_count', e.target.value)}
+                className="w-full rounded border border-neutral-300 px-2 py-1 text-right text-sm"
+              />
+            </label>
+            <label className="flex items-center gap-1 sm:block">
+              <span className="text-[11px] text-neutral-400 sm:hidden">Qty</span>
+              <input
+                inputMode="numeric"
+                value={l.box_qty}
+                onChange={(e) => patch(l.key, 'box_qty', e.target.value)}
+                className="w-full rounded border border-neutral-300 px-2 py-1 text-right text-sm"
+              />
+            </label>
+            <label className="flex items-center gap-1 sm:block">
+              <span className="text-[11px] text-neutral-400 sm:hidden">Unit price</span>
+              <input
+                inputMode="decimal"
+                value={l.unit_price}
+                onChange={(e) => patch(l.key, 'unit_price', e.target.value)}
+                className="w-full rounded border border-neutral-300 px-2 py-1 text-right text-sm"
+              />
+            </label>
+            <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
+              <span className="text-xs text-neutral-500 sm:hidden">= {formatLKR(lineTotal(l))}</span>
+              <button
+                type="button"
+                onClick={() => removeLine(l.key)}
+                aria-label="Remove line"
+                className="rounded border border-neutral-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setLines((cur) => [...cur, newEditLine()])}
+        className="mt-3 rounded border border-dashed border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+      >
+        + Add line
+      </button>
+
+      <div className="mt-3 flex flex-col gap-1 border-t border-neutral-200 pt-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-neutral-500">Subtotal</span>
+          <span className="font-medium">{formatLKR(subtotal)}</span>
+        </div>
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-neutral-500">Delivery fee</span>
+          <input
+            inputMode="decimal"
+            value={deliveryFee}
+            onChange={(e) => setDeliveryFee(e.target.value)}
+            className="w-24 rounded border border-neutral-300 px-2 py-1 text-right text-sm"
+          />
+        </label>
+        {discount > 0 && (
+          <div className="flex items-center justify-between gap-3 text-green-700">
+            <span>Voucher discount</span>
+            <span>−{formatLKR(discount)}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-3 border-t border-neutral-200 pt-1 text-base font-bold">
+          <span>Total</span>
+          <span>{formatLKR(total)}</span>
+        </div>
+      </div>
+
+      {save.isError && (
+        <p className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+          {save.error instanceof Error ? save.error.message : 'Failed to save changes'}
+        </p>
+      )}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!valid || save.isPending}
+          onClick={handleSave}
+          className="rounded-lg bg-pink px-3 py-1.5 text-xs font-bold text-white hover:bg-pink-dark disabled:opacity-50"
+        >
+          {save.isPending ? 'Saving…' : 'Save changes'}
+        </button>
+        <button
+          type="button"
+          disabled={save.isPending}
+          onClick={onDone}
+          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+      <p className="mt-2 text-[11px] text-neutral-400">
+        Unit price is the price of one unit; the line total is unit price × qty. Saving recomputes
+        the order total and updates the kitchen.
+      </p>
+    </div>
+  )
+}
+
+// Parse a possibly-empty numeric input to a number, defaulting to 0.
+function num(v: string): number {
+  const n = parseFloat(v)
+  return Number.isFinite(n) ? n : 0
+}
+function round2(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
+// Admin's private note to the kitchen for this order. Distinct from the
+// customer's note — it shows up highlighted on the kitchen board. Saved on
+// blur/Save; a Clear button removes it.
+function KitchenNoteEditor({ order }: { order: AdminOrder }) {
+  const save = useUpdateKitchenNote()
+  const [value, setValue] = useState(order.kitchen_note ?? '')
+  // Re-sync when the underlying order changes (e.g. after a refetch).
+  useEffect(() => {
+    setValue(order.kitchen_note ?? '')
+  }, [order.kitchen_note])
+
+  const dirty = value.trim() !== (order.kitchen_note ?? '')
+
+  return (
+    <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+        📌 Note to kitchen
+      </p>
+      <p className="mt-0.5 text-[11px] text-amber-700">
+        Private instruction for the kitchen (not shown to the customer). Appears highlighted on the
+        kitchen board.
+      </p>
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        rows={2}
+        placeholder="e.g. Double-box the fragile flavours; customer wants extra ribbon."
+        className="mt-2 w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-sm text-neutral-800 focus:border-amber-500 focus:outline-none"
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!dirty || save.isPending}
+          onClick={() => save.mutate({ id: order.id, note: value })}
+          className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+        >
+          {save.isPending ? 'Saving…' : 'Save note'}
+        </button>
+        {order.kitchen_note && (
+          <button
+            type="button"
+            disabled={save.isPending}
+            onClick={() => {
+              setValue('')
+              save.mutate({ id: order.id, note: '' })
+            }}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+          >
+            Clear
+          </button>
+        )}
+        {save.isError && (
+          <span className="text-xs text-red-600">
+            {save.error instanceof Error ? save.error.message : 'Failed to save'}
+          </span>
+        )}
+      </div>
+    </div>
   )
 }
 

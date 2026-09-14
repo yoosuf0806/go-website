@@ -10,6 +10,7 @@ import ProductDetail from './pages/ProductDetail'
 import Corporate from './pages/Corporate'
 import Wedding from './pages/Wedding'
 import Slab from './pages/Slab'
+import BuildBox from './pages/BuildBox'
 import TrackOrder from './pages/TrackOrder'
 import About from './pages/About'
 import Policy from './pages/Policy'
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="/corporate" element={<Corporate />} />
         <Route path="/wedding" element={<Wedding />} />
         <Route path="/slab" element={<Slab />} />
+        <Route path="/build-a-box" element={<BuildBox />} />
         <Route path="/track-order" element={<TrackOrder />} />
         <Route path="/about" element={<About />} />
         <Route path="/policies/:slug" element={<Policy />} />

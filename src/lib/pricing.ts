@@ -21,6 +21,14 @@ export interface CartAddon {
   detail?: AddonDetail
 }
 
+/** One chosen flavour inside a "Make your own box" line. */
+export interface BoxFlavor {
+  productId: string
+  name: string
+  count: number
+  pricePerPiece: number
+}
+
 export interface CartItem {
   productId: string
   packageId: string
@@ -49,6 +57,20 @@ export interface CartItem {
   isSlab?: boolean
   /** The chosen flavour name, for slab lines (also mirrored to packageLabel). */
   flavor?: string
+  /**
+   * True for a "Make your own box" line: a 15-piece box the customer filled
+   * with a mix of flavours. Priced as Σ (flavour price_per_piece × count) — NOT
+   * unitPrice × pieceCount. pieceCount is the box size (15) and drives delivery
+   * like any per-piece line. The composition is in boxItems.
+   */
+  isBox?: boolean
+  /** The flavours (with counts + per-piece prices) in a build-your-own box. */
+  boxItems?: BoxFlavor[]
+}
+
+/** Σ of a box's per-piece prices × counts (the box's own subtotal, pre add-ons). */
+export function boxBase(items: BoxFlavor[]): number {
+  return items.reduce((sum, f) => sum + f.pricePerPiece * f.count, 0)
 }
 
 export interface DeliveryTier {
@@ -85,11 +107,13 @@ export function addonsTotal(item: CartItem): number {
  * into one line via box_qty (spec §8). Confirmed with the owner.
  */
 export function lineTotal(item: CartItem): number {
-  const base = item.isSlab
-    ? item.unitPrice
-    : item.packPrice != null
-      ? item.packPrice
-      : item.unitPrice * item.pieceCount
+  const base = item.isBox
+    ? boxBase(item.boxItems ?? [])
+    : item.isSlab
+      ? item.unitPrice
+      : item.packPrice != null
+        ? item.packPrice
+        : item.unitPrice * item.pieceCount
   return (base + addonsTotal(item)) * item.boxQty
 }
 

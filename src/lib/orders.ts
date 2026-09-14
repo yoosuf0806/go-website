@@ -38,21 +38,38 @@ export interface CreatedOrder {
 
 /** Cart lines → the jsonb item shape the create_order() RPC expects. */
 export function orderItemsPayload(items: CartLine[]) {
-  return items.map((item) => ({
-    product_id: item.productId,
-    product_name: item.productName,
-    // Slab lines have no package — the cart carries a `slab:<flavour>` sentinel
-    // in packageId for keying, but the order stores package_id = null and the
-    // chosen flavour in package_label (the RPC recomputes a slab's price from
-    // the product's flavours, keyed by that label).
-    package_id: item.isSlab ? null : item.packageId,
-    package_label: item.packageLabel,
-    piece_count: item.isSlab ? 0 : item.pieceCount,
-    box_qty: item.boxQty,
-    unit_price: item.unitPrice,
-    addons: item.addons,
-    line_total: lineTotal(item),
-  }))
+  return items.map((item) => {
+    // Build-your-own box: send the composition so the server re-derives the
+    // price (Σ per-piece × count) and enforces the 15-piece rule. product_id /
+    // package_id are null — a box is a composite, not a catalogue row.
+    if (item.isBox) {
+      return {
+        box: true,
+        product_name: item.productName || 'Make Your Own Box (15 pcs)',
+        box_qty: item.boxQty,
+        addons: item.addons,
+        box_items: (item.boxItems ?? []).map((f) => ({
+          product_id: f.productId,
+          count: f.count,
+        })),
+      }
+    }
+    return {
+      product_id: item.productId,
+      product_name: item.productName,
+      // Slab lines have no package — the cart carries a `slab:<flavour>` sentinel
+      // in packageId for keying, but the order stores package_id = null and the
+      // chosen flavour in package_label (the RPC recomputes a slab's price from
+      // the product's flavours, keyed by that label).
+      package_id: item.isSlab ? null : item.packageId,
+      package_label: item.packageLabel,
+      piece_count: item.isSlab ? 0 : item.pieceCount,
+      box_qty: item.boxQty,
+      unit_price: item.unitPrice,
+      addons: item.addons,
+      line_total: lineTotal(item),
+    }
+  })
 }
 
 export async function createOrder({ items, totals, details, voucher, payment }: CreateOrderInput): Promise<CreatedOrder> {
