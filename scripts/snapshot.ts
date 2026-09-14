@@ -85,6 +85,7 @@ function mapProducts(rows: RawProduct[]): Catalog['products'] {
       slabLetterMaxChars: r.slab_letter_max_chars ?? 7,
       isHotPick: r.is_hot_pick,
       isCorporate: r.is_corporate ?? false,
+      isBuildYourOwn: r.is_build_your_own ?? false,
       sortOrder: r.sort_order,
     }))
 }

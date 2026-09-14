@@ -57,6 +57,7 @@ function mapProducts(rows: Record<string, unknown>[]): CatalogProduct[] {
         slabLetterMaxChars: (r.slab_letter_max_chars as number | null) ?? 7,
         isHotPick: (r.is_hot_pick as boolean) ?? false,
         isCorporate: (r.is_corporate as boolean) ?? false,
+        isBuildYourOwn: (r.is_build_your_own as boolean) ?? false,
         sortOrder: r.sort_order as number,
       }
     })

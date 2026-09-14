@@ -43,6 +43,7 @@ async function main() {
     { url: '/corporate', out: 'corporate/index.html' },
     { url: '/wedding', out: 'wedding/index.html' },
     { url: '/slab', out: 'slab/index.html' },
+    { url: '/build-a-box', out: 'build-a-box/index.html' },
     { url: '/about', out: 'about/index.html' },
     { url: '/policies/returns', out: 'policies/returns/index.html' },
     { url: '/policies/payment', out: 'policies/payment/index.html' },

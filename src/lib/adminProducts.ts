@@ -51,6 +51,8 @@ export interface AdminProduct {
   is_hot_pick: boolean
   /** Offered as a corporate/wedding quote flavour on the /corporate page. */
   is_corporate: boolean
+  /** Selectable as a flavour in the "Make your own box" (15pc) builder. */
+  is_build_your_own: boolean
   sort_order: number
 }
 

@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest'
 import {
   addonsTotal,
   lineTotal,
+  boxBase,
   findTier,
   cartTotals,
   totalAfterVoucher,
   voucherDiscount,
+  type BoxFlavor,
   type CartItem,
   type DeliveryTier,
 } from './pricing'
@@ -209,6 +211,58 @@ describe('voucherDiscount', () => {
     expect(voucherDiscount(2000, 'percent', 100)).toBe(2000)
     expect(voucherDiscount(2000, 'percent', 0)).toBe(0)
     expect(voucherDiscount(2000, 'fixed', -5)).toBe(0)
+  })
+})
+
+// A 15-piece "make your own box": price = Σ (per-piece price × count).
+const boxFlavors: BoxFlavor[] = [
+  { productId: 'p1', name: 'Cashew', count: 5, pricePerPiece: 190 },
+  { productId: 'p2', name: 'Naked', count: 6, pricePerPiece: 150 },
+  { productId: 'p3', name: 'Salted Caramel', count: 4, pricePerPiece: 200 },
+]
+
+function boxItem(overrides: Partial<CartItem> = {}): CartItem {
+  return {
+    productId: 'make-your-own-box',
+    packageId: 'box:sig',
+    productName: 'Make Your Own Box (15 pcs)',
+    packageLabel: '5× Cashew, 6× Naked, 4× Salted Caramel',
+    pieceCount: 15,
+    boxQty: 1,
+    unitPrice: boxBase(boxFlavors),
+    isBox: true,
+    boxItems: boxFlavors,
+    addons: [],
+    ...overrides,
+  }
+}
+
+describe('boxBase / build-your-own box pricing', () => {
+  it('sums each flavour price_per_piece × count', () => {
+    // 5×190 + 6×150 + 4×200 = 950 + 900 + 800 = 2650
+    expect(boxBase(boxFlavors)).toBe(2650)
+  })
+
+  it('lineTotal of a box is its base × boxQty (not unitPrice × pieceCount)', () => {
+    expect(lineTotal(boxItem())).toBe(2650)
+    expect(lineTotal(boxItem({ boxQty: 2 }))).toBe(5300)
+  })
+
+  it('add-ons are charged per box on top of the composition', () => {
+    const withRibbon = boxItem({
+      addons: [{ id: 'gift_ribbon', label: 'Gift Ribbon', price: 150 }],
+      boxQty: 2,
+    })
+    // (2650 + 150) × 2
+    expect(lineTotal(withRibbon)).toBe(5600)
+  })
+
+  it('a box counts its 15 pieces toward the combined delivery total', () => {
+    const totals = cartTotals([boxItem()], baseTiers)
+    expect(totals.totalPieces).toBe(15)
+    expect(totals.subtotal).toBe(2650)
+    expect(totals.deliveryFee).toBe(580)
+    expect(totals.total).toBe(3230)
   })
 })
 

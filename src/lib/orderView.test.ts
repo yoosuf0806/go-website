@@ -33,6 +33,7 @@ function order(partial: Partial<AdminOrder>): AdminOrder {
     delivery_date: TOMORROW,
     delivery_slot: null,
     note: null,
+    kitchen_note: null,
     subtotal: 100,
     delivery_fee: 580,
     total: 680,

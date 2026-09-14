@@ -110,7 +110,13 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <div className="truncate text-[15px] font-medium text-navy">{item.productName}</div>
-                            {meta && <div className="truncate pt-0.5 text-[13px] text-neutral-500">{meta}</div>}
+                            {meta && (
+                              <div
+                                className={`pt-0.5 text-[13px] text-neutral-500 ${item.isBox ? '' : 'truncate'}`}
+                              >
+                                {meta}
+                              </div>
+                            )}
                           </div>
                           <button
                             type="button"
