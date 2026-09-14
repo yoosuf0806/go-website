@@ -54,7 +54,7 @@ describe('buildOrderMessage', () => {
       },
     })
     expect(msg).toContain('nadeesha@example.com')
-    expect(msg).toContain('Alt: +94712223344')
+    expect(msg).toContain('Alt phone: +94712223344')
   })
 
   it('includes the order number, line, addon summary, and line total', () => {
@@ -77,9 +77,9 @@ describe('buildOrderMessage', () => {
       ...input,
       customer: { name: 'X', phone: '+94770000000' },
     })
-    expect(msg).not.toContain('📍')
-    expect(msg).not.toContain('🗓')
-    expect(msg).not.toContain('📝')
+    expect(msg).not.toContain('Address:')
+    expect(msg).not.toContain('Email:')
+    expect(msg).not.toContain('Note:')
   })
 
   it('shows the voucher line and discounts the total when a voucher is applied', () => {
@@ -130,7 +130,7 @@ describe('buildOrderPaymentRequestMessage (Pay with WhatsApp)', () => {
 
   it('leads with the payment-pending header and request line', () => {
     const msg = buildOrderPaymentRequestMessage(input)
-    expect(msg.startsWith('New Order #16 — Payment Pending\n')).toBe(true)
+    expect(msg.startsWith('*New Order #16 — Payment Pending*\n')).toBe(true)
     expect(msg).toContain('Please send your payment details so I can complete the payment for this order.')
     expect(msg.trimEnd().endsWith('Thank you!')).toBe(true)
   })

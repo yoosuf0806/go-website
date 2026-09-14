@@ -72,13 +72,14 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   const { orderNo, items, totals, customer, voucher } = input
   const lines: string[] = []
 
-  lines.push(`🍫 *Golden Oven — New Order #${orderNo}*`)
+  // Plain text with WhatsApp bold (*…*) only — no emojis/icons.
+  lines.push(`*Golden Oven — New Order #${orderNo}*`)
   lines.push('')
 
   for (const item of items) {
-    lines.push(`• ${item.productName} — ${item.packageLabel} × ${item.boxQty}`)
+    lines.push(`${item.productName} — ${item.packageLabel} × ${item.boxQty}`)
     const addons = addonSummary(item)
-    if (addons) lines.push(`  ↳ ${addons}`)
+    if (addons) lines.push(`  ${addons}`)
     lines.push(`  ${formatLKR(lineTotal(item))}`)
   }
 
@@ -91,19 +92,20 @@ export function buildOrderMessage(input: OrderMessageInput): string {
   const finalTotal = voucher ? totalAfterVoucher(totals.total, voucher.discount) : totals.total
   lines.push(`*Total: ${formatLKR(finalTotal)}*`)
   lines.push('')
-  lines.push(`👤 ${customer.name} | 📞 ${customer.phone}`)
-  if (customer.altPhone) lines.push(`📞 Alt: ${customer.altPhone}`)
-  if (customer.email) lines.push(`✉️ ${customer.email}`)
-  if (customer.address) lines.push(`📍 ${customer.address}`)
+  lines.push(`Name: ${customer.name}`)
+  lines.push(`Phone: ${customer.phone}`)
+  if (customer.altPhone) lines.push(`Alt phone: ${customer.altPhone}`)
+  if (customer.email) lines.push(`Email: ${customer.email}`)
+  if (customer.address) lines.push(`Address: ${customer.address}`)
   if (customer.deliveryDate)
     lines.push(
-      `🗓 Delivery: ${formatDate(customer.deliveryDate)}` +
+      `Delivery: ${formatDate(customer.deliveryDate)}` +
         (customer.deliverySlot ? ` (${slotShort(customer.deliverySlot)})` : ''),
     )
   if (customer.isGift && customer.recipientName) {
-    lines.push(`🎁 Gift for: ${customer.recipientName}${customer.recipientPhone ? ` | 📞 ${customer.recipientPhone}` : ''}`)
+    lines.push(`Gift for: ${customer.recipientName}${customer.recipientPhone ? ` (${customer.recipientPhone})` : ''}`)
   }
-  if (customer.note) lines.push(`📝 ${customer.note}`)
+  if (customer.note) lines.push(`Note: ${customer.note}`)
 
   return lines.join('\n')
 }
@@ -288,17 +290,18 @@ export function buildOrderPaymentRequestMessage(input: OrderMessageInput): strin
   const finalTotal = voucher ? totalAfterVoucher(totals.total, voucher.discount) : totals.total
   const lines: string[] = []
 
-  lines.push(`New Order #${orderNo} — Payment Pending`)
+  // Plain text with WhatsApp bold (*…*) only — no emojis/icons.
+  lines.push(`*New Order #${orderNo} — Payment Pending*`)
   lines.push('Please send your payment details so I can complete the payment for this order.')
 
   // Order Details
-  lines.push('Order Details')
+  lines.push('*Order Details*')
   lines.push('')
   for (const item of items) lines.push(paymentRequestItemLine(item))
   lines.push('')
 
   // Billing Summary
-  lines.push('Billing Summary')
+  lines.push('*Billing Summary*')
   lines.push('')
   lines.push(`* Subtotal: ${formatLKR(totals.subtotal)}`)
   lines.push(`* Delivery: ${formatLKR(totals.deliveryFee)}`)
@@ -309,7 +312,7 @@ export function buildOrderPaymentRequestMessage(input: OrderMessageInput): strin
   lines.push('')
 
   // Customer & Delivery Info
-  lines.push('Customer & Delivery Info')
+  lines.push('*Customer & Delivery Info*')
   lines.push('')
   lines.push(`* Name: ${customer.name}`)
   lines.push(`* Phone: ${formatPhoneDisplay(customer.phone)}`)
