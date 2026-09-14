@@ -15,10 +15,10 @@ import Toaster from './Toaster'
 const HEADER_HEIGHT = 68
 
 const NAV = [
-  { to: '/build-a-box', label: 'Make Your Own Box' },
   { to: '/slab', label: 'Brownie Slab' },
   { to: '/wedding', label: 'Wedding Orders' },
   { to: '/corporate', label: 'Corporate Orders' },
+  { to: '/build-a-box', label: 'Make Your Own Box' },
   { to: '/shop', label: 'Shop All' },
   { to: '/track-order', label: 'Track your order' },
 ]
