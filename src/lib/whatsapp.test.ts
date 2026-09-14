@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildOrderMessage,
+  buildOrderPaymentRequestMessage,
   buildInquiryMessage,
   buildDeliveryConfirmationMessage,
   deliveryConfirmationWaLink,
@@ -90,6 +91,69 @@ describe('buildOrderMessage', () => {
   it('omits the voucher line when no voucher is applied', () => {
     const msg = buildOrderMessage(input)
     expect(msg).not.toContain('Voucher')
+  })
+})
+
+describe('buildOrderPaymentRequestMessage (Pay with WhatsApp)', () => {
+  const boxItems: CartItem[] = [
+    {
+      productId: 'make-your-own-box',
+      packageId: 'box:sig',
+      productName: 'Make Your Own Box (15 pcs)',
+      packageLabel: '5x Assorted, 5x Cashew, 5x Naked',
+      pieceCount: 15,
+      boxQty: 1,
+      unitPrice: 2750,
+      isBox: true,
+      boxItems: [
+        { productId: 'c', name: 'Cashew', count: 5, pricePerPiece: 190 },
+        { productId: 'a', name: 'Assorted', count: 5, pricePerPiece: 180 },
+        { productId: 'n', name: 'Naked', count: 5, pricePerPiece: 180 },
+      ],
+      addons: [],
+    },
+  ]
+  const totals = cartTotals(boxItems, tiers)
+  const input: OrderMessageInput = {
+    orderNo: 16,
+    items: boxItems,
+    totals,
+    customer: {
+      name: 'Afdhal',
+      phone: '+94769970226',
+      email: 'ahamedyoosuf20018@gmail.com',
+      address: '57/3, Rajasinghe Mawatha, Borupona, Rathmalane',
+      deliveryDate: '2026-09-15',
+      deliverySlot: '10-11',
+    },
+  }
+
+  it('leads with the payment-pending header and request line', () => {
+    const msg = buildOrderPaymentRequestMessage(input)
+    expect(msg.startsWith('New Order #16 — Payment Pending\n')).toBe(true)
+    expect(msg).toContain('Please send your payment details so I can complete the payment for this order.')
+    expect(msg.trimEnd().endsWith('Thank you!')).toBe(true)
+  })
+
+  it('renders the box line with its flavour composition (sorted by name)', () => {
+    const msg = buildOrderPaymentRequestMessage(input)
+    expect(msg).toContain('* 1x Make Your Own Box (15 pcs) (5x Assorted, 5x Cashew, 5x Naked)')
+  })
+
+  it('has Billing Summary with subtotal, delivery and total', () => {
+    const msg = buildOrderPaymentRequestMessage(input)
+    expect(msg).toContain('Billing Summary')
+    expect(msg).toContain('* Subtotal: Rs. 2,750.00')
+    expect(msg).toContain('* Delivery: Rs. 580.00')
+    expect(msg).toContain('* Total: Rs. 3,330.00')
+  })
+
+  it('formats the phone and delivery time the way the business expects', () => {
+    const msg = buildOrderPaymentRequestMessage(input)
+    expect(msg).toContain('* Name: Afdhal')
+    expect(msg).toContain('* Phone: +94 76 997 0226')
+    expect(msg).toContain('* Email: ahamedyoosuf20018@gmail.com')
+    expect(msg).toContain('* Delivery Time: Sep 15, 2026 (10:00 AM – 11:00 AM)')
   })
 })
 

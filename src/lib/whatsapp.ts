@@ -3,8 +3,8 @@
 // and the caller's cartTotals() output, so the message never diverges from the
 // cart/checkout UI (a real prototype bug class). Encoded with encodeURIComponent;
 // `\n` line breaks become %0A in the link.
-import { formatLKR, formatDate, toWhatsAppNumber } from './format'
-import { slotShort } from './deliverySlots'
+import { formatLKR, formatDate, toWhatsAppNumber, normalizePhone } from './format'
+import { slotShort, slotLabel } from './deliverySlots'
 import { lineTotal, totalAfterVoucher, type CartAddon, type CartItem, type CartTotals } from './pricing'
 
 export interface OrderCustomer {
@@ -233,18 +233,105 @@ export function orderWhatsAppLink(businessNumber: string, input: OrderMessageInp
   return whatsAppLink(businessNumber, buildOrderMessage(input))
 }
 
+// US-style date "Sep 15, 2026" from an ISO date-only string, built from UTC
+// parts so an ISO midnight never rolls to the previous day. Empty for no date.
+const US_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+function formatUsDate(value: string | null | undefined): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${US_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
+}
+
+// Group a Sri Lankan number for display, e.g. +94769970226 -> "+94 76 997 0226".
+// Falls back to the raw input if it isn't a normalisable SL number.
+function formatPhoneDisplay(phone: string): string {
+  const norm = normalizePhone(phone)
+  if (!norm) return phone
+  const n = norm.slice(3) // 9 national digits
+  return `+94 ${n.slice(0, 2)} ${n.slice(2, 5)} ${n.slice(5)}`
+}
+
+// One "Order Details" line: "1x Name (detail)". For a build-your-own box the
+// detail is its flavour composition; for other lines it's the package label and
+// any add-ons.
+function paymentRequestItemLine(item: CartItem): string {
+  const detailParts: string[] = []
+  if (item.isBox && item.boxItems && item.boxItems.length > 0) {
+    detailParts.push(
+      item.boxItems
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((f) => `${f.count}x ${f.name}`)
+        .join(', '),
+    )
+  } else if (item.packageLabel) {
+    detailParts.push(item.packageLabel)
+  }
+  const addons = addonSummary(item)
+  if (addons) detailParts.push(addons)
+  const detail = detailParts.length > 0 ? ` (${detailParts.join(' · ')})` : ''
+  return `* ${item.boxQty}x ${item.productName}${detail}`
+}
+
 /**
- * "Pay with WhatsApp" message: the full order summary followed by a short line
- * asking the business for its payment details. Sent BY the customer TO the
- * business, so it reads as a request. Reuses buildOrderMessage so the summary
- * never diverges from the cart/checkout.
+ * "Pay with WhatsApp" message — sent BY the customer TO the business to request
+ * payment details. Structured into Order Details / Billing Summary / Customer &
+ * Delivery Info sections. Amounts come from the same cartTotals() the checkout
+ * shows, so the message never diverges from what the customer saw.
  */
 export function buildOrderPaymentRequestMessage(input: OrderMessageInput): string {
-  return (
-    buildOrderMessage(input) +
-    '\n\n' +
-    '💳 Please send me your payment details so I can pay for this order. Thank you!'
-  )
+  const { orderNo, items, totals, customer, voucher } = input
+  const finalTotal = voucher ? totalAfterVoucher(totals.total, voucher.discount) : totals.total
+  const lines: string[] = []
+
+  lines.push(`New Order #${orderNo} — Payment Pending`)
+  lines.push('Please send your payment details so I can complete the payment for this order.')
+
+  // Order Details
+  lines.push('Order Details')
+  lines.push('')
+  for (const item of items) lines.push(paymentRequestItemLine(item))
+  lines.push('')
+
+  // Billing Summary
+  lines.push('Billing Summary')
+  lines.push('')
+  lines.push(`* Subtotal: ${formatLKR(totals.subtotal)}`)
+  lines.push(`* Delivery: ${formatLKR(totals.deliveryFee)}`)
+  if (voucher && voucher.discount > 0) {
+    lines.push(`* Voucher (${voucher.code}): −${formatLKR(voucher.discount)}`)
+  }
+  lines.push(`* Total: ${formatLKR(finalTotal)}`)
+  lines.push('')
+
+  // Customer & Delivery Info
+  lines.push('Customer & Delivery Info')
+  lines.push('')
+  lines.push(`* Name: ${customer.name}`)
+  lines.push(`* Phone: ${formatPhoneDisplay(customer.phone)}`)
+  if (customer.altPhone) lines.push(`* Alt Phone: ${formatPhoneDisplay(customer.altPhone)}`)
+  if (customer.email) lines.push(`* Email: ${customer.email}`)
+  if (customer.address) lines.push(`* Address: ${customer.address}`)
+  if (customer.deliveryDate) {
+    const slot = customer.deliverySlot ? ` (${slotLabel(customer.deliverySlot)})` : ''
+    lines.push(`* Delivery Time: ${formatUsDate(customer.deliveryDate)}${slot}`)
+  }
+  if (customer.isGift && customer.recipientName) {
+    lines.push(
+      `* Gift for: ${customer.recipientName}` +
+        (customer.recipientPhone ? ` (${formatPhoneDisplay(customer.recipientPhone)})` : ''),
+    )
+  }
+  if (customer.note) lines.push(`* Note: ${customer.note}`)
+  lines.push('')
+
+  lines.push('Thank you!')
+
+  return lines.join('\n')
 }
 
 export function orderPaymentRequestWaLink(businessNumber: string, input: OrderMessageInput): string {
