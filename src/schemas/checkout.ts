@@ -97,11 +97,12 @@ export const adminOrderDetailsSchema = detailsBase.superRefine((data, ctx) => {
   }
 })
 
-// Payment step (spec: separate step after Review). Only bank transfer is live;
-// card is wired in a later PayHere PR. Bank transfer requires BOTH a reference
-// number and an uploaded slip before the order can be placed — validated here
-// so the CheckoutModal and any future caller share one rule.
-export const PAYMENT_METHODS = ['bank_transfer', 'card'] as const
+// Payment step (spec: separate step after Review). Bank transfer and WhatsApp
+// are live; card is wired in a later PayHere PR. Bank transfer requires BOTH a
+// reference number and an uploaded slip before the order can be placed; WhatsApp
+// and card need no manual proof (WhatsApp arranges payment in chat afterwards).
+// Validated here so the CheckoutModal and any future caller share one rule.
+export const PAYMENT_METHODS = ['bank_transfer', 'card', 'whatsapp'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
 export const paymentSchema = z
