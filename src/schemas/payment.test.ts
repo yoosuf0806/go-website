@@ -45,6 +45,11 @@ describe('payment schema (PR-A: bank transfer requires ref + slip)', () => {
     expect(r.success).toBe(true)
   })
 
+  it('accepts a WhatsApp payment without ref or slip (payment arranged in chat)', () => {
+    const r = paymentSchema.safeParse({ method: 'whatsapp' })
+    expect(r.success).toBe(true)
+  })
+
   it('rejects an unknown payment method', () => {
     const r = paymentSchema.safeParse({ method: 'crypto' })
     expect(r.success).toBe(false)

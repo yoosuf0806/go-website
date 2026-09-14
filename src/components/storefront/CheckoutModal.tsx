@@ -3,7 +3,13 @@ import { useCartStore } from '../../stores/cart'
 import { useVoucherStore } from '../../stores/voucher'
 import { cartTotals, lineTotal, totalAfterVoucher, voucherDiscount } from '../../lib/pricing'
 import { formatLKR, normalizePhone, toWhatsAppNumber } from '../../lib/format'
-import { addonSummary, buildOrderMessage, orderWhatsAppLink } from '../../lib/whatsapp'
+import {
+  addonSummary,
+  buildOrderMessage,
+  buildOrderPaymentRequestMessage,
+  orderWhatsAppLink,
+  orderPaymentRequestWaLink,
+} from '../../lib/whatsapp'
 import { checkoutDetailsSchema, paymentSchema, type CheckoutDetails, type PaymentMethod } from '../../schemas/checkout'
 import { useCreateOrder } from '../../hooks/useCreateOrder'
 import { useCatalog } from '../../contexts/CatalogContext'
@@ -167,6 +173,7 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
     setPayErrors({})
 
     const isBank = payMethod === 'bank_transfer'
+    const isWhatsapp = payMethod === 'whatsapp'
     const appliedVoucher =
       voucher.status === 'ok' ? { code: voucher.code.trim(), discount: appliedDiscount } : null
     try {
@@ -204,13 +211,24 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
         },
         voucher: appliedVoucher,
       }
-      const link = isBank ? '' : orderWhatsAppLink(settings.business.whatsapp_number, messageInput)
+      // Bank transfer skips WhatsApp entirely. "Pay with WhatsApp" hands off a
+      // payment-REQUEST message (order summary + ask for payment details); any
+      // other WhatsApp handoff (card/legacy) uses the plain order summary.
+      const link = isBank
+        ? ''
+        : isWhatsapp
+          ? orderPaymentRequestWaLink(settings.business.whatsapp_number, messageInput)
+          : orderWhatsAppLink(settings.business.whatsapp_number, messageInput)
       // Snapshot everything the confirmation screen needs BEFORE clearing the
       // cart — items/totals are about to become empty.
       setSuccess({
         orderNo,
         waLink: link,
-        message: isBank ? '' : buildOrderMessage(messageInput),
+        message: isBank
+          ? ''
+          : isWhatsapp
+            ? buildOrderPaymentRequestMessage(messageInput)
+            : buildOrderMessage(messageInput),
         lines: items.map((i) => ({
           name: i.productName,
           qty: i.boxQty,
@@ -535,7 +553,9 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
             <div className="flex-1 overflow-y-auto px-5 py-5">
               <h2 className="font-display text-[26px] text-navy">How would you like to pay?</h2>
               <p className="mt-1 text-sm leading-relaxed text-neutral-500">
-                Pay by bank transfer and upload your slip — we'll verify it and confirm your order.
+                {payMethod === 'whatsapp'
+                  ? "We'll open WhatsApp with your order summary — send it to us and we'll reply with payment details."
+                  : "Pay by bank transfer and upload your slip — we'll verify it and confirm your order."}
               </p>
 
               <div className="mt-4 flex flex-col gap-3">
@@ -579,6 +599,49 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                     </div>
                   </div>
                 </button>
+
+                {/* Pay with WhatsApp — place the order, then arrange payment in chat */}
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('whatsapp')}
+                  className={`rounded-2xl border p-4 text-left transition-colors ${
+                    payMethod === 'whatsapp'
+                      ? 'border-pink bg-white ring-1 ring-pink'
+                      : 'border-blush-200 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 ${
+                          payMethod === 'whatsapp' ? 'border-pink' : 'border-blush-200'
+                        }`}
+                      >
+                        {payMethod === 'whatsapp' && <span className="h-2.5 w-2.5 rounded-full bg-pink" />}
+                      </span>
+                      <div>
+                        <div className="font-bold text-navy">Pay with WhatsApp</div>
+                        <div className="text-[13px] text-neutral-500">Arrange payment in chat</div>
+                      </div>
+                    </div>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#25d366" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+                      <path d="M21 11.6a8.4 8.4 0 0 1-12.4 7.4L4 20.5l1.6-4.4A8.4 8.4 0 1 1 21 11.6Z" />
+                    </svg>
+                  </div>
+                </button>
+
+                {/* WhatsApp explainer */}
+                {payMethod === 'whatsapp' && (
+                  <div className="rounded-2xl border border-blush-200 bg-blush-50 p-4 text-sm leading-relaxed text-neutral-600">
+                    When you place the order, we'll open WhatsApp with your order summary already
+                    written out. Send it to us and we'll reply with our payment details — no slip
+                    upload needed here.
+                    <div className="mt-3 flex items-baseline justify-between border-t border-blush-200 pt-3">
+                      <span className="font-bold text-navy">Amount</span>
+                      <span className="text-lg font-bold text-navy">{formatLKR(finalTotal)}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Transfer-to details (from admin-editable settings) */}
                 {payMethod === 'bank_transfer' && bank.enabled && (
@@ -716,11 +779,24 @@ export default function CheckoutModal({ onClose }: CheckoutModalProps) {
                 disabled={mutation.isPending || slipUploading}
                 className="w-full rounded-2xl bg-pink py-4 text-base font-bold text-white transition-colors hover:bg-pink-dark disabled:opacity-50"
               >
-                {mutation.isPending ? 'Placing order…' : 'Place order'}
+                {mutation.isPending
+                  ? 'Placing order…'
+                  : payMethod === 'whatsapp'
+                    ? 'Place order & open WhatsApp'
+                    : 'Place order'}
               </button>
               <p className="pt-2.5 text-center text-[13px] text-neutral-500">
-                Your order is placed as <span className="font-medium text-navy">Awaiting verification</span> — we'll
-                confirm once we've checked your slip.
+                {payMethod === 'whatsapp' ? (
+                  <>
+                    We'll open WhatsApp with your order — send it to us to arrange payment, and we'll
+                    confirm your order.
+                  </>
+                ) : (
+                  <>
+                    Your order is placed as <span className="font-medium text-navy">Awaiting verification</span> —
+                    we'll confirm once we've checked your slip.
+                  </>
+                )}
               </p>
             </div>
           </>
@@ -759,6 +835,7 @@ function OrderConfirmation({
   const [copied, setCopied] = useState(false)
   const firstName = customerName.trim().split(/\s+/)[0] || 'there'
   const isBank = success.paymentMethod === 'bank_transfer'
+  const isWhatsapp = success.paymentMethod === 'whatsapp'
 
   async function copyMessage() {
     try {
@@ -779,7 +856,9 @@ function OrderConfirmation({
         <p className="mx-auto mt-2.5 max-w-sm text-[15px] leading-relaxed text-neutral-600">
           {isBank
             ? "Your order is in and marked awaiting verification. We'll check your transfer slip and confirm timing within the hour."
-            : "Your order is in. Send us the WhatsApp message below and we'll confirm timing and lettering within the hour."}
+            : isWhatsapp
+              ? "Your order is in. Send us the WhatsApp message below — it has your order summary and asks for our payment details, so you can pay and we'll confirm."
+              : "Your order is in. Send us the WhatsApp message below and we'll confirm timing and lettering within the hour."}
         </p>
         <div className="pt-2 text-sm text-neutral-500">
           Order <span className="font-bold text-navy">#{success.orderNo}</span>

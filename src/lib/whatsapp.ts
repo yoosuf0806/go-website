@@ -233,6 +233,24 @@ export function orderWhatsAppLink(businessNumber: string, input: OrderMessageInp
   return whatsAppLink(businessNumber, buildOrderMessage(input))
 }
 
+/**
+ * "Pay with WhatsApp" message: the full order summary followed by a short line
+ * asking the business for its payment details. Sent BY the customer TO the
+ * business, so it reads as a request. Reuses buildOrderMessage so the summary
+ * never diverges from the cart/checkout.
+ */
+export function buildOrderPaymentRequestMessage(input: OrderMessageInput): string {
+  return (
+    buildOrderMessage(input) +
+    '\n\n' +
+    '💳 Please send me your payment details so I can pay for this order. Thank you!'
+  )
+}
+
+export function orderPaymentRequestWaLink(businessNumber: string, input: OrderMessageInput): string {
+  return whatsAppLink(businessNumber, buildOrderPaymentRequestMessage(input))
+}
+
 export function inquiryWhatsAppLink(businessNumber: string, input: InquiryMessageInput): string {
   return whatsAppLink(businessNumber, buildInquiryMessage(input))
 }

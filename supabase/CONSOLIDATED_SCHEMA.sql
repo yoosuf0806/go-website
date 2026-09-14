@@ -2112,7 +2112,7 @@ GRANT ALL ON FUNCTION public.validate_gift_voucher(p_code text) TO authenticated
 
 
 -- ============================================================================
--- MIGRATIONS 048–050 — features layered on top of the dump above.
+-- MIGRATIONS 048–051 — features layered on top of the dump above.
 -- (This dump was generated before these migrations existed; their effects are
 -- reproduced here verbatim so a freshly-stood-up project matches the migration
 -- chain. Regenerate the whole file with gen_consolidated.sh to fold them in.)
@@ -2521,6 +2521,12 @@ grant execute on function public.create_order(
   text, text, text, text, text, date, text, numeric, numeric, numeric, int, jsonb,
   text, numeric, boolean, text, text, text, text, text, text
 ) to anon, authenticated;
+
+-- 051_whatsapp_payment_method.sql — allow 'whatsapp' as an order payment method.
+alter table public.orders drop constraint if exists orders_payment_method_check;
+alter table public.orders
+  add constraint orders_payment_method_check
+  check (payment_method in ('bank_transfer', 'card', 'whatsapp'));
 
 
 -- ============================================================================

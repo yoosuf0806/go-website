@@ -17,7 +17,7 @@ export interface AppliedVoucher {
 
 /** Payment selection carried from the checkout Payment step into the RPC. */
 export interface OrderPayment {
-  method: 'bank_transfer' | 'card'
+  method: 'bank_transfer' | 'card' | 'whatsapp'
   paymentRef?: string | null
   slipUrl?: string | null
 }

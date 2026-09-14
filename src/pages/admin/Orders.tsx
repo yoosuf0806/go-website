@@ -460,7 +460,11 @@ function OrderRow({
                   {order.payment_method && (
                     <div className="mt-1 rounded bg-white px-2 py-1.5 text-neutral-700">
                       <span className="font-medium">Payment:</span>{' '}
-                      {order.payment_method === 'bank_transfer' ? 'Bank transfer' : 'Card'}
+                      {order.payment_method === 'bank_transfer'
+                        ? 'Bank transfer'
+                        : order.payment_method === 'whatsapp'
+                          ? 'WhatsApp'
+                          : 'Card'}
                       {order.payment_status && (
                         <span
                           className={`ml-1.5 rounded px-1.5 py-0.5 text-xs font-semibold ${
@@ -480,7 +484,8 @@ function OrderRow({
                         <div className="text-xs text-neutral-500">Ref: {order.payment_ref}</div>
                       )}
                       {order.slip_url && <SlipLink path={order.slip_url} />}
-                      {order.payment_status === 'awaiting_verification' && (
+                      {(order.payment_status === 'awaiting_verification' ||
+                        (order.payment_method === 'whatsapp' && order.payment_status !== 'paid')) && (
                         <div className="mt-2">
                           <button
                             type="button"
@@ -488,7 +493,11 @@ function OrderRow({
                             disabled={confirmingPayment}
                             className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700 disabled:opacity-50"
                           >
-                            {confirmingPayment ? 'Confirming…' : '✓ Confirm & verified'}
+                            {confirmingPayment
+                              ? 'Confirming…'
+                              : order.payment_method === 'whatsapp'
+                                ? '✓ Mark paid'
+                                : '✓ Confirm & verified'}
                           </button>
                           <p className="mt-1 text-[11px] text-neutral-400">
                             Sends this order to the kitchen and opens a WhatsApp confirmation to the customer.
