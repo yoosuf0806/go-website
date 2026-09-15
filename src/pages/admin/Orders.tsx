@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   useAllAdminOrders,
   useUpdateOrderStatus,
@@ -6,6 +7,8 @@ import {
   useUpdateKitchenNote,
   useUpdateOrderItems,
 } from '../../hooks/useAdminOrders'
+import DispatchOrderModal from '../../components/DispatchOrderModal'
+import { providerLabel } from '../../lib/dispatch'
 import type { AdminOrder, OrderItemEdit } from '../../lib/adminOrders'
 import { signedSlipUrl } from '../../lib/bankSlips'
 import { STATUS_LABELS, nextStatus, canCancel, type OrderStatus } from '../../lib/orderStatus'
@@ -22,7 +25,7 @@ import { findTier } from '../../lib/pricing'
 import { formatLKR, formatDate, toWhatsAppNumber } from '../../lib/format'
 import { printOrderSlip } from '../../lib/orderSlip'
 import { useCatalog } from '../../contexts/CatalogContext'
-import { addonSummary, deliveryConfirmationWaLink } from '../../lib/whatsapp'
+import { addonSummary, deliveryConfirmationWaLink, dispatchWaLink } from '../../lib/whatsapp'
 import StatusBadge from '../../components/admin/StatusBadge'
 import { slotLabel, slotShort } from '../../lib/deliverySlots'
 
@@ -79,6 +82,8 @@ export default function Orders() {
   // Land on the "Needs review" inbox so new orders are the first thing seen.
   const [tab, setTab] = useState<OrderTab>('needs_review')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [dispatching, setDispatching] = useState<AdminOrder | null>(null)
+  const qc = useQueryClient()
   const { data: orders, isLoading, isError, error } = useAllAdminOrders()
   const updateStatus = useUpdateOrderStatus()
   const confirmPayment = useConfirmOrderPayment()
@@ -216,6 +221,7 @@ export default function Orders() {
                   expanded={expanded === order.id}
                   onToggle={() => setExpanded((cur) => (cur === order.id ? null : order.id))}
                   onAdvance={(to) => updateStatus.mutate({ id: order.id, status: to })}
+                  onDispatch={() => setDispatching(order)}
                   busy={updateStatus.isPending}
                   onConfirmPayment={() =>
                     confirmPayment.mutate(order.id, {
@@ -232,6 +238,19 @@ export default function Orders() {
           </table>
         </div>
       )}
+
+      {dispatching && (
+        <DispatchOrderModal
+          orderId={dispatching.id}
+          orderNo={dispatching.order_no}
+          customerPhone={dispatching.phone}
+          onClose={() => setDispatching(null)}
+          onDispatched={() => {
+            qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+            qc.invalidateQueries({ queryKey: ['kitchen-orders'] })
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -242,6 +261,7 @@ function OrderRow({
   expanded,
   onToggle,
   onAdvance,
+  onDispatch,
   busy,
   onConfirmPayment,
   confirmingPayment,
@@ -251,6 +271,7 @@ function OrderRow({
   expanded: boolean
   onToggle: () => void
   onAdvance: (to: OrderStatus) => void
+  onDispatch: () => void
   busy: boolean
   onConfirmPayment: () => void
   confirmingPayment: boolean
@@ -348,10 +369,12 @@ function OrderRow({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => onAdvance(next)}
+                // Dispatching (→ out for delivery) opens the tracking modal; any
+                // other step is a plain status advance.
+                onClick={() => (next === 'out_for_delivery' ? onDispatch() : onAdvance(next))}
                 className="rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-100 disabled:opacity-50"
               >
-                → {STATUS_LABELS[next]}
+                {next === 'out_for_delivery' ? '🚚 Send for delivery' : `→ ${STATUS_LABELS[next]}`}
               </button>
             )}
             {canCancel(order.status) && (
@@ -441,6 +464,39 @@ function OrderRow({
                     🗓 {order.delivery_date ? formatDate(order.delivery_date) : 'No delivery date'}
                     {order.delivery_slot ? ` · ${slotLabel(order.delivery_slot)}` : ''}
                   </div>
+                  {order.delivery_provider && (
+                    <div className="mt-1 rounded bg-sky-50 px-2 py-1.5 text-sky-800">
+                      <span className="font-medium">🚚 {providerLabel(order.delivery_provider)}</span>
+                      {order.tracking_number && (
+                        <span className="ml-1">· {order.tracking_number}</span>
+                      )}
+                      {order.tracking_url && (
+                        <a
+                          href={order.tracking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-1 underline hover:no-underline"
+                        >
+                          Track link
+                        </a>
+                      )}
+                      {toWhatsAppNumber(order.phone) && (
+                        <a
+                          href={dispatchWaLink(order.phone, {
+                            provider: order.delivery_provider,
+                            orderNo: order.order_no,
+                            trackingNumber: order.tracking_number,
+                            trackingUrl: order.tracking_url,
+                          })}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 font-medium text-pink underline hover:no-underline"
+                        >
+                          Resend tracking on WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  )}
                   <div>
                     📞 {order.phone}
                     {order.alt_phone && <span className="text-neutral-500"> · alt {order.alt_phone}</span>}

@@ -341,6 +341,54 @@ export function orderPaymentRequestWaLink(businessNumber: string, input: OrderMe
   return whatsAppLink(businessNumber, buildOrderPaymentRequestMessage(input))
 }
 
+// PromptXpress has a single tracking page; the customer looks their item up
+// there with the tracking number. PickMe Flash gives a per-order link instead.
+export const PROMPTXPRESS_TRACK_URL = 'https://www.promptxpress.lk/TrackItem.aspx'
+
+export interface DispatchMessageInput {
+  provider: 'promptxpress' | 'pickme_flash'
+  orderNo: number | string
+  /** PromptXpress tracking number. */
+  trackingNumber?: string | null
+  /** PickMe Flash tracking link. */
+  trackingUrl?: string | null
+}
+
+/**
+ * Dispatch/tracking message sent TO the customer when an order goes out for
+ * delivery. Plain text, no icons. Two templates — PromptXpress carries a
+ * tracking number + the fixed tracking page; PickMe Flash carries a link.
+ */
+export function buildDispatchMessage(input: DispatchMessageInput): string {
+  const lines: string[] = []
+  if (input.provider === 'promptxpress') {
+    lines.push('Golden Oven Delivery Update!')
+    lines.push('')
+    lines.push(
+      `Hi there! Your order #${input.orderNo} has been dispatched and is scheduled for delivery tomorrow.`,
+    )
+    lines.push('')
+    lines.push(`Tracking Number: ${input.trackingNumber ?? ''}`)
+    lines.push(`Track your package: ${PROMPTXPRESS_TRACK_URL}`)
+  } else {
+    lines.push('Golden Oven Delivery Update')
+    lines.push('')
+    lines.push(
+      `Hi there! Your order #${input.orderNo} has been dispatched and is scheduled for delivery tomorrow.`,
+    )
+    lines.push('')
+    lines.push(`Track your package: ${input.trackingUrl ?? ''}`)
+  }
+  lines.push('')
+  lines.push('If you have any questions about your delivery, feel free to reply directly to this message!')
+  return lines.join('\n')
+}
+
+/** wa.me link to the CUSTOMER carrying the dispatch/tracking message. */
+export function dispatchWaLink(customerPhone: string, input: DispatchMessageInput): string {
+  return whatsAppLink(customerPhone, buildDispatchMessage(input))
+}
+
 export function inquiryWhatsAppLink(businessNumber: string, input: InquiryMessageInput): string {
   return whatsAppLink(businessNumber, buildInquiryMessage(input))
 }

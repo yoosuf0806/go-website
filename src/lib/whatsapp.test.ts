@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   buildOrderMessage,
   buildOrderPaymentRequestMessage,
+  buildDispatchMessage,
+  PROMPTXPRESS_TRACK_URL,
   buildInquiryMessage,
   buildDeliveryConfirmationMessage,
   deliveryConfirmationWaLink,
@@ -154,6 +156,30 @@ describe('buildOrderPaymentRequestMessage (Pay with WhatsApp)', () => {
     expect(msg).toContain('* Phone: +94 76 997 0226')
     expect(msg).toContain('* Email: ahamedyoosuf20018@gmail.com')
     expect(msg).toContain('* Delivery Time: Sep 15, 2026 (10:00 AM – 11:00 AM)')
+  })
+})
+
+describe('buildDispatchMessage (delivery/tracking)', () => {
+  it('PromptXpress: tracking number + the fixed tracking page, no icons', () => {
+    const msg = buildDispatchMessage({ provider: 'promptxpress', orderNo: 42, trackingNumber: 'PX999' })
+    expect(msg).toContain('Golden Oven Delivery Update!')
+    expect(msg).toContain('Your order #42 has been dispatched')
+    expect(msg).toContain('Tracking Number: PX999')
+    expect(msg).toContain(`Track your package: ${PROMPTXPRESS_TRACK_URL}`)
+    expect(msg).toContain('reply directly to this message')
+    expect(/\p{Extended_Pictographic}/u.test(msg)).toBe(false)
+  })
+
+  it('PickMe Flash: the staff-entered link, no tracking-number line', () => {
+    const msg = buildDispatchMessage({
+      provider: 'pickme_flash',
+      orderNo: 42,
+      trackingUrl: 'https://pickme.lk/track/abc',
+    })
+    expect(msg).toContain('Golden Oven Delivery Update')
+    expect(msg).not.toContain('Delivery Update!')
+    expect(msg).not.toContain('Tracking Number:')
+    expect(msg).toContain('Track your package: https://pickme.lk/track/abc')
   })
 })
 
