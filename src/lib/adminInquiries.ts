@@ -91,6 +91,12 @@ export async function convertInquiryToOrder({
       total: totals.total,
       total_pieces: totals.totalPieces,
       source: 'inquiry_conversion',
+      // Converting an inquiry is a deliberate admin action after the quote is
+      // agreed, so the order is created 'confirmed' — NOT the default 'pending'.
+      // kitchenVisible() releases an inquiry_conversion order to the kitchen +
+      // the schedule only once it's past 'pending', so a pending one would be
+      // stranded in the admin "needs review" limbo and never reach the kitchen.
+      status: 'confirmed',
       inquiry_id: inquiry.id,
     })
     .select('id, order_no')
