@@ -11,7 +11,9 @@ import {
   type KitchenOrder,
 } from '../../lib/kitchenOrders'
 import KitchenLayout from '../../components/kitchen/KitchenLayout'
+import DispatchOrderModal from '../../components/DispatchOrderModal'
 import { slotShort } from '../../lib/deliverySlots'
+import { providerLabel } from '../../lib/dispatch'
 import type { OrderStatus } from '../../lib/orderStatus'
 
 const DATE_CHIPS = [
@@ -44,6 +46,7 @@ function formatShortDate(iso: string | null): string {
 
 export default function KitchenBoard() {
   const [selectedDate, setSelectedDate] = useState(offsetDate(0))
+  const [dispatching, setDispatching] = useState<KitchenOrder | null>(null)
 
   const qc = useQueryClient()
   const {
@@ -120,12 +123,28 @@ export default function KitchenBoard() {
             <OrderCard
               key={order.id}
               order={order}
-              onAdvance={(to) => advance.mutate({ id: order.id, to })}
+              // Dispatching (→ out_for_delivery) opens the tracking modal; every
+              // other transition is a plain status advance.
+              onAdvance={(to) =>
+                to === 'out_for_delivery'
+                  ? setDispatching(order)
+                  : advance.mutate({ id: order.id, to })
+              }
               advancing={advance.isPending}
             />
           ))}
         </div>
       </div>
+
+      {dispatching && (
+        <DispatchOrderModal
+          orderId={dispatching.id}
+          orderNo={dispatching.order_no}
+          customerPhone={dispatching.phone}
+          onClose={() => setDispatching(null)}
+          onDispatched={() => qc.invalidateQueries({ queryKey: ['kitchen-orders', selectedDate] })}
+        />
+      )}
     </KitchenLayout>
   )
 }
@@ -212,6 +231,12 @@ function OrderCard({
           {order.delivery_slot ? ` · ${slotShort(order.delivery_slot)}` : ''}
         </p>
         {order.address && <p>📍 {order.address}</p>}
+        {order.delivery_provider && (
+          <p className="text-sky-300">
+            🚚 {providerLabel(order.delivery_provider)}
+            {order.tracking_number ? ` · ${order.tracking_number}` : ''}
+          </p>
+        )}
       </div>
 
       {/* Advance button */}

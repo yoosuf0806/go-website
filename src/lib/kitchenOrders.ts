@@ -29,11 +29,15 @@ export interface KitchenOrder {
   order_no: number
   status: OrderStatus
   customer_name: string
+  phone: string
   address: string | null
   delivery_date: string | null
   delivery_slot: string | null
   note: string | null
   kitchen_note: string | null
+  delivery_provider: 'promptxpress' | 'pickme_flash' | null
+  tracking_number: string | null
+  tracking_url: string | null
   total_pieces: number
   order_items: KitchenOrderItem[]
 }
@@ -48,7 +52,11 @@ export const KITCHEN_NEXT: Partial<
   pending: { to: 'baking', label: 'Start baking', variant: 'pink' },
   confirmed: { to: 'baking', label: 'Start baking', variant: 'pink' },
   baking: { to: 'ready', label: 'Mark ready to deliver', variant: 'green' },
-  ready: { to: 'completed', label: 'Mark delivered', variant: 'navy' },
+  // 'ready' → out_for_delivery opens the dispatch modal (tracking + customer
+  // message); the board handles that transition specially. out_for_delivery →
+  // completed is the plain "delivered" advance.
+  ready: { to: 'out_for_delivery', label: 'Send for delivery', variant: 'navy' },
+  out_for_delivery: { to: 'completed', label: 'Mark delivered', variant: 'navy' },
 }
 
 export const KITCHEN_STATUS_LABEL: Record<OrderStatus, string> = {
@@ -122,7 +130,7 @@ export async function fetchKitchenOrders(deliveryDate: string): Promise<KitchenO
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_no, status, customer_name, address, delivery_date, delivery_slot, note, kitchen_note, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons, box_items)',
+      'id, order_no, status, customer_name, phone, address, delivery_date, delivery_slot, note, kitchen_note, delivery_provider, tracking_number, tracking_url, total_pieces, payment_status, payment_method, source, order_items(id, product_name, package_label, piece_count, box_qty, addons, box_items)',
     )
     .eq('delivery_date', deliveryDate)
     .neq('status', 'cancelled')

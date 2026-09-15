@@ -2112,7 +2112,7 @@ GRANT ALL ON FUNCTION public.validate_gift_voucher(p_code text) TO authenticated
 
 
 -- ============================================================================
--- MIGRATIONS 048–051 — features layered on top of the dump above.
+-- MIGRATIONS 048–052 — features layered on top of the dump above.
 -- (This dump was generated before these migrations existed; their effects are
 -- reproduced here verbatim so a freshly-stood-up project matches the migration
 -- chain. Regenerate the whole file with gen_consolidated.sh to fold them in.)
@@ -2527,6 +2527,58 @@ alter table public.orders drop constraint if exists orders_payment_method_check;
 alter table public.orders
   add constraint orders_payment_method_check
   check (payment_method in ('bank_transfer', 'card', 'whatsapp'));
+
+-- 052_order_dispatch_tracking.sql — courier + tracking on an order, and the
+-- staff-callable RPC that dispatches it (sets out_for_delivery + tracking).
+alter table public.orders
+  add column if not exists delivery_provider text
+    check (delivery_provider in ('promptxpress', 'pickme_flash'));
+alter table public.orders add column if not exists tracking_number text;
+alter table public.orders add column if not exists tracking_url text;
+
+create or replace function public.dispatch_order(
+  p_id uuid,
+  p_provider text,
+  p_tracking_number text default null,
+  p_tracking_url text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_number text := nullif(trim(coalesce(p_tracking_number, '')), '');
+  v_url text := nullif(trim(coalesce(p_tracking_url, '')), '');
+begin
+  if auth.uid() is null then
+    raise exception 'NOT_AUTHENTICATED';
+  end if;
+  if p_provider not in ('promptxpress', 'pickme_flash') then
+    raise exception 'INVALID_PROVIDER';
+  end if;
+  if p_provider = 'promptxpress' then
+    if v_number is null then
+      raise exception 'TRACKING_NUMBER_REQUIRED';
+    end if;
+    v_url := null;
+  else
+    if v_url is null then
+      raise exception 'TRACKING_URL_REQUIRED';
+    end if;
+    v_number := null;
+  end if;
+  update orders
+    set status = 'out_for_delivery', delivery_provider = p_provider,
+        tracking_number = v_number, tracking_url = v_url, updated_at = now()
+    where id = p_id;
+  if not found then
+    raise exception 'ORDER_NOT_FOUND';
+  end if;
+end;
+$$;
+revoke execute on function public.dispatch_order(uuid, text, text, text) from public, anon;
+grant execute on function public.dispatch_order(uuid, text, text, text) to authenticated;
 
 
 -- ============================================================================
