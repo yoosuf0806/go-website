@@ -6,6 +6,7 @@ import { useCartUI } from '../../stores/cartUI'
 import { lineTotal } from '../../lib/pricing'
 import { toWhatsAppNumber, formatLKR } from '../../lib/format'
 import WhatsAppIcon from '../ui/WhatsAppIcon'
+import WhatsAppFloat from './WhatsAppFloat'
 import BannerBar from './BannerBar'
 import PromoTicker from './PromoTicker'
 import CartDrawer from './CartDrawer'
@@ -99,22 +100,7 @@ export default function StorefrontLayout() {
         </div>
       )}
 
-      {waNumber && (
-        <a
-          href={`https://wa.me/${waNumber}?text=${encodeURIComponent("Hi! I'd like to place an order.")}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat on WhatsApp"
-          className="fixed right-7 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25d366] text-white shadow-lg shadow-[#25d366]/40 transition-transform hover:scale-110"
-          style={{
-            bottom: showMiniCart
-              ? 'calc(env(safe-area-inset-bottom) + 76px)'
-              : 'max(1.75rem, env(safe-area-inset-bottom))',
-          }}
-        >
-          <WhatsAppIcon className="h-7 w-7" />
-        </a>
-      )}
+      {waNumber && <WhatsAppFloat waNumber={waNumber} liftForMiniCart={showMiniCart} />}
     </div>
   )
 }

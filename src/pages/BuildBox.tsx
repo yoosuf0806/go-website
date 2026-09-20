@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCatalog } from '../contexts/CatalogContext'
 import { useCartStore } from '../stores/cart'
 import type { BoxFlavor, CartItem } from '../lib/pricing'
@@ -66,6 +66,24 @@ export default function BuildBox() {
       const currentTotal = Object.values(cur).reduce((n, c) => n + c, 0)
       if (delta > 0 && currentTotal >= BOX_SIZE) return cur
       return { ...cur, [id]: next }
+    })
+  }
+
+  // Set an exact count for a flavour (typed into its field). Clamped to the room
+  // remaining after the other flavours so the box never exceeds 15 pieces; a
+  // value of 0 (or a cleared field) removes the flavour. The 15-piece rule is
+  // re-checked server-side at checkout regardless.
+  function setCount(id: string, value: number) {
+    setJustAdded(false)
+    setCounts((cur) => {
+      const safe = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0
+      const othersTotal = Object.entries(cur).reduce((n, [k, c]) => (k === id ? n : n + c), 0)
+      const capped = Math.min(safe, BOX_SIZE - othersTotal)
+      if (capped <= 0) {
+        const { [id]: _removed, ...rest } = cur
+        return rest
+      }
+      return { ...cur, [id]: capped }
     })
   }
 
@@ -152,9 +170,11 @@ export default function BuildBox() {
                         >
                           −
                         </button>
-                        <span className="min-w-[1.5rem] text-center text-[16px] font-bold text-navy">
-                          {count}
-                        </span>
+                        <CountField
+                          count={count}
+                          label={`${f.name} quantity`}
+                          onSet={(v) => setCount(f.id, v)}
+                        />
                         <button
                           type="button"
                           onClick={() => adjust(f.id, 1)}
@@ -203,5 +223,47 @@ export default function BuildBox() {
         )}
       </section>
     </div>
+  )
+}
+
+// Tappable, typeable per-flavour count. Mirrors the QtyStepper draft pattern on
+// the quote pages: a local draft lets the customer freely type (including
+// clearing the field) without the count snapping mid-edit, and the value is
+// committed — clamped by the parent — on blur. `count` flowing back in resets
+// the draft, so a value capped at the 15-piece limit shows the clamped number.
+function CountField({
+  count,
+  label,
+  onSet,
+}: {
+  count: number
+  label: string
+  onSet: (value: number) => void
+}) {
+  const [draft, setDraft] = useState(String(count))
+  useEffect(() => setDraft(String(count)), [count])
+
+  function commit() {
+    const n = parseInt(draft, 10)
+    const next = Number.isNaN(n) ? 0 : n
+    onSet(next)
+    setDraft(String(next))
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={draft}
+      aria-label={label}
+      onChange={(e) => {
+        const v = e.target.value
+        if (!/^\d*$/.test(v)) return
+        setDraft(v)
+        if (v !== '') onSet(parseInt(v, 10))
+      }}
+      onBlur={commit}
+      className="w-12 rounded-lg border border-blush-200 bg-transparent px-1 py-1 text-center text-[16px] font-bold text-navy focus:outline-none focus:ring-2 focus:ring-pink/40"
+    />
   )
 }

@@ -12,6 +12,7 @@ import QuoteStatsBar from '../components/storefront/QuoteStatsBar'
 import QuoteOccasionsGrid from '../components/storefront/QuoteOccasionsGrid'
 import QuoteHandledSection from '../components/storefront/QuoteHandledSection'
 import FlavorShowcase from '../components/storefront/FlavorShowcase'
+import WhatsAppIcon from '../components/ui/WhatsAppIcon'
 import Toast from '../components/ui/Toast'
 import Seo, { breadcrumbJsonLd, faqPageJsonLd } from '../components/Seo'
 
@@ -282,6 +283,29 @@ export default function QuoteLandingPage({
               >
                 {mutation.isPending ? 'Sending…' : isCorporate ? 'Send quote request' : 'Send wedding request'}
               </button>
+
+              {waNumber && (
+                <>
+                  <div className="my-3 flex items-center gap-3 text-xs text-neutral-400">
+                    <span className="h-px flex-1 bg-blush-200" />
+                    or
+                    <span className="h-px flex-1 bg-blush-200" />
+                  </div>
+                  <a
+                    href={`https://wa.me/${waNumber}?text=${encodeURIComponent(
+                      isCorporate
+                        ? "Hi! I'd like to inquire about a corporate order."
+                        : "Hi! I'd like to inquire about a wedding order.",
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#25d366] py-4 text-base font-bold text-white transition-transform hover:scale-[1.01]"
+                  >
+                    <WhatsAppIcon className="h-5 w-5" />
+                    Inquire via WhatsApp
+                  </a>
+                </>
+              )}
 
               {content.preOrderNote && (
                 <p className="mt-4 rounded-xl bg-blush-100 px-4 py-3 text-sm text-neutral-700">
