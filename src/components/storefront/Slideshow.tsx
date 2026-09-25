@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PromoSlide } from '../../types/content'
-import { imageSrcSet, cdnUrl } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
 const SLIDE_WIDTHS = [640, 960, 1280, 1600]
-
-// Fall back to the untouched original if a CDN-transformed candidate fails.
-function dropSrcSet(e: React.SyntheticEvent<HTMLImageElement>) {
-  e.currentTarget.srcset = ''
-  e.currentTarget.sizes = ''
-}
 
 interface Slide {
   eyebrow: string
@@ -112,7 +106,8 @@ export default function Slideshow({ promoSlides = [] }: { promoSlides?: PromoSli
                   loading={i === 0 ? 'eager' : 'lazy'}
                   fetchPriority={i === 0 ? 'high' : undefined}
                   decoding={i === 0 ? 'auto' : 'async'}
-                  onError={dropSrcSet}
+                  data-fallback-src={slide.imageUrl}
+                  onError={imgError}
                 />
                 <div className="absolute inset-0 bg-black/45" />
               </>

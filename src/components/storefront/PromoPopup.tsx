@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PromoPopup as PromoPopupContent } from '../../types/content'
-import { cdnUrl } from '../../lib/images'
+import { cdnUrl, imgError } from '../../lib/images'
 
 // Landing-page promotional popup (admin-managed). Shows once per browser session
 // so a returning visitor within the same session isn't nagged on every page, but
@@ -86,7 +86,7 @@ export default function PromoPopup({ popup }: { popup: PromoPopupContent }) {
         </button>
 
         {popup.imageUrl && (
-          <img src={cdnUrl(popup.imageUrl)} alt="" className="max-h-64 w-full object-cover" />
+          <img src={cdnUrl(popup.imageUrl)} data-fallback-src={popup.imageUrl} onError={imgError} alt="" className="max-h-64 w-full object-cover" />
         )}
 
         <div className="px-6 py-6 text-center">

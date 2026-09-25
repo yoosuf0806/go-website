@@ -1,15 +1,9 @@
 import { useState } from 'react'
 import type { CatalogMedia } from '../../types/catalog'
 import BrownieImage from './BrownieImage'
-import { imageSrcSet, cdnUrl } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
 const GALLERY_WIDTHS = [400, 600, 800, 1200]
-
-// Fall back to the untouched original if a CDN-transformed candidate fails.
-function dropSrcSet(e: React.SyntheticEvent<HTMLImageElement>) {
-  e.currentTarget.srcset = ''
-  e.currentTarget.sizes = ''
-}
 
 interface ProductGalleryProps {
   media: CatalogMedia[]
@@ -69,7 +63,8 @@ export default function ProductGallery({
                 loading={i === 0 ? 'eager' : 'lazy'}
                 fetchPriority={i === 0 ? 'high' : undefined}
                 decoding={i === 0 ? 'auto' : 'async'}
-                onError={dropSrcSet}
+                data-fallback-src={item.url}
+                onError={imgError}
                 className="h-full w-full object-cover"
               />
             )}

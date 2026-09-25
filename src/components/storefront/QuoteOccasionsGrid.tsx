@@ -1,4 +1,5 @@
 import type { OccasionCard } from '../../types/content'
+import { cdnUrl, imgError } from '../../lib/images'
 
 // "Occasions We Cover" — a tidy responsive grid. Emojis are intentionally
 // dropped (they looked toy-ish on the corporate page); each occasion is a
@@ -17,7 +18,7 @@ export default function QuoteOccasionsGrid({ heading, occasions }: { heading: st
           {occasions.map((o, i) => (
             <div key={i} className="overflow-hidden rounded-2xl border border-blush-200 bg-white">
               <div className="aspect-[3/2] bg-blush-100">
-                {o.imageUrl && <img src={o.imageUrl} alt="" className="h-full w-full object-cover" />}
+                {o.imageUrl && <img src={cdnUrl(o.imageUrl)} data-fallback-src={o.imageUrl} onError={imgError} alt="" className="h-full w-full object-cover" />}
               </div>
               <p className="px-3 py-2.5 text-[14px] font-medium text-navy">{o.title}</p>
             </div>

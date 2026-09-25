@@ -1,5 +1,6 @@
 import type { CatalogProduct } from '../../types/catalog'
 import { formatLKR } from '../../lib/format'
+import { cdnUrl, imgError } from '../../lib/images'
 
 // Visual flavour menu for the corporate & wedding quote pages: each flavour as
 // an image + name + per-piece price, so a customer browsing a bulk order can
@@ -35,7 +36,9 @@ export default function FlavorShowcase({
               <div className="aspect-square w-full bg-blush-50">
                 {f.imageUrl ? (
                   <img
-                    src={f.imageUrl}
+                    src={cdnUrl(f.imageUrl)}
+                    data-fallback-src={f.imageUrl}
+                    onError={imgError}
                     alt={f.name}
                     loading="lazy"
                     className="h-full w-full object-cover"

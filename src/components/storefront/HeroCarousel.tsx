@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { HeroSlide } from '../../types/content'
-import { imageSrcSet } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
 // Full-bleed hero: offer a handful of wide variants when the image CDN is on.
 const HERO_WIDTHS = [640, 960, 1280, 1600]
-
-// If a CDN-transformed candidate 404/400s, strip srcset so the browser reloads
-// the untouched original `src`. Keeps the hero from ever showing a broken image.
-function dropSrcSet(e: React.SyntheticEvent<HTMLImageElement>) {
-  e.currentTarget.srcset = ''
-  e.currentTarget.sizes = ''
-}
 
 interface HeroCarouselProps {
   slides: HeroSlide[]
@@ -45,7 +38,7 @@ export default function HeroCarousel({ slides, primaryCta }: HeroCarouselProps) 
         {slides.map((slide, i) => (
           <div key={i} className="relative h-full min-w-full">
             <img
-              src={slide.imageUrl}
+              src={cdnUrl(slide.imageUrl)}
               srcSet={imageSrcSet(slide.imageUrl, HERO_WIDTHS)}
               sizes="100vw"
               alt={slide.title ? `${slide.title} ${slide.titleAfter}`.trim() : 'Golden Oven brownies'}
@@ -53,7 +46,8 @@ export default function HeroCarousel({ slides, primaryCta }: HeroCarouselProps) 
               loading={i === 0 ? 'eager' : 'lazy'}
               fetchPriority={i === 0 ? 'high' : undefined}
               decoding={i === 0 ? 'auto' : 'async'}
-              onError={dropSrcSet}
+              data-fallback-src={slide.imageUrl}
+              onError={imgError}
             />
             {/* Dark scrim so overlaid text stays readable over any image. */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/20" />

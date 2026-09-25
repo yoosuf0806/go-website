@@ -1,3 +1,5 @@
+import type { SyntheticEvent } from 'react'
+
 // Central image-URL helper. Golden Oven's product and content images are served
 // from Supabase Storage public URLs. On a PAID Supabase plan you can serve
 // right-sized, compressed variants straight from the CDN (Shopify-style
@@ -23,18 +25,58 @@ const CDN_ENABLED = import.meta.env.VITE_IMAGE_CDN === 'supabase'
 const CDN_BASE = (import.meta.env.VITE_IMAGE_CDN_BASE as string | undefined)?.replace(/\/+$/, '')
 const STORAGE_SEGMENT = '/storage/v1/'
 
+// Same-origin image proxy (api/img.ts). Product & content images live in
+// Supabase Storage on a DIFFERENT host (…supabase.co). That split origin is why
+// some visitors see the whole page but no pictures: ad blockers, privacy
+// browsers, and some ISP/corporate/mobile networks block the third-party
+// Supabase host while the site's own domain loads fine — and serving straight
+// from Supabase also burns the project's storage-egress quota, after which
+// Supabase returns errors for everyone. So in production, when no explicit CDN
+// host is configured, we rewrite storage URLs to `/api/img?path=…` — served from
+// the site's OWN origin (no third-party request) and cached hard at Vercel's
+// edge, which also collapses Supabase egress. If the proxy ever fails, `imgError`
+// below reloads the untouched Supabase URL, so an image can never end up broken.
+//
+// Left off in dev/preview (no serverless functions there) — images load direct.
+const PROXY_PATH = '/api/img'
+const USE_PROXY = import.meta.env.PROD && !CDN_BASE
+
 /**
- * Route a Supabase storage URL through the configured image CDN host, if one is
- * set. Preserves the full `/storage/v1/...` path (works for both the public
- * object URL and the render/transform URL) so the CDN just needs to proxy that
- * path to Supabase. Non-storage URLs and nullish values pass through untouched.
+ * Route a Supabase storage URL through the configured image host. Precedence:
+ *   1. VITE_IMAGE_CDN_BASE (an external CDN, e.g. Cloudflare) if set;
+ *   2. otherwise the same-origin `/api/img` proxy in production;
+ *   3. otherwise the untouched URL (dev, or non-storage/nullish values).
  */
 export function cdnUrl(src: string): string
 export function cdnUrl(src: null | undefined): null | undefined
 export function cdnUrl(src: string | null | undefined): string | null | undefined {
-  if (!CDN_BASE || typeof src !== 'string') return src
+  if (typeof src !== 'string') return src
   const i = src.indexOf(STORAGE_SEGMENT)
-  return i === -1 ? src : CDN_BASE + src.slice(i)
+  if (i === -1) return src
+  if (CDN_BASE) return CDN_BASE + src.slice(i)
+  if (USE_PROXY) return `${PROXY_PATH}?path=${encodeURIComponent(src.slice(i + STORAGE_SEGMENT.length))}`
+  return src
+}
+
+/**
+ * `<img onError>` handler for any image whose `src` came from `cdnUrl`. It first
+ * drops a failed responsive `srcSet` so the browser retries the base `src`; if
+ * that also fails and a `data-fallback-src` (the original, un-proxied Supabase
+ * URL) is present, it reloads from there. Net effect: a broken CDN/proxy can
+ * never leave a blank image — it degrades to serving straight from Supabase.
+ */
+export function imgError(e: SyntheticEvent<HTMLImageElement>): void {
+  const img = e.currentTarget
+  if (img.srcset) {
+    img.srcset = ''
+    img.sizes = ''
+    return
+  }
+  const fallback = img.getAttribute('data-fallback-src')
+  if (fallback && img.dataset.fellBack !== '1' && img.src !== fallback) {
+    img.dataset.fellBack = '1'
+    img.src = fallback
+  }
 }
 
 // Supabase public object URLs look like:
