@@ -1,18 +1,13 @@
 import type { SyntheticEvent } from 'react'
 
-// Central image-URL helper. Golden Oven's product and content images are served
-// from Supabase Storage public URLs. On a PAID Supabase plan you can serve
-// right-sized, compressed variants straight from the CDN (Shopify-style
-// `?width=` responsive images) by setting VITE_IMAGE_CDN=supabase in the deploy
-// env — a grid tile then downloads a ~400px image instead of the full 1600px
-// upload, which is the single biggest first-load win.
-//
-// It is OFF by default because Supabase's image-transform endpoint is a paid
-// feature: on the Free plan those URLs return an error, so we serve the original
-// public URL untouched. BrownieImage (and the hero/slideshow images) also fall
-// back to the original URL if a transform ever fails, so flipping the flag on
-// can never leave an image broken — worst case it serves the full-size original.
-const CDN_ENABLED = import.meta.env.VITE_IMAGE_CDN === 'supabase'
+// Central image-URL helper. Golden Oven's product and content images are stored
+// in Supabase Storage. This module decides the URL the browser actually loads:
+//   • responsive, right-sized AVIF/WebP variants via Vercel Image Optimization
+//     (imageUrl / imageSrcSet), the big load-time win — see below;
+//   • a same-origin proxy for the base `src` (cdnUrl), so images are never a
+//     blockable third-party request and Supabase egress is offloaded;
+//   • a graceful onError fallback (imgError) so a broken variant/proxy can never
+//     leave an image blank — it degrades to serving straight from Supabase.
 
 // Optional image CDN in front of Supabase Storage (e.g. Cloudflare). When
 // VITE_IMAGE_CDN_BASE is set to your CDN origin (e.g. https://cdn.example.com),
@@ -79,32 +74,36 @@ export function imgError(e: SyntheticEvent<HTMLImageElement>): void {
   }
 }
 
-// Supabase public object URLs look like:
-//   https://<proj>.supabase.co/storage/v1/object/public/<bucket>/<path>
-// The on-the-fly transform endpoint is the same path with `object` → `render/image`:
-//   https://<proj>.supabase.co/storage/v1/render/image/public/<bucket>/<path>?width=…
-const PUBLIC_SEGMENT = '/storage/v1/object/public/'
-const RENDER_SEGMENT = '/storage/v1/render/image/public/'
+// Vercel Image Optimization endpoint. On the deployed site this fetches the
+// source image (our Supabase storage URL, allow-listed in vercel.json's
+// `images.remotePatterns`), resizes it to the requested width, serves it as
+// AVIF/WebP, and caches every variant at Vercel's edge. This is what makes a
+// grid tile download a ~400px image instead of the full 1280px upload — the
+// single biggest load-time win — and it also collapses Supabase egress because
+// Vercel fetches each source only once. Uploads are still stored at up to
+// 1280px (see adminProducts.resizeImage); this shrinks them per-device on read.
+//
+// Enabled only on the real deployment (the endpoint doesn't exist in dev/preview)
+// and only when no explicit external CDN base is configured. When off,
+// imageSrcSet returns undefined and the browser just loads the base `src`
+// (the same-origin proxy / original), so nothing breaks locally. `q` is left to
+// Vercel's default so we don't depend on an image-quality allow-list.
+const OPTIMIZER_PATH = '/_vercel/image'
+const USE_OPTIMIZER = import.meta.env.PROD && !CDN_BASE
 
-/** True when `src` is a Supabase public-storage URL we know how to transform. */
+/** True when `src` is a storage image we can route through the Vercel optimizer. */
 export function canTransform(src: string | null | undefined): src is string {
-  return CDN_ENABLED && typeof src === 'string' && src.includes(PUBLIC_SEGMENT)
+  return USE_OPTIMIZER && typeof src === 'string' && src.includes(STORAGE_SEGMENT)
 }
 
-/** A single resized variant URL (returns the original untouched when CDN is off). */
-export function imageUrl(src: string, width: number, quality = 70): string {
+/** A single resized variant URL (returns the un-resized proxied/original URL when off). */
+export function imageUrl(src: string, width: number): string {
   if (!canTransform(src)) return cdnUrl(src)
-  const base = src.replace(PUBLIC_SEGMENT, RENDER_SEGMENT)
-  const join = base.includes('?') ? '&' : '?'
-  return cdnUrl(`${base}${join}width=${width}&quality=${quality}`)
+  return `${OPTIMIZER_PATH}?url=${encodeURIComponent(src)}&w=${width}`
 }
 
-/** A `srcset` string across the given widths, or undefined when CDN is off. */
-export function imageSrcSet(
-  src: string | null | undefined,
-  widths: number[],
-  quality = 70,
-): string | undefined {
+/** A `srcset` string across the given widths, or undefined when optimization is off. */
+export function imageSrcSet(src: string | null | undefined, widths: number[]): string | undefined {
   if (!canTransform(src)) return undefined
-  return widths.map((w) => `${imageUrl(src, w, quality)} ${w}w`).join(', ')
+  return widths.map((w) => `${imageUrl(src, w)} ${w}w`).join(', ')
 }

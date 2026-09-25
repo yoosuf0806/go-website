@@ -1,6 +1,8 @@
 import type { CatalogProduct } from '../../types/catalog'
 import { formatLKR } from '../../lib/format'
-import { cdnUrl, imgError } from '../../lib/images'
+import { cdnUrl, imgError, imageSrcSet } from '../../lib/images'
+
+const FLAVOR_WIDTHS = [200, 400, 600]
 
 // Visual flavour menu for the corporate & wedding quote pages: each flavour as
 // an image + name + per-piece price, so a customer browsing a bulk order can
@@ -37,6 +39,8 @@ export default function FlavorShowcase({
                 {f.imageUrl ? (
                   <img
                     src={cdnUrl(f.imageUrl)}
+                    srcSet={imageSrcSet(f.imageUrl, FLAVOR_WIDTHS)}
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                     data-fallback-src={f.imageUrl}
                     onError={imgError}
                     alt={f.name}
