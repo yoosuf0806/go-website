@@ -7,6 +7,7 @@ import HeroCarousel from '../components/storefront/HeroCarousel'
 import ProductTile from '../components/storefront/ProductTile'
 import BrownieImage from '../components/storefront/BrownieImage'
 import GallerySection from '../components/storefront/GallerySection'
+import PromoPopup from '../components/storefront/PromoPopup'
 import Seo, { organizationJsonLd, websiteJsonLd, localBusinessJsonLd, faqPageJsonLd } from '../components/Seo'
 
 // Home — Blush & Ink direction. Mobile matches the mockup (screen 01) exactly:
@@ -40,6 +41,7 @@ export default function Home() {
 
   return (
     <div>
+      <PromoPopup popup={content.promoPopup} />
       <Seo
         title={content.seo.home.title}
         description={content.seo.home.description}

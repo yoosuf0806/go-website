@@ -95,6 +95,22 @@ export interface FaqItem {
   a: string
 }
 
+// Admin-managed promotional popup shown once per visit on the landing page.
+// Toggled on/off and edited by the admin (Admin → Content & SEO → "Landing
+// popup"). Renders an image and/or text with an optional call-to-action; hidden
+// entirely when `enabled` is false, so the site works the same when it's off.
+export interface PromoPopup {
+  enabled: boolean
+  title: string
+  body: string
+  /** Optional promo image (uploaded). Shown above the text; either or both may be set. */
+  imageUrl?: string
+  /** Optional button. Hidden when `ctaText` is blank. */
+  ctaText: string
+  /** Where the button links (internal path like "/shop" or an absolute URL). */
+  ctaHref: string
+}
+
 // A footer policy page (Return Policy, Payment Terms). `body` is plain text;
 // blank lines separate paragraphs when rendered. Hidden from the footer when
 // the body is empty.
@@ -225,6 +241,9 @@ export interface SiteContent {
   /** Brownie Slab landing page (/slab): banner, how-it-works, flavour picker
    *  (driven live by slab-enabled products), product gallery, and FAQ. */
   slab: SlabLandingContent
+  /** Promotional popup shown once per visit on the landing page. Admin toggles
+   *  it on/off and edits the image/text/CTA. Disabled by default. */
+  promoPopup: PromoPopup
 }
 
 // Brownie Slab landing page content. The flavour list itself is NOT stored
@@ -574,6 +593,14 @@ export const DEFAULT_CONTENT: SiteContent = {
       },
     ],
   },
+  promoPopup: {
+    enabled: false,
+    title: 'Sweet news!',
+    body: 'Order today and enjoy freshly baked brownies delivered islandwide.',
+    imageUrl: undefined,
+    ctaText: 'Shop now',
+    ctaHref: '/shop',
+  },
 }
 
 /** Deep-merge a partial (DB) content object over the defaults so missing keys
@@ -640,6 +667,7 @@ export function mergeContent(partial: Partial<SiteContent> | null | undefined): 
     corporate: mergeQuoteLanding(DEFAULT_CONTENT.corporate, partial.corporate),
     wedding: mergeQuoteLanding(DEFAULT_CONTENT.wedding, partial.wedding),
     slab: mergeSlabLanding(DEFAULT_CONTENT.slab, partial.slab),
+    promoPopup: { ...DEFAULT_CONTENT.promoPopup, ...partial.promoPopup },
   }
 }
 

@@ -280,6 +280,34 @@ function ContentForm({ initial, onSaved }: { initial: SiteContent; onSaved: () =
 
       <SlabPageEditor content={form.slab} onChange={(v) => set('slab', v)} />
 
+      <Section title="Landing popup">
+        <p className="-mt-2 mb-2 text-xs text-neutral-500">
+          A promotional popup shown once per visit when someone lands on the homepage. Use it for
+          offers or announcements — an image, text, or both. Turn it off to hide it entirely.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.promoPopup.enabled}
+            onChange={(e) => set('promoPopup', { ...form.promoPopup, enabled: e.target.checked })}
+          />
+          Show popup on the homepage
+        </label>
+        <ImageField
+          label="Image (optional)"
+          aspect={4 / 3}
+          aspectLabel="Popup image"
+          value={form.promoPopup.imageUrl}
+          onChange={(url) => set('promoPopup', { ...form.promoPopup, imageUrl: url })}
+        />
+        <Text label="Title" value={form.promoPopup.title} onChange={(v) => set('promoPopup', { ...form.promoPopup, title: v })} />
+        <Area label="Body" value={form.promoPopup.body} onChange={(v) => set('promoPopup', { ...form.promoPopup, body: v })} />
+        <Row>
+          <Text label="Button text (leave blank to hide)" value={form.promoPopup.ctaText} onChange={(v) => set('promoPopup', { ...form.promoPopup, ctaText: v })} />
+          <Text label="Button link (e.g. /shop or https://…)" value={form.promoPopup.ctaHref} onChange={(v) => set('promoPopup', { ...form.promoPopup, ctaHref: v })} />
+        </Row>
+      </Section>
+
       <Section title="SEO">
         <Text label="Site name" value={form.seo.siteName} onChange={(v) => set('seo', { ...form.seo, siteName: v })} />
         <ImageField
