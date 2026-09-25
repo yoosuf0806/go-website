@@ -3,7 +3,7 @@ import type { CatalogMedia } from '../../types/catalog'
 import BrownieImage from './BrownieImage'
 import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
-const GALLERY_WIDTHS = [400, 600, 800, 1200]
+const GALLERY_WIDTHS = [400, 800, 1280]
 
 interface ProductGalleryProps {
   media: CatalogMedia[]

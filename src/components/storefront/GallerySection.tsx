@@ -1,7 +1,7 @@
 import { useCatalog } from '../../contexts/CatalogContext'
 import { cdnUrl, imgError, imageSrcSet } from '../../lib/images'
 
-const GALLERY_WIDTHS = [200, 400, 600, 800]
+const GALLERY_WIDTHS = [400, 800]
 
 // Shared photo gallery ("View our Gallery") shown on Home, Wedding, and
 // Corporate. Admin-uploaded images (content.gallery), toggleable via

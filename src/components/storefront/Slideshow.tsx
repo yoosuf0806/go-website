@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { PromoSlide } from '../../types/content'
 import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
-const SLIDE_WIDTHS = [640, 960, 1280, 1600]
+const SLIDE_WIDTHS = [640, 1280]
 
 interface Slide {
   eyebrow: string

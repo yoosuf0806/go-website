@@ -25,7 +25,7 @@ interface BrownieImageProps {
   sizes?: string
 }
 
-const DEFAULT_WIDTHS = [200, 400, 600, 800]
+const DEFAULT_WIDTHS = [200, 400, 600]
 
 // Product image with a graceful blush-gradient fallback for products that don't
 // have an uploaded image yet (seed data ships with none). Keeps cards looking

@@ -8,7 +8,7 @@ import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 // every category landing page reads as one system. Falls back to a navy
 // gradient when no image is set.
 
-const HERO_WIDTHS = [640, 960, 1280, 1600]
+const HERO_WIDTHS = [640, 1280]
 
 export interface HeroCta {
   label: string
