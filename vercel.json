@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "images": {
+    "sizes": [200, 400, 600, 640, 800, 960, 1200, 1280, 1600],
+    "formats": ["image/avif", "image/webp"],
+    "minimumCacheTTL": 31536000,
+    "remotePatterns": [{ "protocol": "https", "hostname": "**.supabase.co" }]
+  },
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/app.html" }],
   "headers": [
     {
