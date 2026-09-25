@@ -4,7 +4,7 @@ import type { HeroSlide } from '../../types/content'
 import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
 // Full-bleed hero: offer a handful of wide variants when the image CDN is on.
-const HERO_WIDTHS = [640, 960, 1280, 1600]
+const HERO_WIDTHS = [640, 1280]
 
 interface HeroCarouselProps {
   slides: HeroSlide[]
