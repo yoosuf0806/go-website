@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { imageSrcSet, cdnUrl } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
 interface BrownieImageProps {
   src: string | null
@@ -39,13 +38,8 @@ export default function BrownieImage({
   widths = DEFAULT_WIDTHS,
   sizes,
 }: BrownieImageProps) {
-  // If a CDN-transformed candidate fails to load (e.g. the flag is on but the
-  // Supabase plan doesn't support transforms), drop the srcset so the browser
-  // reloads the untouched original — an image never ends up broken.
-  const [transformFailed, setTransformFailed] = useState(false)
-
   if (src) {
-    const srcSet = transformFailed ? undefined : imageSrcSet(src, widths)
+    const srcSet = imageSrcSet(src, widths)
     return (
       <img
         src={cdnUrl(src)}
@@ -55,7 +49,9 @@ export default function BrownieImage({
         loading={priority ? 'eager' : 'lazy'}
         fetchPriority={priority ? 'high' : undefined}
         decoding={priority ? 'auto' : 'async'}
-        onError={srcSet ? () => setTransformFailed(true) : undefined}
+        // Fall back to the untouched Supabase URL if the CDN/proxy candidate fails.
+        data-fallback-src={src}
+        onError={imgError}
         className={`object-cover ${className}`}
       />
     )

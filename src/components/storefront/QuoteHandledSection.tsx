@@ -1,3 +1,5 @@
+import { cdnUrl, imgError } from '../../lib/images'
+
 // "Everything Handled for You" — an image + checklist section matching the
 // reference template, with a CTA that scrolls down to the quote form.
 export default function QuoteHandledSection({
@@ -18,7 +20,7 @@ export default function QuoteHandledSection({
       <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2">
         <div className="aspect-[4/3] overflow-hidden rounded-3xl bg-blush-100">
           {imageUrl ? (
-            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+            <img src={cdnUrl(imageUrl)} data-fallback-src={imageUrl} onError={imgError} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[6rem]">🍫</div>
           )}

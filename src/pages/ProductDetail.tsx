@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useCatalog } from '../contexts/CatalogContext'
 import { formatLKR } from '../lib/format'
+import { cdnUrl, imgError } from '../lib/images'
 import ProductGallery from '../components/storefront/ProductGallery'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
 import Seo, { SITE_URL } from '../components/Seo'
@@ -178,7 +179,7 @@ export default function ProductDetail() {
             {related.map((p) => (
               <Link key={p.id} to={`/shop/${p.slug}`} className="w-[140px] flex-none">
                 <div className="aspect-square overflow-hidden rounded-xl bg-blush-100">
-                  {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
+                  {p.imageUrl && <img src={cdnUrl(p.imageUrl)} data-fallback-src={p.imageUrl} onError={imgError} alt={p.name} className="h-full w-full object-cover" loading="lazy" />}
                 </div>
                 <div className="mt-2 truncate text-[13px] font-medium text-navy">{p.name}</div>
               </Link>

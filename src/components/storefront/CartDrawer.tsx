@@ -3,6 +3,7 @@ import { useVoucherStore } from '../../stores/voucher'
 import { cartTotals, lineTotal, totalAfterVoucher, voucherDiscount } from '../../lib/pricing'
 import { formatLKR } from '../../lib/format'
 import { addonSummary } from '../../lib/whatsapp'
+import { cdnUrl, imgError } from '../../lib/images'
 import { useCatalog } from '../../contexts/CatalogContext'
 
 interface CartDrawerProps {
@@ -104,7 +105,7 @@ export default function CartDrawer({ onClose, onCheckout }: CartDrawerProps) {
                   return (
                     <li key={item.key} className="flex gap-3">
                       <div className="h-[68px] w-[68px] flex-none overflow-hidden rounded-xl bg-blush-100">
-                        {img && <img src={img} alt={item.productName} className="h-full w-full object-cover" />}
+                        {img && <img src={cdnUrl(img)} data-fallback-src={img} onError={imgError} alt={item.productName} className="h-full w-full object-cover" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">

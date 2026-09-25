@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { imageSrcSet, cdnUrl } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
 
 // Shared full-bleed landing banner — the same visual template as the Home hero
 // (HeroCarousel): a full-width photo with a dark bottom-up scrim and the copy
@@ -9,13 +9,6 @@ import { imageSrcSet, cdnUrl } from '../../lib/images'
 // gradient when no image is set.
 
 const HERO_WIDTHS = [640, 960, 1280, 1600]
-
-// If a CDN-transformed candidate fails, strip srcset so the browser reloads the
-// untouched original `src` (mirrors HeroCarousel/Slideshow).
-function dropSrcSet(e: React.SyntheticEvent<HTMLImageElement>) {
-  e.currentTarget.srcset = ''
-  e.currentTarget.sizes = ''
-}
 
 export interface HeroCta {
   label: string
@@ -82,7 +75,8 @@ export default function HeroBanner({
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : undefined}
             decoding={priority ? 'auto' : 'async'}
-            onError={dropSrcSet}
+            data-fallback-src={imageUrl ?? undefined}
+            onError={imgError}
           />
           {/* Dark scrim so overlaid text stays readable over any image. */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-black/20" />
