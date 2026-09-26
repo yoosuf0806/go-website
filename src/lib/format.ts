@@ -29,6 +29,22 @@ export function formatDate(value: string | Date | null | undefined): string {
 }
 
 /**
+ * Format a full timestamp (timestamptz, e.g. orders/inquiries.created_at) as a
+ * readable LOCAL date + time — "15 Sep 2026, 2:30 PM". Unlike formatDate (which
+ * uses UTC parts for date-only values), this uses local time because it answers
+ * "when did this happen" for the person reading the screen.
+ */
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return ''
+  const d = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(d.getTime())) return ''
+  const time = `${((d.getHours() + 11) % 12) + 1}:${String(d.getMinutes()).padStart(2, '0')} ${
+    d.getHours() < 12 ? 'AM' : 'PM'
+  }`
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${time}`
+}
+
+/**
  * Normalise a Sri Lankan phone number to E.164 (`+94XXXXXXXXX`), or return null
  * if it isn't a valid SL number. Accepts local (`07X XXX XXXX` / `0XX…`),
  * `94…`, and `+94…` forms, ignoring spaces, dashes, and brackets.

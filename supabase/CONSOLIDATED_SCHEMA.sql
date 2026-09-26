@@ -2622,7 +2622,7 @@ create policy "bank_slips_admin_read" on storage.objects
 
 
 -- ============================================================================
--- REALTIME — stream orders inserts to the admin PWA
+-- REALTIME — stream orders + inquiries inserts to the admin PWA
 -- ============================================================================
 
 do $$
@@ -2635,6 +2635,13 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'orders'
   ) then
     alter publication supabase_realtime add table orders;
+  end if;
+  -- 053_inquiries_realtime.sql
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'inquiries'
+  ) then
+    alter publication supabase_realtime add table inquiries;
   end if;
 end $$;
 
