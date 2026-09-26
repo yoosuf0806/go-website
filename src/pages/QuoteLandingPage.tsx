@@ -51,6 +51,9 @@ export default function QuoteLandingPage({
 
   const [toast, setToast] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  // The piece count as submitted, captured before the form resets — the live
+  // `qty` is reset to the default on success, so the banner must not read it.
+  const [submittedQty, setSubmittedQty] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const initialQty = isCorporate ? MIN_PIECES : DEFAULT_GUESTS
   const [qty, setQty] = useState(initialQty)
@@ -106,6 +109,7 @@ export default function QuoteLandingPage({
     const name = isCorporate && company.trim() ? `${data.name} (${company.trim()})` : data.name
     try {
       await mutation.mutateAsync({ ...data, name, message: message || undefined, category, pieceCount: Number(data.pieceCount) })
+      setSubmittedQty(Number(data.pieceCount))
       setSubmitted(true)
       reset({ pieceCount: String(initialQty) })
       resetExtras()
@@ -152,7 +156,7 @@ export default function QuoteLandingPage({
       <div id={FORM_ANCHOR_ID} className="scroll-mt-20 px-6 pb-16 pt-8 sm:px-10">
         <div className="mx-auto max-w-2xl">
           {submitted ? (
-            <SuccessBanner isCorporate={isCorporate} qty={qty} qtyLabel={qtyLabel.toLowerCase()} waNumber={waNumber} onReset={() => setSubmitted(false)} />
+            <SuccessBanner isCorporate={isCorporate} qty={submittedQty} waNumber={waNumber} onReset={() => setSubmitted(false)} />
           ) : (
             <form
               onSubmit={handleSubmit(onSubmit)}
@@ -486,24 +490,23 @@ function Faq({ q, a }: { q: string; a: string }) {
 function SuccessBanner({
   isCorporate,
   qty,
-  qtyLabel,
   waNumber,
   onReset,
 }: {
   isCorporate: boolean
   qty: number
-  qtyLabel: string
   waNumber: string | null
   onReset: () => void
 }) {
+  const pieces = `${qty} brownie ${qty === 1 ? 'piece' : 'pieces'}`
   return (
     <div className="animate-tin rounded-[18px] border border-pink/30 bg-blush-50 p-6 text-center sm:p-8">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-pink text-2xl text-white">✓</div>
       <h3 className="font-display text-2xl text-navy">{isCorporate ? 'Request received' : "Congratulations — we're on it"}</h3>
       <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-[#5c4450]">
         {isCorporate
-          ? `We've logged ${qty} ${qtyLabel} and will send a formal quotation within one working day.`
-          : `We've got your date and ${qty} ${qtyLabel}. Expect flavour and lettering options within one working day.`}
+          ? `We've logged your request for ${pieces} and will send a formal quotation within one working day.`
+          : `We've got your date and your request for ${pieces}. Expect flavour and lettering options within one working day.`}
       </p>
       {waNumber && (
         <a
