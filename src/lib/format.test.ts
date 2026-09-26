@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatLKR, formatDate, normalizePhone, toWhatsAppNumber } from './format'
+import { formatLKR, formatDate, formatDateTime, normalizePhone, toWhatsAppNumber } from './format'
 
 describe('formatLKR', () => {
   it('formats with thousands separators and 2 decimals', () => {
@@ -21,6 +21,24 @@ describe('formatDate', () => {
   it('returns empty string for null/invalid', () => {
     expect(formatDate(null)).toBe('')
     expect(formatDate('not-a-date')).toBe('')
+  })
+})
+
+describe('formatDateTime', () => {
+  it('formats a timestamp as local date + 12-hour time', () => {
+    // Construct a local Date so the assertion is timezone-independent.
+    const d = new Date(2026, 8, 15, 14, 30) // 15 Sep 2026, 14:30 local
+    expect(formatDateTime(d)).toBe('15 Sep 2026, 2:30 PM')
+  })
+
+  it('pads minutes and handles midnight/noon', () => {
+    expect(formatDateTime(new Date(2026, 0, 1, 0, 5))).toBe('1 Jan 2026, 12:05 AM')
+    expect(formatDateTime(new Date(2026, 0, 1, 12, 0))).toBe('1 Jan 2026, 12:00 PM')
+  })
+
+  it('returns empty for null/invalid', () => {
+    expect(formatDateTime(null)).toBe('')
+    expect(formatDateTime('not-a-date')).toBe('')
   })
 })
 

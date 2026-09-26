@@ -34,11 +34,18 @@ interface NewOrderRow {
   total?: number
 }
 
+interface NewInquiryRow {
+  name?: string
+  category?: string
+  phone?: string
+}
+
 /**
- * New-order notifications for the admin. When enabled (and permission granted),
- * subscribes to Supabase Realtime INSERTs on `orders`, raises an OS
- * notification, and refreshes the orders cache so the in-app bell badge updates
- * live. Preference is remembered per device in localStorage.
+ * New-order AND new-inquiry notifications for the admin. When enabled (and
+ * permission granted), subscribes to Supabase Realtime INSERTs on `orders` and
+ * `inquiries`, raises an OS notification, and refreshes the relevant caches so
+ * the in-app badges update live. Preference is remembered per device in
+ * localStorage.
  */
 export function useOrderNotifications() {
   const qc = useQueryClient()
@@ -50,7 +57,7 @@ export function useOrderNotifications() {
   useEffect(() => {
     if (!active) return
     const channel = supabase
-      .channel('admin-new-orders')
+      .channel('admin-new-activity')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
@@ -65,6 +72,23 @@ export function useOrderNotifications() {
             icon: '/icons/admin-192.png',
             badge: '/icons/admin-192.png',
             data: { url: '/admin/orders' },
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'inquiries' },
+        (payload) => {
+          const i = payload.new as NewInquiryRow
+          qc.invalidateQueries({ queryKey: ['admin', 'inquiries'] })
+          qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+          const kind = i.category ? `${i.category} inquiry` : 'inquiry'
+          void showNotification(`New ${kind}`, {
+            body: `${i.name ?? 'Someone'}${i.phone ? ` · ${i.phone}` : ''}`,
+            tag: `inquiry-${Date.now()}`,
+            icon: '/icons/admin-192.png',
+            badge: '/icons/admin-192.png',
+            data: { url: '/admin/inquiries' },
           })
         },
       )

@@ -200,8 +200,8 @@ function NotifyBell({ notify }: { notify: NotifyState }) {
   const title = denied
     ? 'Notifications are blocked in your browser settings'
     : notify.active
-      ? 'New-order notifications on — tap to turn off'
-      : 'Turn on new-order notifications'
+      ? 'New order & inquiry notifications on — tap to turn off'
+      : 'Turn on new order & inquiry notifications'
 
   return (
     <button

@@ -8,7 +8,7 @@ import {
   type AdminInquiry,
   type InquiryStatus,
 } from '../../lib/adminInquiries'
-import { formatDate, toWhatsAppNumber } from '../../lib/format'
+import { formatDate, formatDateTime, toWhatsAppNumber } from '../../lib/format'
 import { shareQuotation } from '../../lib/inquirySlip'
 import ConvertToOrderModal from '../../components/admin/ConvertToOrderModal'
 import Toast from '../../components/ui/Toast'
@@ -114,6 +114,9 @@ function InquiryCard({
             </span>
           </p>
           <p className="text-xs text-neutral-500">{inquiry.phone}</p>
+          <p className="mt-0.5 text-xs text-neutral-400">
+            Received {formatDateTime(inquiry.created_at)}
+          </p>
         </div>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[inquiry.status]}`}
