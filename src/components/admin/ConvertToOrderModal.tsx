@@ -60,10 +60,14 @@ export default function ConvertToOrderModal({
     requested ?? { productId: orderableProducts[0]?.id ?? '', packageId: orderablePackages[0]?.id ?? '', boxQty: 1 },
   ])
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutDetails, string>>>({})
+  const [discountInput, setDiscountInput] = useState('')
   const convert = useConvertInquiry()
 
   const lines = buildLines(rows, products, packages)
   const totals = cartTotals(lines, deliveryTiers)
+  // Admin discount (LKR), clamped so the total never drops below zero.
+  const discount = Math.max(0, Math.min(Math.floor(Number(discountInput) || 0), totals.total))
+  const grandTotal = Math.max(0, totals.total - discount)
 
   async function handleSave() {
     const parsed = adminOrderDetailsSchema.safeParse(details)
@@ -84,6 +88,7 @@ export default function ConvertToOrderModal({
         items: lines,
         totals,
         details: parsed.data,
+        discount,
       })
       onConverted(orderNo)
     } catch {
@@ -139,7 +144,7 @@ export default function ConvertToOrderModal({
               className="w-full rounded border border-neutral-300 px-3 py-2 text-sm"
             />
           </TextField>
-          <TextField label="Email" error={errors.email}>
+          <TextField label="Email (optional)" error={errors.email}>
             <input
               type="email"
               value={details.email}
@@ -285,9 +290,30 @@ export default function ConvertToOrderModal({
             <span>Delivery ({totals.totalPieces} pcs)</span>
             <span>{formatLKR(totals.deliveryFee)}</span>
           </div>
+          <label className="mt-2 flex items-center justify-between gap-3 text-neutral-600">
+            <span>Discount (optional)</span>
+            <span className="flex items-center gap-1">
+              <span className="text-neutral-400">Rs.</span>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={discountInput}
+                onChange={(e) => setDiscountInput(e.target.value)}
+                placeholder="0"
+                className="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-sm"
+              />
+            </span>
+          </label>
+          {discount > 0 && (
+            <div className="mt-1 flex justify-between text-green-700">
+              <span>Applied discount</span>
+              <span>−{formatLKR(discount)}</span>
+            </div>
+          )}
           <div className="mt-2 flex justify-between text-base font-semibold">
             <span>Total</span>
-            <span>{formatLKR(totals.total)}</span>
+            <span>{formatLKR(grandTotal)}</span>
           </div>
         </div>
 

@@ -20,12 +20,17 @@ const detailsBase = z.object({
     .refine((v) => normalizePhone(v) !== null, {
       message: 'Enter a valid Sri Lankan phone number',
     }),
+  // Email is a plain string here (so both schemas infer `email: string`); it may
+  // be blank but, if given, must be a valid address. The storefront additionally
+  // REQUIRES it via checkoutDetailsSchema's refine below — an admin converting an
+  // inquiry may have no email for the customer, so there it stays optional.
   email: z
     .string()
     .trim()
-    .min(1, 'Email is required')
-    .email('Enter a valid email address')
-    .max(200),
+    .max(200)
+    .refine((v) => v === '' || z.string().email().safeParse(v).success, {
+      message: 'Enter a valid email address',
+    }),
   // Optional second contact — only validated as a SL number when provided.
   altPhone: z
     .string()
@@ -72,6 +77,9 @@ function refineGift(data: DetailsShape, ctx: z.RefinementCtx) {
  */
 export const checkoutDetailsSchema = detailsBase.superRefine((data, ctx) => {
   refineGift(data, ctx)
+  if (!data.email || data.email.trim() === '') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['email'], message: 'Email is required' })
+  }
   if (!(DELIVERY_SLOT_CODES as readonly string[]).includes(data.deliverySlot)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

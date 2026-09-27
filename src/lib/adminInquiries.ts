@@ -56,6 +56,8 @@ export interface ConvertInquiryInput {
   items: CartLine[]
   totals: CartTotals
   details: CheckoutDetails
+  /** Optional admin discount in LKR, subtracted from the order total. */
+  discount?: number
 }
 
 /**
@@ -72,14 +74,18 @@ export async function convertInquiryToOrder({
   items,
   totals,
   details,
+  discount = 0,
 }: ConvertInquiryInput): Promise<{ orderNo: number }> {
   const phone = normalizePhone(details.phone) ?? details.phone
+  // Clamp the discount to what's actually owed so the total never goes negative.
+  const appliedDiscount = Math.max(0, Math.min(discount, totals.total))
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       customer_name: details.name,
       phone,
+      email: details.email?.trim() ? details.email.trim() : null,
       address: details.address,
       delivery_date: details.deliveryDate,
       // Blank means "no fixed slot" — store NULL, not '', so the CHECK
@@ -88,7 +94,10 @@ export async function convertInquiryToOrder({
       note: details.note || null,
       subtotal: totals.subtotal,
       delivery_fee: totals.deliveryFee,
-      total: totals.total,
+      // An admin discount is stored in voucher_discount (the order's "amount off"
+      // field) with no voucher_code, and taken off the total.
+      voucher_discount: appliedDiscount,
+      total: Math.max(0, totals.total - appliedDiscount),
       total_pieces: totals.totalPieces,
       source: 'inquiry_conversion',
       // Converting an inquiry is a deliberate admin action after the quote is
