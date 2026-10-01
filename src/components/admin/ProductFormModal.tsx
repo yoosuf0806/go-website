@@ -32,6 +32,8 @@ function initialInput(product: AdminProduct | null, categories: AdminCategory[])
     slug: '',
     description: '',
     price_per_piece: 0,
+    wedding_price_per_piece: null,
+    corporate_price_per_piece: null,
     image_url: null,
     media: [],
     is_visible: true,
@@ -169,6 +171,10 @@ export default function ProductFormModal({
       // A slab is priced per product, so it can't be a per-piece box flavour.
       is_build_your_own: isSlabProduct ? false : form.is_build_your_own,
       flavors: cleanedFlavors,
+      // Bulk rates only apply to corporate/wedding flavours; drop them otherwise
+      // so a product that's no longer offered for quotes never keeps a stale rate.
+      wedding_price_per_piece: form.is_corporate ? form.wedding_price_per_piece : null,
+      corporate_price_per_piece: form.is_corporate ? form.corporate_price_per_piece : null,
       allows_letter_topper:
         isSlabProduct || form.is_slab_available || form.is_slab_15_available
           ? form.allows_letter_topper
@@ -383,6 +389,48 @@ export default function ProductFormModal({
               />
               Corporate / wedding flavour (show on quote page)
             </label>
+            {form.is_corporate && (
+              <div className="ml-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label className="text-sm">
+                  <span className="block text-neutral-600">Wedding bulk price / piece (Rs.)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={form.wedding_price_per_piece ?? ''}
+                    onChange={(e) =>
+                      set(
+                        'wedding_price_per_piece',
+                        e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0),
+                      )
+                    }
+                    placeholder="Standard price"
+                    className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="block text-neutral-600">Corporate bulk price / piece (Rs.)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={form.corporate_price_per_piece ?? ''}
+                    onChange={(e) =>
+                      set(
+                        'corporate_price_per_piece',
+                        e.target.value === '' ? null : Math.max(0, Number(e.target.value) || 0),
+                      )
+                    }
+                    placeholder="Standard price"
+                    className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <p className="text-xs text-neutral-400 sm:col-span-2">
+                  Leave blank to use the standard price / piece. Applied when converting a
+                  wedding / corporate inquiry to an order (admin can still override per line).
+                </p>
+              </div>
+            )}
             {!form.is_slab_product && (
               <label className="flex items-center gap-2 text-sm">
                 <input
