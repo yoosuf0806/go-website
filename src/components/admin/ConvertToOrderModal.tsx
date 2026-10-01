@@ -1,19 +1,31 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useCatalog } from '../../contexts/CatalogContext'
-import { cartTotals, type CartItem } from '../../lib/pricing'
+import { cartTotals, resolveBulkUnitPrice, type CartItem } from '../../lib/pricing'
 import { cartLineKey, type CartLine } from '../../stores/cart'
 import { formatLKR } from '../../lib/format'
 import { adminOrderDetailsSchema, type CheckoutDetails } from '../../schemas/checkout'
 import { DELIVERY_SLOTS } from '../../lib/deliverySlots'
 import { useConvertInquiry } from '../../hooks/useAdminInquiries'
+import { useAdminProducts } from '../../hooks/useAdminProducts'
 import type { AdminInquiry } from '../../lib/adminInquiries'
+import type { InquiryCategory } from '../../schemas/inquiry'
 import type { CatalogProduct, CatalogPackage } from '../../types/catalog'
 
 interface LineRow {
   productId: string
   packageId: string
   boxQty: number
+  /**
+   * Admin override of the per-piece price for this line. undefined = use the
+   * category bulk rate (wedding/corporate) if set, else the standard price.
+   * Computed live (see effectiveUnitPrice) so it reflects bulk rates that load
+   * after the modal opens, without re-hydrating state.
+   */
+  unitPriceOverride?: number
 }
+
+/** Per-piece bulk rates for one product, keyed off the inquiry category. */
+type BulkRates = Record<InquiryCategory, number | null>
 
 interface ConvertToOrderModalProps {
   inquiry: AdminInquiry
@@ -32,6 +44,34 @@ export default function ConvertToOrderModal({
 }: ConvertToOrderModalProps) {
   const { catalog } = useCatalog()
   const { products, packages, deliveryTiers } = catalog
+  // Admin-only bulk rates aren't in the public catalogue, so read them from the
+  // authenticated products query and key them by product id. Lines price live
+  // off this map, so a late load just refreshes the totals (no state to rehydrate).
+  const { data: adminProducts } = useAdminProducts()
+  const bulkRates = useMemo(() => {
+    const map = new Map<string, BulkRates>()
+    for (const p of adminProducts ?? []) {
+      map.set(p.id, {
+        wedding: p.wedding_price_per_piece,
+        corporate: p.corporate_price_per_piece,
+      })
+    }
+    return map
+  }, [adminProducts])
+
+  // The effective per-piece price for a line: admin override → category bulk
+  // rate → product's standard price (see resolveBulkUnitPrice). category is
+  // always 'wedding' | 'corporate' here.
+  const effectiveUnitPrice = (row: LineRow): number =>
+    resolveBulkUnitPrice(
+      products.find((p) => p.id === row.productId)?.pricePerPiece ?? 0,
+      bulkRates.get(row.productId)?.[inquiry.category],
+      row.unitPriceOverride,
+    )
+  // True when a line is using a category bulk rate (not overridden, and a rate
+  // is set) — surfaced as a small hint so the admin sees the bulk price applied.
+  const usesBulkRate = (row: LineRow): boolean =>
+    row.unitPriceOverride == null && bulkRates.get(row.productId)?.[inquiry.category] != null
   const [details, setDetails] = useState<CheckoutDetails>({
     name: inquiry.name,
     phone: inquiry.phone,
@@ -63,7 +103,7 @@ export default function ConvertToOrderModal({
   const [discountInput, setDiscountInput] = useState('')
   const convert = useConvertInquiry()
 
-  const lines = buildLines(rows, products, packages)
+  const lines = buildLines(rows, products, packages, effectiveUnitPrice)
   const totals = cartTotals(lines, deliveryTiers)
   // Admin discount (LKR), clamped so the total never drops below zero.
   const discount = Math.max(0, Math.min(Math.floor(Number(discountInput) || 0), totals.total))
@@ -222,7 +262,11 @@ export default function ConvertToOrderModal({
               <div key={i} className="flex flex-wrap items-center gap-2">
                 <select
                   value={row.productId}
-                  onChange={(e) => updateRow(setRows, i, { productId: e.target.value })}
+                  onChange={(e) =>
+                    // New product → drop any manual override so the new product's
+                    // bulk/standard price is shown.
+                    updateRow(setRows, i, { productId: e.target.value, unitPriceOverride: undefined })
+                  }
                   className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
                 >
                   {orderableProducts.map((p) => (
@@ -255,6 +299,29 @@ export default function ConvertToOrderModal({
                     className="w-20 rounded border border-neutral-300 px-2 py-1.5 text-sm"
                   />
                 </label>
+                <label className="flex items-center gap-1 text-xs text-neutral-500">
+                  Rs./pc
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={effectiveUnitPrice(row)}
+                    onChange={(e) =>
+                      updateRow(setRows, i, {
+                        unitPriceOverride: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                    className="w-24 rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                {usesBulkRate(row) && (
+                  <span
+                    className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                    title={`Using the ${inquiry.category} bulk rate for this product`}
+                  >
+                    {inquiry.category} bulk
+                  </span>
+                )}
                 {rows.length > 1 && (
                   <button
                     type="button"
@@ -380,6 +447,7 @@ function buildLines(
   rows: LineRow[],
   products: CatalogProduct[],
   packages: CatalogPackage[],
+  unitPriceFor: (row: LineRow) => number,
 ): CartLine[] {
   const lines: CartLine[] = []
   for (const row of rows) {
@@ -394,7 +462,9 @@ function buildLines(
       packageLabel: pkg.label,
       pieceCount: pkg.pieceCount,
       boxQty: row.boxQty,
-      unitPrice: product.pricePerPiece,
+      // Category bulk rate (wedding/corporate) or admin override; falls back to
+      // the product's standard per-piece price.
+      unitPrice: unitPriceFor(row),
       addons: [],
     }
     lines.push({ ...item, key: cartLineKey(item.productId, item.packageId, item.addons) })

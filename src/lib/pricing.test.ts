@@ -5,6 +5,7 @@ import {
   boxBase,
   findTier,
   cartTotals,
+  resolveBulkUnitPrice,
   totalAfterVoucher,
   voucherDiscount,
   type BoxFlavor,
@@ -277,5 +278,24 @@ describe('totalAfterVoucher', () => {
 
   it('is a no-op with a zero discount', () => {
     expect(totalAfterVoucher(1200, 0)).toBe(1200)
+  })
+})
+
+describe('resolveBulkUnitPrice', () => {
+  it('falls back to the standard price when no bulk rate or override is set', () => {
+    expect(resolveBulkUnitPrice(140, null, undefined)).toBe(140)
+  })
+
+  it('uses the category bulk rate when one is set', () => {
+    expect(resolveBulkUnitPrice(140, 120, undefined)).toBe(120)
+  })
+
+  it('an admin override wins over both the bulk rate and the standard price', () => {
+    expect(resolveBulkUnitPrice(140, 120, 100)).toBe(100)
+  })
+
+  it('honours a zero bulk rate and a zero override (free bulk line)', () => {
+    expect(resolveBulkUnitPrice(140, 0, undefined)).toBe(0)
+    expect(resolveBulkUnitPrice(140, 120, 0)).toBe(0)
   })
 })

@@ -29,6 +29,13 @@ export interface AdminProduct {
   slug: string
   description: string | null
   price_per_piece: number
+  /**
+   * Per-piece bulk rates used when converting a wedding / corporate inquiry to
+   * an order (admin-only; stripped from the public catalogue). null = no special
+   * rate, fall back to price_per_piece. Only meaningful for is_corporate products.
+   */
+  wedding_price_per_piece: number | null
+  corporate_price_per_piece: number | null
   /** Derived = media[0]?.url, kept in sync on save; don't hand-edit. */
   image_url: string | null
   /** Ordered image/video gallery, shown as a carousel on the storefront. */
