@@ -47,6 +47,11 @@ export default function Home() {
         description={content.seo.home.description}
         path="/"
         preloadImage={content.heroSlides[0]?.imageUrl ?? heroImage}
+        // Match the widths of whichever hero actually renders below: the
+        // full-bleed HeroCarousel (when admin slides exist) or the blush hero's
+        // BrownieImage (its DEFAULT_WIDTHS). Both render at 100vw.
+        preloadWidths={content.heroSlides.length > 0 ? [640, 1280] : [200, 400, 600]}
+        preloadSizes="100vw"
         jsonLd={[
           organizationJsonLd(),
           websiteJsonLd(),

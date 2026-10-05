@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async'
 import { content } from '../data/catalog'
-import { imageUrl } from '../lib/images'
+import { imageUrl, imageSrcSet } from '../lib/images'
 
 // Per-page <head> (title, description, canonical, Open Graph, Twitter) plus
 // optional JSON-LD structured data. Read by react-helmet-async both in the
@@ -24,21 +24,59 @@ interface SeoProps {
    * the biggest lever on how fast the first image paints.
    */
   preloadImage?: string | null
+  /**
+   * Candidate widths offered to the preload via `imagesrcset`. These MUST match
+   * the widths the LCP `<img>` itself uses, so the browser applies the same
+   * selection and preloads the exact candidate it then renders (no second
+   * download). Defaults to the full-bleed hero set.
+   */
+  preloadWidths?: number[]
+  /**
+   * `imagesizes` for the preload — again, MUST match the LCP `<img>`'s `sizes`
+   * so the preload and the render resolve to the same candidate.
+   */
+  preloadSizes?: string
   /** JSON-LD objects to embed (Product, BreadcrumbList, …). */
   jsonLd?: Record<string, unknown>[]
 }
 
-export default function Seo({ title, description, path, image, preloadImage, jsonLd }: SeoProps) {
+export default function Seo({
+  title,
+  description,
+  path,
+  image,
+  preloadImage,
+  preloadWidths = [640, 1280],
+  preloadSizes = '100vw',
+  jsonLd,
+}: SeoProps) {
   const url = `${SITE_URL}${path}`
   const ogImage = image ?? absoluteUrl(content.seo.defaultImageUrl) ?? `${SITE_URL}/og-default.png`
+
+  // Responsive LCP preload. We emit the SAME srcset/sizes the LCP <img> uses, so
+  // the byte the browser preloads is exactly the candidate it renders — a
+  // single-width preload would mismatch the chosen candidate on most viewports
+  // and download the image twice. When the Vercel optimizer is off (dev/preview)
+  // imageSrcSet returns undefined, so we fall back to a plain single-URL preload.
+  const preloadSrcSet = preloadImage ? imageSrcSet(preloadImage, preloadWidths) : undefined
+  const preloadHref = preloadImage
+    ? imageUrl(preloadImage, preloadWidths[preloadWidths.length - 1])
+    : undefined
 
   return (
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
-      {preloadImage && (
-        <link rel="preload" as="image" href={imageUrl(preloadImage, 1280)} fetchPriority="high" />
+      {preloadImage && preloadHref && (
+        <link
+          rel="preload"
+          as="image"
+          href={preloadHref}
+          imageSrcSet={preloadSrcSet}
+          imageSizes={preloadSrcSet ? preloadSizes : undefined}
+          fetchPriority="high"
+        />
       )}
 
       <meta property="og:type" content="website" />

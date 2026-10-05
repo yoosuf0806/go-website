@@ -65,6 +65,14 @@ export default function ProductDetail() {
 
   const path = `/shop/${product.slug}`
   const seoDescription = product.description ?? content.seo.shop.description
+  // The gallery's first slide is the LCP — unless it's a video (ProductGallery
+  // shows media[0] first). Preload the image only when the first slide is one.
+  const firstMedia = product.media[0]
+  const lcpImage = firstMedia
+    ? firstMedia.type === 'image'
+      ? firstMedia.url
+      : null
+    : product.imageUrl
   const productLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -102,6 +110,12 @@ export default function ProductDetail() {
         description={seoDescription}
         path={path}
         image={product.imageUrl ?? undefined}
+        // The product gallery's first photo is this page's LCP — preload it with
+        // the SAME widths/sizes ProductGallery renders, so it starts downloading
+        // before the JS bundle parses (big first-paint win on the PDP).
+        preloadImage={lcpImage}
+        preloadWidths={[400, 800, 1280]}
+        preloadSizes="(min-width: 768px) 50vw, 100vw"
         jsonLd={[productLd, breadcrumbLd]}
       />
 
