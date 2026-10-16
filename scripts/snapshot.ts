@@ -46,6 +46,7 @@ import type {
 } from '../src/types/catalog.ts'
 import { stockKey } from '../src/types/catalog.ts'
 import { mergeContent, type SiteContent } from '../src/types/content.ts'
+import { localizeImages } from './localizeImages.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUT_PATH = resolve(__dirname, '../src/data/catalog.json')
@@ -404,6 +405,20 @@ async function main() {
   if (google) {
     catalog.google = google
     console.log(`[snapshot] Google reviews: ${google.reviews.length} (rating ${google.rating}, ${google.total} total).`)
+  }
+
+  // Localise images: download every Supabase storage image into
+  // public/catalog-images/ and rewrite the catalogue to the local paths, so the
+  // browser loads them from our own origin (fast, edge-cached) instead of
+  // hitting Supabase at runtime. Best-effort per image; no-ops for the seed
+  // build (no storage URLs). See scripts/localizeImages.ts.
+  try {
+    const localized = await localizeImages(catalog)
+    if (localized > 0) console.log(`[snapshot] Localized ${localized} image(s) into public/catalog-images/.`)
+  } catch (err) {
+    // Never fail the build over image localisation — the un-rewritten Supabase
+    // URLs still load through the runtime proxy/optimizer.
+    console.warn('[snapshot] Image localisation errored — keeping Supabase URLs:', err)
   }
 
   mkdirSync(dirname(OUT_PATH), { recursive: true })

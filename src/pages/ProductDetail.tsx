@@ -4,7 +4,7 @@ import { formatLKR } from '../lib/format'
 import { cdnUrl, imgError } from '../lib/images'
 import ProductGallery from '../components/storefront/ProductGallery'
 import ProductConfigurator from '../components/storefront/ProductConfigurator'
-import Seo, { SITE_URL } from '../components/Seo'
+import Seo, { SITE_URL, absoluteUrl } from '../components/Seo'
 
 const RELATED_COUNT = 4
 
@@ -70,7 +70,7 @@ export default function ProductDetail() {
     '@type': 'Product',
     name: product.name,
     description: seoDescription,
-    ...(product.imageUrl ? { image: product.imageUrl } : {}),
+    ...(product.imageUrl ? { image: absoluteUrl(product.imageUrl) } : {}),
     brand: { '@type': 'Brand', name: content.seo.siteName },
     offers: {
       '@type': 'Offer',

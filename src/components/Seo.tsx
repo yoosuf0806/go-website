@@ -30,7 +30,10 @@ interface SeoProps {
 
 export default function Seo({ title, description, path, image, preloadImage, jsonLd }: SeoProps) {
   const url = `${SITE_URL}${path}`
-  const ogImage = image ?? absoluteUrl(content.seo.defaultImageUrl) ?? `${SITE_URL}/og-default.png`
+  // absoluteUrl passes through absolute URLs and prefixes root-relative ones
+  // (e.g. a build-time /catalog-images/… path) with SITE_URL — crawlers require
+  // an absolute og:image/twitter:image.
+  const ogImage = absoluteUrl(image) ?? absoluteUrl(content.seo.defaultImageUrl) ?? `${SITE_URL}/og-default.png`
 
   return (
     <Helmet>
@@ -80,7 +83,7 @@ const LOCALBUSINESS_ID = `${SITE_URL}/#localbusiness`
 const WEBSITE_ID = `${SITE_URL}/#website`
 
 /** Prefix a relative path with SITE_URL; pass through absolute URLs; '' → undefined. */
-function absoluteUrl(u?: string | null): string | undefined {
+export function absoluteUrl(u?: string | null): string | undefined {
   if (!u) return undefined
   return /^https?:\/\//.test(u) ? u : `${SITE_URL}${u.startsWith('/') ? '' : '/'}${u}`
 }

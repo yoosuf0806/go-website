@@ -20,6 +20,10 @@ dist-ssr
 # Generated build-time catalogue snapshot (spec §3)
 src/data/catalog.json
 
+# Build-time localised images (downloaded from Supabase by the snapshot and
+# bundled into the deploy — regenerated on every build, like catalog.json)
+public/catalog-images/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
