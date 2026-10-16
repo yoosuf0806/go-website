@@ -20,6 +20,14 @@ import type { SyntheticEvent } from 'react'
 const CDN_BASE = (import.meta.env.VITE_IMAGE_CDN_BASE as string | undefined)?.replace(/\/+$/, '')
 const STORAGE_SEGMENT = '/storage/v1/'
 
+// Same-origin prefix for images baked into the deploy at build time (the
+// snapshot downloads Supabase storage images into public/catalog-images/ and
+// rewrites the catalogue to these paths — see scripts/localizeImages.ts). These
+// already load from our own origin, so cdnUrl leaves them untouched; the
+// optimizer below still right-sizes them per device. Keep in sync with
+// localizeImages.ts's PUBLIC_PREFIX.
+const LOCAL_IMAGE_PREFIX = '/catalog-images/'
+
 // Same-origin image proxy (api/img.ts). Product & content images live in
 // Supabase Storage on a DIFFERENT host (…supabase.co). That split origin is why
 // some visitors see the whole page but no pictures: ad blockers, privacy
@@ -91,9 +99,18 @@ export function imgError(e: SyntheticEvent<HTMLImageElement>): void {
 const OPTIMIZER_PATH = '/_vercel/image'
 const USE_OPTIMIZER = import.meta.env.PROD && !CDN_BASE
 
-/** True when `src` is a storage image we can route through the Vercel optimizer. */
+/**
+ * True when `src` is an image we can route through the Vercel optimizer — either
+ * a Supabase storage URL (allow-listed in vercel.json's remotePatterns) or a
+ * same-origin build-time local image under /catalog-images/. The optimizer
+ * accepts both a full URL and a root-relative path as its `url` parameter.
+ */
 export function canTransform(src: string | null | undefined): src is string {
-  return USE_OPTIMIZER && typeof src === 'string' && src.includes(STORAGE_SEGMENT)
+  return (
+    USE_OPTIMIZER &&
+    typeof src === 'string' &&
+    (src.includes(STORAGE_SEGMENT) || src.startsWith(LOCAL_IMAGE_PREFIX))
+  )
 }
 
 /** A single resized variant URL (returns the un-resized proxied/original URL when off). */
