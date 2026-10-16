@@ -165,6 +165,25 @@ export function cartTotals(items: CartItem[], tiers: DeliveryTier[]): CartTotals
   }
 }
 
+/**
+ * The per-piece price for a line when converting a bulk (wedding/corporate)
+ * inquiry into an order, in precedence order:
+ *   1. an explicit admin override on the line,
+ *   2. else the category bulk rate (products.wedding/corporate_price_per_piece)
+ *      when the admin has set one,
+ *   3. else the product's standard per-piece price.
+ * Pure so the converter and its tests share one definition of the rule.
+ */
+export function resolveBulkUnitPrice(
+  standardPrice: number,
+  categoryBulkRate: number | null | undefined,
+  override: number | null | undefined,
+): number {
+  if (override != null) return override
+  if (categoryBulkRate != null) return categoryBulkRate
+  return standardPrice
+}
+
 /** Order total after a flat gift-voucher discount, clamped so it never goes below zero. */
 export function totalAfterVoucher(total: number, discount: number): number {
   return Math.max(0, total - discount)
