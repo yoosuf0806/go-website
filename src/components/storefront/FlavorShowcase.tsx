@@ -1,6 +1,6 @@
 import type { CatalogProduct } from '../../types/catalog'
 import { formatLKR } from '../../lib/format'
-import { cdnUrl, imgError, imageSrcSet } from '../../lib/images'
+import { cdnUrl, imgError, imageSrcSet, blurStyle } from '../../lib/images'
 
 const FLAVOR_WIDTHS = [200, 400]
 
@@ -45,6 +45,7 @@ export default function FlavorShowcase({
                     onError={imgError}
                     alt={f.name}
                     loading="lazy"
+                    style={blurStyle(f.imageUrl)}
                     className="h-full w-full object-cover"
                   />
                 ) : (

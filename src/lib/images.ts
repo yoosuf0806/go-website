@@ -1,4 +1,5 @@
-import type { SyntheticEvent } from 'react'
+import type { CSSProperties, SyntheticEvent } from 'react'
+import { imagePlaceholders } from '../data/catalog'
 
 // Central image-URL helper. Golden Oven's product and content images are stored
 // in Supabase Storage. This module decides the URL the browser actually loads:
@@ -59,6 +60,40 @@ export function cdnUrl(src: string | null | undefined): string | null | undefine
   if (CDN_BASE) return CDN_BASE + src.slice(i)
   if (USE_PROXY) return `${PROXY_PATH}?path=${encodeURIComponent(src.slice(i + STORAGE_SEGMENT.length))}`
   return src
+}
+
+/**
+ * The blur-up placeholder (a tiny base64 WebP data URI) for an image, or
+ * undefined when none was baked. Resolves the lookup key from whichever URL form
+ * the caller holds — a same-origin `/catalog-images/…` bake path OR a live
+ * Supabase storage URL — since the snapshot keys the map under both (see
+ * scripts/localizeImages.ts). Components paint the result as a CSS background
+ * behind the real <img> so a blurred preview shows instantly, with no network.
+ */
+export function blurDataUrl(src: string | null | undefined): string | undefined {
+  if (typeof src !== 'string') return undefined
+  const i = src.indexOf(STORAGE_SEGMENT)
+  if (i !== -1) {
+    const rest = src.slice(i + STORAGE_SEGMENT.length)
+    const q = rest.indexOf('?')
+    return imagePlaceholders[q === -1 ? rest : rest.slice(0, q)]
+  }
+  if (src.startsWith(LOCAL_IMAGE_PREFIX)) return imagePlaceholders[src]
+  return undefined
+}
+
+/**
+ * Inline `style` that paints an image's blur-up placeholder as a cover
+ * background, or undefined when none exists. Drop it on any `<img>` (alongside
+ * an `object-cover`/`object-contain` class) so a blurred preview shows instantly
+ * and the real photo covers it once decoded. Returns undefined in the common
+ * no-placeholder case so callers can spread it with no visual change.
+ */
+export function blurStyle(src: string | null | undefined): CSSProperties | undefined {
+  const blur = blurDataUrl(src)
+  return blur
+    ? { backgroundImage: `url("${blur}")`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : undefined
 }
 
 /**

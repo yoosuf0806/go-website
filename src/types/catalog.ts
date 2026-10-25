@@ -220,4 +220,13 @@ export interface Catalog {
   productPackageAvailability: ProductPackageAvailabilityMap
   /** Whole-pack price overrides; see ProductPackagePriceMap. No entry = priced per piece. */
   productPackagePrice: ProductPackagePriceMap
+  /**
+   * Blur-up placeholders (tiny base64 WebP data URIs) for catalogue/content
+   * images, keyed by both the baked local path and the Supabase storage path so
+   * a lookup hits whether the URL came from the bake or a live refetch. Baked by
+   * the snapshot (scripts/localizeImages.ts); read via src/lib/images.ts →
+   * blurDataUrl. Absent/empty on the seed build (no storage images). Build-time
+   * only — the live refetch (liveCatalog.ts) doesn't carry it.
+   */
+  imagePlaceholders?: Record<string, string>
 }

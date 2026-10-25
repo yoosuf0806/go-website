@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { HeroSlide } from '../../types/content'
-import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError, blurStyle } from '../../lib/images'
 
 // Full-bleed hero: offer a handful of wide variants when the image CDN is on.
 const HERO_WIDTHS = [640, 1280]
@@ -46,6 +46,8 @@ export default function HeroCarousel({ slides, primaryCta }: HeroCarouselProps) 
               loading={i === 0 ? 'eager' : 'lazy'}
               fetchPriority={i === 0 ? 'high' : undefined}
               decoding={i === 0 ? 'auto' : 'async'}
+              // Blur-up placeholder paints instantly behind the hero photo.
+              style={blurStyle(slide.imageUrl)}
               data-fallback-src={slide.imageUrl}
               onError={imgError}
             />

@@ -17,6 +17,10 @@ export const addons = catalog.addons
 export const deliveryTiers = catalog.deliveryTiers
 export const featuredReviews = catalog.reviews
 export const settings = catalog.settings
+// Blur-up placeholders baked by the snapshot (keyed by local + storage path).
+// Always the BUILD-TIME map — never the live refetch — so src/lib/images.ts can
+// read it without the catalogue context. Empty on the seed build.
+export const imagePlaceholders: Record<string, string> = catalog.imagePlaceholders ?? {}
 // mergeContent guarantees a full SiteContent even for older snapshots that
 // predate the content field.
 export const content = mergeContent(catalog.content)
