@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError, blurStyle } from '../../lib/images'
 
 // Shared full-bleed landing banner — the same visual template as the Home hero
 // (HeroCarousel): a full-width photo with a dark bottom-up scrim and the copy
@@ -75,6 +75,8 @@ export default function HeroBanner({
             loading={priority ? 'eager' : 'lazy'}
             fetchPriority={priority ? 'high' : undefined}
             decoding={priority ? 'auto' : 'async'}
+            // Blur-up placeholder paints instantly behind the banner photo.
+            style={blurStyle(imageUrl)}
             data-fallback-src={imageUrl ?? undefined}
             onError={imgError}
           />

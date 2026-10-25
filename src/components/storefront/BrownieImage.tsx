@@ -1,4 +1,4 @@
-import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError, blurStyle } from '../../lib/images'
 
 interface BrownieImageProps {
   src: string | null
@@ -52,6 +52,9 @@ export default function BrownieImage({
         // Fall back to the untouched Supabase URL if the CDN/proxy candidate fails.
         data-fallback-src={src}
         onError={imgError}
+        // Blur-up: the inlined placeholder paints instantly behind the image
+        // (no network), and the real photo covers it once decoded.
+        style={blurStyle(src)}
         className={`object-cover ${className}`}
       />
     )

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PromoSlide } from '../../types/content'
-import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError, blurStyle } from '../../lib/images'
 
 const SLIDE_WIDTHS = [640, 1280]
 
@@ -108,6 +108,7 @@ export default function Slideshow({ promoSlides = [] }: { promoSlides?: PromoSli
                   decoding={i === 0 ? 'auto' : 'async'}
                   data-fallback-src={slide.imageUrl}
                   onError={imgError}
+                  style={blurStyle(slide.imageUrl)}
                 />
                 <div className="absolute inset-0 bg-black/45" />
               </>

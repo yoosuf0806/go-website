@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { CatalogMedia } from '../../types/catalog'
 import BrownieImage from './BrownieImage'
-import { imageSrcSet, cdnUrl, imgError } from '../../lib/images'
+import { imageSrcSet, cdnUrl, imgError, blurStyle } from '../../lib/images'
 
 const GALLERY_WIDTHS = [400, 800, 1280]
 
@@ -65,6 +65,7 @@ export default function ProductGallery({
                 decoding={i === 0 ? 'auto' : 'async'}
                 data-fallback-src={item.url}
                 onError={imgError}
+                style={blurStyle(item.url)}
                 className="h-full w-full object-cover"
               />
             )}

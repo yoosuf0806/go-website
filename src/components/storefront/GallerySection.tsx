@@ -1,5 +1,5 @@
 import { useCatalog } from '../../contexts/CatalogContext'
-import { cdnUrl, imgError, imageSrcSet } from '../../lib/images'
+import { cdnUrl, imgError, imageSrcSet, blurStyle } from '../../lib/images'
 
 const GALLERY_WIDTHS = [400, 800]
 
@@ -28,6 +28,7 @@ export default function GallerySection() {
                 onError={imgError}
                 alt={`Golden Oven gallery ${i + 1}`}
                 loading="lazy"
+                style={blurStyle(url)}
                 className="w-full"
               />
             </div>

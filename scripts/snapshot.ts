@@ -413,8 +413,17 @@ async function main() {
   // hitting Supabase at runtime. Best-effort per image; no-ops for the seed
   // build (no storage URLs). See scripts/localizeImages.ts.
   try {
-    const localized = await localizeImages(catalog)
-    if (localized > 0) console.log(`[snapshot] Localized ${localized} image(s) into public/catalog-images/.`)
+    const { count, placeholders } = await localizeImages(catalog)
+    // Bake the blur-up placeholders into the snapshot so the storefront can
+    // paint an instant preview behind each image (src/lib/images.ts).
+    catalog.imagePlaceholders = placeholders
+    if (count > 0) {
+      const n = Object.keys(placeholders).length / 2 // two keys per image
+      console.log(
+        `[snapshot] Localized ${count} image(s) into public/catalog-images/` +
+          ` (${n} blur placeholder(s)).`,
+      )
+    }
   } catch (err) {
     // Never fail the build over image localisation — the un-rewritten Supabase
     // URLs still load through the runtime proxy/optimizer.

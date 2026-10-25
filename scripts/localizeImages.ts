@@ -25,6 +25,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import sharp from 'sharp'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -40,6 +41,17 @@ const STORAGE_SEGMENT = '/storage/v1/'
 
 // How many images to download at once.
 const CONCURRENCY = 8
+
+// Blur-up placeholder (LQIP): a tiny, heavily-compressed WebP of each image,
+// inlined as a base64 data URI into the catalogue. The storefront paints it as
+// a CSS background behind the real <img> (see src/lib/images.ts → blurDataUrl),
+// so a blurred preview of every photo shows INSTANTLY — zero network, straight
+// from the HTML/JS — and the full image sharpens in on top once it arrives.
+// This is the "load like other sites" win: no blank/flat box while a photo
+// downloads. Kept intentionally tiny (a ~24px-wide WebP is a few hundred bytes)
+// so the data URIs baked into catalog.json stay cheap.
+const PLACEHOLDER_WIDTH = 24
+const PLACEHOLDER_QUALITY = 45
 
 // Map a content-type to a file extension, used when the storage path has none.
 const EXT_BY_TYPE: Record<string, string> = {
@@ -88,8 +100,35 @@ function rewriteStrings<T>(node: T, mapping: Map<string, string>): T {
   return node
 }
 
-/** Download one URL to OUT_DIR, returning its local public path (or null on failure). */
-async function download(url: string): Promise<string | null> {
+/**
+ * A tiny blurred WebP data URI for `buf`, or null if it can't be rasterised
+ * (e.g. an SVG icon or an unexpected file). Best-effort: a placeholder is a
+ * nice-to-have, never a reason to fail the localisation of an otherwise-good
+ * image.
+ */
+async function makePlaceholder(buf: Buffer): Promise<string | null> {
+  try {
+    const out = await sharp(buf)
+      .resize(PLACEHOLDER_WIDTH, PLACEHOLDER_WIDTH, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: PLACEHOLDER_QUALITY })
+      .toBuffer()
+    return `data:image/webp;base64,${out.toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
+interface Localized {
+  /** The site-origin path the catalogue is rewritten to (`/catalog-images/…`). */
+  local: string
+  /** The stable storage path (after `/storage/v1/`), used as a placeholder key. */
+  storagePath: string
+  /** Blur-up data URI, or null when the image couldn't be rasterised. */
+  placeholder: string | null
+}
+
+/** Download one URL to OUT_DIR, returning its local path + blur placeholder (or null on failure). */
+async function download(url: string): Promise<Localized | null> {
   const path = storagePath(url)
   if (!path) return null
   try {
@@ -104,7 +143,8 @@ async function download(url: string): Promise<string | null> {
       extname(path).toLowerCase() || EXT_BY_TYPE[res.headers.get('content-type') ?? ''] || '.img'
     const file = `${hash}${ext}`
     writeFileSync(resolve(OUT_DIR, file), buf)
-    return `${PUBLIC_PREFIX}/${file}`
+    const placeholder = await makePlaceholder(buf)
+    return { local: `${PUBLIC_PREFIX}/${file}`, storagePath: path, placeholder }
   } catch (err) {
     console.warn(
       `[localize-images] skip ${path} — ${err instanceof Error ? err.message : String(err)}`,
@@ -113,31 +153,54 @@ async function download(url: string): Promise<string | null> {
   }
 }
 
+/** Outcome of localising a catalogue's images. */
+export interface LocalizeResult {
+  /** How many distinct images were downloaded and rewritten to a local path. */
+  count: number
+  /**
+   * Blur-up placeholders, keyed by BOTH the baked local path (what the snapshot
+   * rewrites the catalogue to, used on first paint) AND the stable storage path
+   * (what a live Supabase URL resolves to after CatalogProvider swaps in current
+   * data). Either key lets the storefront find the same placeholder. See
+   * src/lib/images.ts → blurDataUrl.
+   */
+  placeholders: Record<string, string>
+}
+
 /**
  * Download every Supabase storage image referenced in `catalog` and rewrite the
- * catalogue (in place) to point at the local copies. Returns how many distinct
- * images were localised. No-ops (returns 0) when the catalogue has no storage
+ * catalogue (in place) to point at the local copies, building a blur-up
+ * placeholder for each. No-ops (empty result) when the catalogue has no storage
  * URLs — e.g. the seed-data build used for local dev.
  */
-export async function localizeImages(catalog: unknown): Promise<number> {
+export async function localizeImages(catalog: unknown): Promise<LocalizeResult> {
   const urls = new Set<string>()
   walkStrings(catalog, (s) => {
     if (s.includes(STORAGE_SEGMENT)) urls.add(s)
   })
-  if (urls.size === 0) return 0
+  if (urls.size === 0) return { count: 0, placeholders: {} }
 
   mkdirSync(OUT_DIR, { recursive: true })
 
   const mapping = new Map<string, string>()
+  const placeholders: Record<string, string> = {}
   const queue = [...urls]
   async function worker() {
     for (let url = queue.pop(); url !== undefined; url = queue.pop()) {
-      const local = await download(url)
-      if (local) mapping.set(url, local)
+      const result = await download(url)
+      if (!result) continue
+      mapping.set(url, result.local)
+      if (result.placeholder) {
+        // Key by both forms the URL can take at runtime so a lookup hits
+        // regardless of whether the catalogue was served from the bake or
+        // refetched live from Supabase.
+        placeholders[result.local] = result.placeholder
+        placeholders[result.storagePath] = result.placeholder
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker))
 
   rewriteStrings(catalog, mapping)
-  return mapping.size
+  return { count: mapping.size, placeholders }
 }
